@@ -1,0 +1,9 @@
+django>=3.2,<3.3
+dataclasses>=0.8
+djangorestframework
+pyyaml
+requests
+django-cors-headers
+django-jazzmin
+django-autocomplete-light
+django-ckeditor
