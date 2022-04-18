@@ -1,0 +1,83 @@
+- model: jobqueue.jobstatus
+  pk: 1
+  fields:
+    name: PENDING
+
+- model: jobqueue.jobstatus
+  pk: 2
+  fields: 
+    name: RUNNNING
+
+- model: jobqueue.jobstatus
+  pk: 3
+  fields:
+    name: FAILED
+
+- model: jobqueue.jobstatus
+  pk: 4
+  fields: 
+    name: SUCCESS
+
+- model: jobqueue.jobmodule
+  pk: pxe-update
+  fields: 
+    name: PXE Update
+    slug: pxe-update
+- model: jobqueue.jobmodule
+  pk: pxe-delete
+  fields: 
+    name: PXE Delete
+    slug: pxe-delete  
+
+- model: jobqueue.jobmodule
+  pk: dns-update
+  fields: 
+    name: DNS Update
+    active: 0
+    slug: dns-update
+- model: jobqueue.jobmodule
+  pk: dns-delete 
+  fields: 
+    name: DNS Delete
+    slug: dns-delete  
+
+- model: jobqueue.jobmodule
+  pk: dhcp-update
+  fields: 
+    name: DHCP Update
+    slug: dhcp-update
+- model: jobqueue.jobmodule
+  pk: dhcp-delete 
+  fields: 
+    name: DHCP Delete
+    slug: dhcp-delete  
+- model: jobqueue.jobmodule
+  pk: os-image-update
+  fields: 
+    name: OS Image Update
+    slug: os-image-update
+- model: jobqueue.jobmodule
+  pk: os-image-delete
+  fields:
+    name: OS Image Delete
+    slug: os-image-delete
+- model: jobqueue.jobmodule
+  pk: repo-update
+  fields: 
+    name: Repo Update
+    slug: repo-update
+- model: jobqueue.jobmodule
+  pk: repo-delete
+  fields:
+    name: Repo Delete
+    slug: repo-delete
+- model: jobqueue.jobmodule
+  pk: image-update
+  fields:
+    name: Image Update
+    slug: image-update
+- model: jobqueue.jobmodule
+  pk: image-delete
+  fields:
+    name: Image Delete
+    slug: image-delete
