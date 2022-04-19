@@ -9,3 +9,9 @@ a {
 .card-primary.card-outline {
   border-top: 3px solid #20c997;
 }
+.nav-sidebar .nav-item>.nav-link {
+  color: #20c997;
+}
+.nav-sidebar>.nav-header, .sidebar-form {
+  font-weight: bold;
+}
