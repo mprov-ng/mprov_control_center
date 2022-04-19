@@ -52,6 +52,7 @@ INSTALLED_APPS = [
 
 ]
 JAZZMIN_SETTINGS={
+    "custom_css": "css/mprov.css",
     'show_ui_builder': True,
     'site_logo': 'mProvLogo.png',
     'icons': {
@@ -75,34 +76,34 @@ JAZZMIN_SETTINGS={
 
 }
 JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": True,
+    "navbar_small_text": False,
     "footer_small_text": False,
-    "body_small_text": False,
-    "brand_small_text": True,
-    "brand_colour": "navbar-orange",
+    "body_small_text": True,
+    "brand_small_text": False,
+    "brand_colour": "navbar-teal",
     "accent": "accent-primary",
-    "navbar": "navbar-orange navbar-light",
+    "navbar": "navbar-teal navbar-dark",
     "no_navbar_border": False,
     "navbar_fixed": False,
-    "layout_boxed": False,
+    "layout_boxed": True,
     "footer_fixed": False,
     "sidebar_fixed": False,
-    "sidebar": "sidebar-dark-orange",
-    "sidebar_nav_small_text": True,
-    "sidebar_disable_expand": True,
+    "sidebar": "sidebar-light-olive",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
     "sidebar_nav_child_indent": False,
     "sidebar_nav_compact_style": False,
     "sidebar_nav_legacy_style": False,
-    "sidebar_nav_flat_style": True,
-    "theme": "default",
+    "sidebar_nav_flat_style": False,
+    "theme": "minty",
     "dark_mode_theme": None,
     "button_classes": {
         "primary": "btn-primary",
         "secondary": "btn-secondary",
-        "info": "btn-outline-info",
-        "warning": "btn-outline-warning",
-        "danger": "btn-outline-danger",
-        "success": "btn-outline-success"
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success"
     },
     "actions_sticky_top": False
 }

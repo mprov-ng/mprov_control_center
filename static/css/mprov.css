@@ -1,0 +1,11 @@
+a {
+  color: #20c997;
+}
+
+.accent-primary .btn-link, .accent-primary .nav-tabs .nav-link, .accent-primary a:not(.dropdown-item):not(.btn-app):not(.nav-link):not(.brand-link):not(.page-link):not(.btn) {
+  color: #20c997;
+}
+
+.card-primary.card-outline {
+  border-top: 3px solid #20c997;
+}
