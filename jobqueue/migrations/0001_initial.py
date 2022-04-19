@@ -2,7 +2,6 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import mprov.common.jobqueue
 
 
 class Migration(migrations.Migration):
@@ -47,7 +46,7 @@ class Migration(migrations.Migration):
                 ('last_update', models.DateTimeField(auto_now=True, null=True, verbose_name='Last Update')),
                 ('return_code', models.IntegerField(blank=True, null=True, verbose_name='Return Code')),
                 ('params', models.JSONField(blank=True, null=True, verbose_name='Job Parameters')),
-                ('status', models.IntegerField(default=mprov.common.jobqueue.JobStatus['PENDING'])),
+                ('status', models.IntegerField(default=1)),
                 ('module', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='jobqueue.jobmodules')),
             ],
             options={
