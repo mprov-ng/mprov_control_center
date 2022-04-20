@@ -1,0 +1,12 @@
+{% extends "admin/index.html" %}
+{% load i18n static jazzmin %}
+{% get_jazzmin_ui_tweaks as jazzmin_ui %}
+
+{% block content_title %} {% trans 'Home' %} {% endblock %}
+
+{% block breadcrumbs %}
+    <ol class="breadcrumb float-sm-right">
+        <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-home"></i> {% trans 'Home' %}</a></li>
+        <li class="breadcrumb-item">{% trans 'Home' %}</li>
+    </ol>
+{% endblock %}

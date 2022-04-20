@@ -15,3 +15,7 @@ a {
 .nav-sidebar>.nav-header, .sidebar-form {
   font-weight: bold;
 }
+
+.timeline>div>.timeline-item>.time {
+  width: 100%;
+}
