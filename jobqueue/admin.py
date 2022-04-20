@@ -4,9 +4,9 @@ from .models import Job, JobModule, JobServer
 class JobAdmin(admin.ModelAdmin):
     model = Job
     readonly_fields = ('return_code', ) 
-    list_display = ['name', 'create_time', 'start_time', 'end_time', 'last_update']
+    list_display = ['name', 'status','create_time', 'start_time', 'end_time', 'last_update']
     
-class JobModelAdmin(admin.ModelAdmin):
+class JobModuleAdmin(admin.ModelAdmin):
     model = JobModule
     readonly_fields = ('active',  )
     list_display=['name', 'slug']
@@ -25,5 +25,5 @@ class JobServerAdmin(admin.ModelAdmin):
     registered_jobmodules.short_description = 'Registered Job Modules'
 
 admin.site.register(Job, JobAdmin)
-admin.site.register(JobModule, JobModelAdmin)
+admin.site.register(JobModule, JobModuleAdmin)
 admin.site.register(JobServer, JobServerAdmin)
