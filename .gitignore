@@ -131,3 +131,5 @@ dmypy.json
 # Excluded for now
 disks/
 locations/
+static/initrd.img
+static/vmlinuz

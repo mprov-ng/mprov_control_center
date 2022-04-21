@@ -1,11 +1,10 @@
-from operator import mod
 from django.db import models
 from django.conf import settings
 from django.dispatch import receiver
 from networks.models import SwitchPort
 from osmanagement.models import OSDistro, OSRepo
 from django.db.models.signals import pre_save, pre_delete
-from jobqueue.models import JobModule, JobStatus, Job
+from jobqueue.models import JobModule, JobStatus, Job, JobServer
 
 class SystemGroup(models.Model):
   name=models.CharField(max_length=255)
@@ -82,6 +81,8 @@ class SystemImage(models.Model):
   updated=models.DateTimeField(auto_now=True, verbose_name="Lasted Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
   needs_rebuild = models.BooleanField(default=True, verbose_name="Rebuild Image?")
+  version = models.BigIntegerField(default=1, verbose_name="Image Version")
+  jobservers = models.ManyToManyField(JobServer, verbose_name="Hosted By", blank=True)
   config_parameters = models.TextField(
     default="-- #Inherit from System Group or Distrubtion.",
     verbose_name="Configuration\nParameters",
@@ -144,7 +145,7 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
 
 # emits an image-update job everytime an image is modified.
 @receiver(pre_save, sender=SystemImage)
-def UpdateSystemImages(sender, **kwargs):
+def UpdateSystemImages(sender, instance, **kwargs):
   JobType = None
   try:
       JobType = JobModule.objects.get(slug='image-update')
@@ -160,3 +161,7 @@ def UpdateSystemImages(sender, **kwargs):
         name=JobType.name , module=JobType,
         defaults={'status': JobStatus.objects.get(pk=1)}
       )
+
+      # TODO: Increment version number and clear out jobservers field.
+      instance.jobservers.clear()
+      instance.version = instance.version + 1

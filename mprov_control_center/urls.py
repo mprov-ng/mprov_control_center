@@ -53,6 +53,7 @@ urlpatterns = [
     path('systemgroups/', SystemGroupAPIView.as_view()),
     path('networkinterfaces/', NetworkInterfaceAPIView.as_view()),
     
+    path('images/', include('systems.systemimage_urls')),
     path('distros/', include('osmanagement.distros_urls')),
     path('repos/', include('osmanagement.repos_urls')),
     path('jobmodules/', include('jobqueue.jobmodules_urls')),    
