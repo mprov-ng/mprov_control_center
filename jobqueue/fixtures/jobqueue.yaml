@@ -81,3 +81,8 @@
   fields:
     name: Image Delete
     slug: image-delete
+- model: jobqueue.jobmodule
+  pk: image-sync
+  fields:
+    name: Image Sync Job
+    slug: image-sync
