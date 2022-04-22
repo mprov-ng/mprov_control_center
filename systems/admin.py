@@ -65,7 +65,10 @@ class SystemImageAdmin(admin.ModelAdmin):
         'needs_rebuild',
       )
     }),
-    
+    ('OS Management', {
+      'fields': ('osdistro','osrepos')
+    }
+    ),
   )
   
   
