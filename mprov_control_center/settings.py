@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'systems',
     'jobqueue',
     'rest_framework',
-    
+    'rest_framework_api_key',
 
 ]
 JAZZMIN_SETTINGS={
@@ -203,6 +203,7 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
+        'rest_framework_api_key.permissions.HasAPIKey',
     ),   
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.BasicAuthentication',

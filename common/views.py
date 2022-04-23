@@ -2,7 +2,8 @@ from django.conf import settings
 from django.http import Http404, HttpResponse
 from django.shortcuts import render
 from rest_framework.response import Response
-
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_api_key.permissions import HasAPIKey
 from rest_framework.views import APIView
 from rest_framework import mixins, generics
 from django.db import models
@@ -28,6 +29,7 @@ class MProvView(
     #filter_backends = [DjangoFilterBackend]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
+    permission_classes = [HasAPIKey|IsAuthenticated]
     
 
     def get(self, request, format=None):
