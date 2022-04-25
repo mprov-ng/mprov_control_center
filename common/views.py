@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.http import Http404, HttpResponse
 from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -44,17 +43,7 @@ class MProvView(
 
         # return the super call for get.
         return generics.ListAPIView.get(self, request, format=None);
-        
-        # if we get here, model is not None, so 
-        # try to get the data
-        model_data = list()
-        try:
-            #
-            queryset = list(self.model.objects.all().values())
-        except:
-            # return 500
-            return HttpResponse("Internal Error")
-        return Response(model_data)
+
     
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
