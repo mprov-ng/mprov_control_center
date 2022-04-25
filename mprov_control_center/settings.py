@@ -70,6 +70,7 @@ JAZZMIN_SETTINGS={
         'jobqueue.jobmodule':'fas fa-search-plus',
         'jobqueue.jobserver':'fas fa-hdd',
         'systems.systemimage': 'fas fa-save',
+        'rest_framework_api_key.apikey': 'fas fa-key',
     },
     'copyright': ' ',
     #"related_modal_active": True
