@@ -72,6 +72,7 @@ class NetworkInterface(models.Model):
 
 class SystemImage(models.Model):
   name=models.CharField(max_length=255, verbose_name="Image Name")
+  slug=models.SlugField(max_length=255, unique=True, editable=False, verbose_name='Image ID', primary_key=True)
   timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
   created_by=models.ForeignKey(
     settings.AUTH_USER_MODEL, 
@@ -156,10 +157,11 @@ def UpdateSystemImages(sender, instance, **kwargs):
   # get the jobtype, do nothing if it's not defined.
   if JobType is not None:
       # save a new job, if one doesn't already exist.
-
-      Job.objects.update_or_create(
-        name=JobType.name , module=JobType,
-        defaults={'status': JobStatus.objects.get(pk=1)}
+      params = { 'imageId': instance.pk}
+      Job.objects.create( name=JobType.name, 
+          module=JobType, 
+          status=JobStatus.objects.get(pk=1), 
+          params = params,
       )
 
       # TODO: Increment version number and clear out jobservers field.

@@ -48,9 +48,9 @@ class SystemGroupAdmin(admin.ModelAdmin):
   list_display_links = ['id', 'name']
 
 class SystemImageAdmin(admin.ModelAdmin):
-  list_display = ['id', 'name']
+  list_display = ['slug', 'name']
   readonly_fields = ['timestamp', 'updated', 'created_by', 'version', 'jobservers']
-  list_display_links = ['id', 'name']
+  list_display_links = ['slug', 'name']
   fieldsets = (
     (None, {
       'fields': (
