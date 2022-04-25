@@ -2,8 +2,11 @@ from datetime import datetime
 from common.views import MProvView
 from jobqueue.models import JobModule, JobServer, Job
 from jobqueue.serializers import JobAPISerializer, JobModuleAPISerializer, JobServerAPISerializer
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.response import Response
+from django.shortcuts import render
+import json
+
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 
@@ -13,6 +16,29 @@ class JobAPIView(MProvView):
     serializer_class = JobAPISerializer
     queryset = Job.objects.all()
     search_fields = ['module__slug']
+
+    # Override the default get func, we need a bit more specialized query here
+    def get(self, request, format=None):
+        if(request.content_type != 'application/json'):
+            return render(request, self.template, {})
+        # if we are 'application/json' return an empty dict if
+        # model is not set.
+        if self.model == None:
+            return Response(None)
+        
+        # Let's see if someone is looking for something specific.
+        self.queryset = self.model.objects.all()
+        jobmodule = self.request.query_params.get('module')
+        print(jobmodule)
+        if jobmodule is not None:
+            self.queryset = self.queryset.filter(module=jobmodule)
+        params = self.request.query_params.get('params')
+        print(params)
+        if params is not None:
+            self.queryset = self.queryset.filter(params=json.loads(params))
+
+        # return the super call for get.
+        return generics.ListAPIView.get(self, request, format=None);
 
 
 class JobModulesAPIView(MProvView):
