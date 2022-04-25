@@ -9,7 +9,7 @@ class Job(models.Model):
     last_update = models.DateTimeField(auto_now=True, blank=True, null=True, verbose_name="Last Update")
     return_code = models.IntegerField(blank=True, null=True, verbose_name='Return Code')
     module = models.ForeignKey('JobModule', on_delete=models.CASCADE)
-    params = models.JSONField(verbose_name="Job Parameters", blank=True, null=True)
+    params = models.JSONField(verbose_name="Job Parameters", default=dict, null=True)
     status = models.ForeignKey('JobStatus', on_delete=models.CASCADE, default=1)
 
     def __str__(self):
