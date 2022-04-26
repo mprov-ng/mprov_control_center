@@ -10,7 +10,7 @@ class OSDistro(models.Model):
   baserepo=models.ForeignKey(
     'OSRepo', 
     on_delete=models.CASCADE, 
-    related_name='+',
+    related_name='baseRepository',
     verbose_name='OS Base Repository',
   )
   osrepos=models.ManyToManyField(
@@ -45,6 +45,7 @@ class OSRepo(models.Model):
     blank=True,
     through=OSDistro.osrepos.through,
     verbose_name='OS Distrubution'
+
   )
 
   def __str__(self):

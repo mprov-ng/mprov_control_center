@@ -5,12 +5,16 @@ from jobqueue.serializers import JobAPISerializer, JobModuleAPISerializer, JobSe
 from rest_framework import status, generics
 from rest_framework.response import Response
 from django.shortcuts import render
+from django.core.serializers import serialize
 import json
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
+from rest_framework import mixins
+from rest_framework.generics import GenericAPIView
 
-class JobAPIView(MProvView):
+class JobAPIView(MProvView, mixins.RetrieveModelMixin,
+                      GenericAPIView):
     model = Job
     template = "jobs_docs.html"
     serializer_class = JobAPISerializer
@@ -18,7 +22,7 @@ class JobAPIView(MProvView):
     search_fields = ['module__slug']
 
     # Override the default get func, we need a bit more specialized query here
-    def get(self, request, format=None):
+    def get(self, request, format=None, **kwargs):
         if(request.content_type != 'application/json'):
             return render(request, self.template, {})
         # if we are 'application/json' return an empty dict if
@@ -26,17 +30,29 @@ class JobAPIView(MProvView):
         if self.model == None:
             return Response(None)
         
-        # Let's see if someone is looking for something specific.
-        self.queryset = self.model.objects.all()
-        jobmodule = self.request.query_params.get('module')
-        print(jobmodule)
-        if jobmodule is not None:
-            self.queryset = self.queryset.filter(module=jobmodule)
-        params = self.request.query_params.get('params')
-        print(params)
-        if params is not None:
-            self.queryset = self.queryset.filter(params=json.loads(params))
+        if 'pk' in kwargs:
+            # someone is looking for a specific item.
+            print("TODO: Get job by id.")
+            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
 
+        # Let's see if someone is looking for something specific.
+        queryset = self.model.objects.all()
+        jobmodule = self.request.query_params.get('module')
+        # print(jobmodule)
+        if jobmodule is not None:
+            queryset = queryset.filter(module=jobmodule)
+        params = self.request.query_params.get('params')
+        # print(params)
+        if params is not None:
+            queryset = queryset.filter(params__contains=[(params)])
+        jobserver = self.request.query_params.get('jobserver')
+        if jobserver is not None:
+            queryset = queryset.filter(jobserver=jobserver)
+        status = self.request.query_params.get('status')
+        if status is not None:
+            queryset = queryset.filter(status=status)
+        
+        self.queryset=queryset
         # return the super call for get.
         return generics.ListAPIView.get(self, request, format=None);
 
@@ -62,6 +78,7 @@ class JobServersAPIView(MProvView):
             'address': request.data['address'],
             'name': request.data['name']
         }
+        data = {}
         if request.data['name']:
             obj, created = JobServer.objects.update_or_create(
                 name=request.data['name'],
@@ -73,4 +90,5 @@ class JobServersAPIView(MProvView):
                     # look up the jobmodule
                     obj.jobmodules.add(JobModule.objects.get(pk=i))
             obj.save()
-        return Response(status=status.HTTP_200_OK)
+        data['pk'] = obj.pk
+        return Response(status=status.HTTP_200_OK,data=json.dumps(data))

@@ -3,8 +3,8 @@ from .models import Job, JobModule, JobServer
 
 class JobAdmin(admin.ModelAdmin):
     model = Job
-    readonly_fields = ('return_code', 'params', 'module',)#'status', ) 
-    list_display = ['name', 'status','create_time', 'start_time', 'end_time', 'last_update']
+    readonly_fields = ('return_code', 'params', 'module','jobserver',)#'status', ) 
+    list_display = ['name', 'status','create_time', 'start_time', 'end_time', 'last_update','jobserver']
     
 class JobModuleAdmin(admin.ModelAdmin):
     model = JobModule

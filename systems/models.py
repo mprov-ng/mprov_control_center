@@ -9,7 +9,7 @@ from django.utils.text import slugify
 
 class SystemGroup(models.Model):
   name=models.CharField(max_length=255)
-  conf_params=models.TextField(
+  config_params=models.TextField(
     blank=True, 
     default="-- # Inherit from OS", 
     verbose_name="Configuration Parameters"
@@ -72,7 +72,7 @@ class NetworkInterface(models.Model):
 
 
 class SystemImage(models.Model):
-  name=models.CharField(max_length=255, verbose_name="Image Name")
+  name=models.CharField(max_length=255, verbose_name="Image Name",unique=True,)
   slug=models.SlugField(max_length=255, unique=True, editable=False, verbose_name='Image ID', primary_key=True)
   timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
   created_by=models.ForeignKey(
@@ -85,7 +85,7 @@ class SystemImage(models.Model):
   needs_rebuild = models.BooleanField(default=True, verbose_name="Rebuild Image?")
   version = models.BigIntegerField(default=1, verbose_name="Image Version")
   jobservers = models.ManyToManyField(JobServer, verbose_name="Hosted By", blank=True)
-  config_parameters = models.TextField(
+  config_params = models.TextField(
     default="-- #Inherit from System Group or Distrubtion.",
     verbose_name="Configuration\nParameters",
     blank=True,
@@ -96,7 +96,8 @@ class SystemImage(models.Model):
     blank=True, 
     null=True, 
     on_delete=models.SET_NULL,
-    verbose_name="OS Distrubution"
+    verbose_name="OS Distrubution",
+    related_name="distro"
   )
   osrepos=models.ManyToManyField(
     OSRepo, 

@@ -11,7 +11,7 @@ class Job(models.Model):
     module = models.ForeignKey('JobModule', on_delete=models.CASCADE)
     params = models.JSONField(verbose_name="Job Parameters", default=dict, null=True)
     status = models.ForeignKey('JobStatus', on_delete=models.CASCADE, default=1)
-
+    jobserver = models.ForeignKey('JobServer', on_delete=models.SET_NULL, null=True, verbose_name="Assigned Job Server")
     def __str__(self):
         return self.name
     class Meta:
@@ -35,7 +35,7 @@ class JobStatus(models.Model):
         verbose_name="Job Status"
 
 class JobServer(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     address = models.GenericIPAddressField()
     heartbeat_time = models.DateTimeField(auto_now=True, verbose_name="Last Heart Beat")
     jobmodules=models.ManyToManyField(JobModule, verbose_name="Handled Job Modules")

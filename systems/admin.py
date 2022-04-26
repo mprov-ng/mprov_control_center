@@ -34,7 +34,7 @@ class SystemAdmin(admin.ModelAdmin):
         'timestamp',
         'updated',
         'systemgroups',
-        'config_parameters',
+        'config_params',
       )
     }),
     ('OS Management', {
@@ -48,7 +48,7 @@ class SystemGroupAdmin(admin.ModelAdmin):
   list_display_links = ['id', 'name']
 
 class SystemImageAdmin(admin.ModelAdmin):
-  list_display = ['slug', 'name']
+  list_display = ['slug', 'name', 'version', 'registered_jobservers']
   readonly_fields = ['timestamp', 'updated', 'created_by', 'version', 'jobservers']
   list_display_links = ['slug', 'name']
   fieldsets = (
@@ -61,7 +61,7 @@ class SystemImageAdmin(admin.ModelAdmin):
         'version',
         'jobservers',
         'systemgroups',
-        'config_parameters',
+        'config_params',
         'needs_rebuild',
       )
     }),
@@ -70,6 +70,9 @@ class SystemImageAdmin(admin.ModelAdmin):
     }
     ),
   )
+  def registered_jobservers(self, obj):
+    return ", ".join([jm.slug for jm in obj.jobservers.all()])
+  registered_jobservers.short_description = 'Registered Job Servers'
   
   
 admin.site.register(SystemImage, SystemImageAdmin)
