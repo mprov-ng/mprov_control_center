@@ -3,8 +3,9 @@ from django.conf import settings
 from django.dispatch import receiver
 from networks.models import SwitchPort
 from osmanagement.models import OSDistro, OSRepo
-from django.db.models.signals import pre_save, pre_delete
+from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, JobStatus, Job, JobServer
+from django.utils.text import slugify
 
 class SystemGroup(models.Model):
   name=models.CharField(max_length=255)
@@ -147,17 +148,19 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
 # emits an image-update job everytime an image is modified.
 @receiver(pre_save, sender=SystemImage)
 def UpdateSystemImages(sender, instance, **kwargs):
+  instance.slug = slugify(instance.name)
   JobType = None
   try:
       JobType = JobModule.objects.get(slug='image-update')
   except:
       JobType = None
-  print(JobType)
+  print(str(JobType) + " post")
   # get or create the OSIMAGE_UPDATE job module in the DB
   # get the jobtype, do nothing if it's not defined.
   if JobType is not None:
+
       # save a new job, if one doesn't already exist.
-      params = { 'imageId': instance.pk}
+      params = { 'imageId': instance.slug}
       Job.objects.create( name=JobType.name, 
           module=JobType, 
           status=JobStatus.objects.get(pk=1), 

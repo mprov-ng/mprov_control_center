@@ -14,7 +14,7 @@ class NetworkTypeAdmin(admin.ModelAdmin):
 
 class SwitchPortInline(admin.StackedInline):
   model = SwitchPort
-  extra = 0
+  extra = 1
   list_display = ['name']
   list_display_links = ['id', 'name']
     

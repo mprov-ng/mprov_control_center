@@ -12,7 +12,7 @@ from .models import (
 
 class NetworkInterfaceInline(admin.StackedInline):
   model = NetworkInterface
-  extra=0
+  extra=1
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
   verbose_name="Network Interfaces"
