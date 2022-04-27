@@ -86,3 +86,8 @@
   fields:
     name: Image Sync Job
     slug: image-sync
+- model: jobqueue.jobmodule
+  pk: image-server
+  fields:
+    name: Image Server
+    slug: image-server
