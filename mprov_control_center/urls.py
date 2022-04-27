@@ -42,6 +42,7 @@ admin.site.site_title = 'mProv Control Center'
 admin.site.index_title = 'mProv Control Center'
 
 urlpatterns = [
+    path('accounts/profile/', RedirectView.as_view(url='/admin/')),
     path('admin/', admin.site.urls),
     path('', IndexAPIView.as_view()),
     path('networks/', NetworkAPIView.as_view()),
