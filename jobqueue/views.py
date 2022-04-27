@@ -32,7 +32,6 @@ class JobAPIView(MProvView, mixins.RetrieveModelMixin,
         
         if 'pk' in kwargs:
             # someone is looking for a specific item.
-            print("TODO: Get job by id.")
             return self.retrieve(self, request, format=None, pk=kwargs['pk'])
 
         # Let's see if someone is looking for something specific.
