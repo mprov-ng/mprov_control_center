@@ -146,6 +146,39 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
           defaults={'status': JobStatus.objects.get(pk=1)}
         )
 
+# emit image-delete jobs for every server that currently 
+# hosts a deleted image.
+@receiver(pre_delete, sender=SystemImage)
+def DeleteSystemImage(sender, instance, **kwargs):
+  # grab a copy of the jobservers.
+  jobservers = list(instance.jobservers.all())
+  print(jobservers)
+  # now clear this so everyone stops serving it.
+  instance.jobservers.clear()
+
+
+  JobType = None
+  try:
+      JobType = JobModule.objects.get(slug='image-delete')
+  except:
+      JobType = None
+  # get the jobtype, do nothing if it's not defined.
+  if JobType is not None:
+    # submit an image-delete job for every jobserver in
+    # the list of jobservers this image is hosted on
+    params = { 'imageId': instance.slug}
+    for jobserver in jobservers:
+      print("Job for " + str(jobserver))
+      Job.objects.create( name=JobType.name, 
+        module=JobType, 
+        status=JobStatus.objects.get(pk=1), 
+        params = params,
+        jobserver = jobserver,
+      )
+  else:
+    print("JobType was none.  HuH?")
+  pass
+
 # emits an image-update job everytime an image is modified.
 @receiver(pre_save, sender=SystemImage)
 def UpdateSystemImages(sender, instance, **kwargs):
@@ -158,8 +191,8 @@ def UpdateSystemImages(sender, instance, **kwargs):
       JobType = JobModule.objects.get(slug='image-update')
   except:
       JobType = None
-  print(str(JobType) + " post")
-  # get or create the OSIMAGE_UPDATE job module in the DB
+  # print(str(JobType) + " post")
+
   # get the jobtype, do nothing if it's not defined.
   if JobType is not None:
 
