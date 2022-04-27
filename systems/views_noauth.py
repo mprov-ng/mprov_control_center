@@ -11,16 +11,22 @@ from systems.serializers import SystemImageSerializer, SystemImageUpdateSerializ
 from osmanagement.models import OSDistro, OSRepo
 from rest_framework.response import Response
 from jobqueue.models import JobServer
+from rest_framework import generics
 
 
-
-class SystemImageAPIView(APIView):
+class SystemImageAPIView(generics.ListAPIView):
       model = SystemImage
       # TODO: placeholder for now to test 302 redirects
       authentication_classes = [] #disables authentication
       permission_classes = [] #disables permission
+      serializer_class = SystemImageSerializer
       def get(self, request, format=None, *args, **kwargs):
-        image = SystemImage.objects.get(pk=kwargs['pk'])
+        if 'pk' in kwargs:
+          image = SystemImage.objects.get(pk=kwargs['pk'])
+        else: 
+          # no pk in image, spit out a list then.
+          self.queryset = SystemImage.objects.all()
+          return(generics.ListAPIView.get(self, request, format=None))
         # choose a random jobserver
         js_set = list(image.jobservers.all())
         js = None
