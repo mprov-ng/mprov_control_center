@@ -71,7 +71,7 @@ class SystemImageAdmin(admin.ModelAdmin):
     ),
   )
   def registered_jobservers(self, obj):
-    return ", ".join([jm.slug for jm in obj.jobservers.all()])
+    return ", ".join([jm.name for jm in obj.jobservers.all()])
   registered_jobservers.short_description = 'Registered Job Servers'
   
   
