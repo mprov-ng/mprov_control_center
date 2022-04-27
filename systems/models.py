@@ -35,7 +35,7 @@ class System(models.Model):
   )
   updated=models.DateTimeField(auto_now=True, verbose_name="Lasted Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
-  config_parameters = models.TextField(
+  config_params = models.TextField(
     default="-- #Inherit from System Group or Distrubtion.",
     verbose_name="Configuration\nParameters",
     blank=True,
@@ -78,7 +78,7 @@ class SystemImage(models.Model):
   created_by=models.ForeignKey(
     settings.AUTH_USER_MODEL, 
     on_delete=models.SET(1),
-    verbose_name="Created By"
+    verbose_name="Created By",
   )
   updated=models.DateTimeField(auto_now=True, verbose_name="Lasted Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
@@ -149,7 +149,10 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
 # emits an image-update job everytime an image is modified.
 @receiver(pre_save, sender=SystemImage)
 def UpdateSystemImages(sender, instance, **kwargs):
+  if not instance.needs_rebuild: 
+    return
   instance.slug = slugify(instance.name)
+
   JobType = None
   try:
       JobType = JobModule.objects.get(slug='image-update')
