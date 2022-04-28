@@ -86,7 +86,7 @@ JAZZMIN_UI_TWEAKS = {
     "navbar": "navbar-teal navbar-dark",
     "no_navbar_border": False,
     "navbar_fixed": False,
-    "layout_boxed": True,
+    "layout_boxed": False,
     "footer_fixed": False,
     "sidebar_fixed": False,
     "sidebar": "sidebar-light-olive",
