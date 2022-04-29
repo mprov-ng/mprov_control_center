@@ -2,6 +2,7 @@ from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import pre_save, pre_delete
 from jobqueue.models import JobModule, Job, JobStatus
+from scripts.models import Script
 
 class OSDistro(models.Model):
   name=models.CharField(max_length=100)
@@ -25,6 +26,7 @@ class OSDistro(models.Model):
     null=True,
     verbose_name="Configuration\nParameters",
   )
+  scripts = models.ManyToManyField(Script, blank=True, )
   install_kernel_cmdline=models.CharField(max_length=4096, null=True, blank=True,help_text="Options to pass to the install kernel")
   class Meta:
     ordering=['name']

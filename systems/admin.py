@@ -34,6 +34,7 @@ class SystemAdmin(admin.ModelAdmin):
         'timestamp',
         'updated',
         'systemgroups',
+        'scripts',
         'config_params',
       )
     }),
@@ -49,7 +50,7 @@ class SystemGroupAdmin(admin.ModelAdmin):
 
 class SystemImageAdmin(admin.ModelAdmin):
   list_display = ['slug', 'name', 'version', 'registered_jobservers']
-  readonly_fields = ['timestamp', 'updated', 'created_by', 'version', 'jobservers']
+  readonly_fields = ['timestamp', 'updated', 'created_by',  'jobservers']
   list_display_links = ['slug', 'name']
   fieldsets = (
     (None, {
@@ -61,6 +62,7 @@ class SystemImageAdmin(admin.ModelAdmin):
         'version',
         'jobservers',
         'systemgroups',
+        'scripts',
         'config_params',
         'needs_rebuild',
       )

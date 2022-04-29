@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'osmanagement',
     'systems',
     'jobqueue',
+    'scripts',
     'rest_framework',
     'rest_framework_api_key',
 
@@ -71,6 +72,7 @@ JAZZMIN_SETTINGS={
         'jobqueue.jobserver':'fas fa-hdd',
         'systems.systemimage': 'fas fa-save',
         'rest_framework_api_key.apikey': 'fas fa-key',
+        'scripts.script': 'fas fa-scroll',
     },
     'copyright': ' ',
     #"related_modal_active": True
@@ -240,3 +242,6 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR,"static"),
     #'/var/www/static/',
 ]
+
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_URL = "media/"

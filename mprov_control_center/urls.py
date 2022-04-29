@@ -35,7 +35,8 @@ from jobqueue.views import (
     JobServersAPIView,
     JobAPIView,
 )
-
+from django.conf import settings
+from django.conf.urls.static import static
 
 admin.site.site_header = 'mProv Control Center'
 admin.site.site_title = 'mProv Control Center'
@@ -59,6 +60,6 @@ urlpatterns = [
     path('repos/', include('osmanagement.repos_urls')),
     path('jobmodules/', include('jobqueue.jobmodules_urls')),    
     path('jobservers/', include('jobqueue.jobservers_urls')),
-    path('jobs/', include('jobqueue.jobs_urls'))
-
-]
+    path('jobs/', include('jobqueue.jobs_urls')),
+    *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)  
+] 

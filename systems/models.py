@@ -6,9 +6,11 @@ from osmanagement.models import OSDistro, OSRepo
 from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, JobStatus, Job, JobServer
 from django.utils.text import slugify
+from scripts.models import Script
 
 class SystemGroup(models.Model):
   name=models.CharField(max_length=255)
+  scripts = models.ManyToManyField(Script, blank=True, )
   config_params=models.TextField(
     blank=True, 
     default="-- # Inherit from OS", 
@@ -35,6 +37,7 @@ class System(models.Model):
   )
   updated=models.DateTimeField(auto_now=True, verbose_name="Lasted Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
+  scripts = models.ManyToManyField(Script, blank=True, )
   config_params = models.TextField(
     default="-- #Inherit from System Group or Distrubtion.",
     verbose_name="Configuration\nParameters",
@@ -82,6 +85,8 @@ class SystemImage(models.Model):
   )
   updated=models.DateTimeField(auto_now=True, verbose_name="Lasted Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
+  scripts = models.ManyToManyField(Script, blank=True, )
+
   needs_rebuild = models.BooleanField(default=True, verbose_name="Rebuild Image?")
   version = models.BigIntegerField(default=1, verbose_name="Image Version")
   jobservers = models.ManyToManyField(JobServer, verbose_name="Hosted By", blank=True)

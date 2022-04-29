@@ -1,0 +1,8 @@
+- model: scripts.scripttype
+  pk: image-gen
+  fields:
+    name: "Image Generation"
+- model: scripts.scripttype
+  pk: post-boot
+  fields:
+    name: "Post Boot"
