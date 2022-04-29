@@ -18,11 +18,15 @@ class Script(models.Model):
   slug=models.SlugField(unique=True, primary_key=True)
   filename = models.FileField(upload_to='')
   scriptType = models.ForeignKey(ScriptType, on_delete=models.SET_NULL, null=True)
+  version = models.BigIntegerField(default=1)
   dependsOn = models.ManyToManyField('self',blank=True)
 
-@receiver(pre_save, sender=Script)
-def SluggifyScriptName(sender, instance, **kwargs):
-  instance.slug = slugify(instance.name)
+  def save(self, *args, **kwargs):
+    if not self.slug:
+      self.slug = slugify(self.filename.name)
+    self.filename.name = self.slug + "-v" + str(self.version)
+    super(Script, self).save(*args, **kwargs)
+
 
 @receiver(post_delete, sender=Script)
 def DeleteScript(sender, instance, **kwargs):
