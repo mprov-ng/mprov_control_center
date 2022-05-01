@@ -91,3 +91,8 @@
   fields:
     name: Image Server
     slug: image-server
+- model: jobqueue.jobmodule
+  pk: dnsmasq
+  fields:
+    name: Dnsmasq Config Management
+    slug: dnsmasq
