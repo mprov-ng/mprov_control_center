@@ -1,7 +1,6 @@
-from systems.models import SystemImage
+from systems.models import NetworkInterface, SystemImage
 from rest_framework import serializers
-from jobqueue.serializers import JobServerAPISerializer
-from jobqueue.models import JobServer
+
 
 class SystemImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,7 +12,17 @@ class SystemImageUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemImage
         fields = '__all__'
-        
+class NetworkInterfaceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NetworkInterface
+        fields = '__all__'
+
+class NetworkInterfaceDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NetworkInterface
+        fields = '__all__'
+        depth=3
+
     # def update(self, instance, validated_data):
     #     jobservers_data = validated_data.pop('jobservers')
     #     print("JS Data: " + jobservers_data)
