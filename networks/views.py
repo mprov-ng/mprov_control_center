@@ -1,9 +1,12 @@
+
 from common.views import MProvView
 from networks.models import Network, NetworkType, Switch, SwitchPort
+from .serializers import NetworkAPISerializer
 
 class NetworkAPIView(MProvView):
     model = Network 
     template = 'network_docs.html'
+    serializer_class = NetworkAPISerializer
 
 class NetworkTypeAPIView(MProvView):
     model = NetworkType

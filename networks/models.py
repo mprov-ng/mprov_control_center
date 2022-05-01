@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils.text import slugify
 
 
 
@@ -14,6 +15,7 @@ class NetworkType(models.Model):
 
 class Network(models.Model):
   name=models.CharField(max_length=120)
+  slug=models.SlugField(unique=True,verbose_name="Network ID")
   net_type=models.ForeignKey(
     NetworkType, 
     on_delete=models.CASCADE, 
@@ -25,8 +27,30 @@ class Network(models.Model):
   for mask in range(1,32):
     masks.append((mask,mask))
   netmask=models.IntegerField(choices=masks, verbose_name="CIDR Mask")
+
+  # Add domain
+  domain=models.CharField(max_length=255)
+
+  # Add Enable DHCP?
+  isdhcp = models.BooleanField(default=False)
+
+  # Add Enable DNS?
+  managedns = models.BooleanField(default=False)
+  
+  # Add Enable Network Booting?
+  isbootable = models.BooleanField(default=False)
+
+  # dhcp net dynamic start
+  dhcpstart = models.GenericIPAddressField(blank=True, null=True)
+  dhcpend = models.GenericIPAddressField(blank=True, null=True)
+
   def __str__(self):
       return self.name
+
+  def save(self, *args, **kwargs):
+    if not self.slug:
+      self.slug = slugify(self.name)
+    super().save(*args, **kwargs)
   
  
 
