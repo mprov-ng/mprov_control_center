@@ -28,7 +28,6 @@ class SystemGroup(models.Model):
 
 class System(models.Model):
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
-  domainname=models.CharField(max_length=255, verbose_name="Domain Name")
   timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
   created_by=models.ForeignKey(
     settings.AUTH_USER_MODEL, 
@@ -68,7 +67,6 @@ class NetworkInterface(models.Model):
   system = models.ForeignKey(System, on_delete=models.CASCADE)
   name=models.CharField(max_length=120, verbose_name="Interface Name(eg. eth0)")
   hostname=models.CharField(max_length=255, )
-  domainname=models.CharField(max_length=255, )
   ipaddress=models.GenericIPAddressField(verbose_name="IP Address ")
   mac=models.CharField(max_length=100, verbose_name="MAC Address")
   switch_port=models.ForeignKey(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")

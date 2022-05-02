@@ -56,7 +56,6 @@ class Network(models.Model):
 
 class Switch(models.Model):
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
-  domainname=models.CharField(max_length=255, verbose_name="Domain Name")
   timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
   created_by=models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, verbose_name="Created By")
   updated=models.DateTimeField(auto_now=True, verbose_name="Last Updated")

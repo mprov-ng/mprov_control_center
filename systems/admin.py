@@ -29,7 +29,6 @@ class SystemAdmin(admin.ModelAdmin):
     (None, {
       'fields': (
         'hostname',
-        'domainname',
         'created_by',
         'timestamp',
         'updated',
