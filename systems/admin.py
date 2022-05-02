@@ -38,7 +38,7 @@ class SystemAdmin(admin.ModelAdmin):
       )
     }),
     ('OS Management', {
-      'fields': ('osdistro','osrepos')
+      'fields': ['systemimage',]
     }
     ),
   )

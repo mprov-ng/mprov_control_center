@@ -1,3 +1,4 @@
+from operator import mod
 from django.db import models
 from django.conf import settings
 from django.dispatch import receiver
@@ -43,18 +44,19 @@ class System(models.Model):
     blank=True,
     null=True,
   )
-  osdistro = models.ForeignKey(
-    OSDistro,
-    blank=True, 
-    null=True, 
-    on_delete=models.SET_NULL,
-    verbose_name="OS Distrubution"
-  )
-  osrepos=models.ManyToManyField(
-    OSRepo, 
-    blank=True,
-    verbose_name="OS Repositories"
-  )
+  systemimage = models.ForeignKey('SystemImage', blank=True, null=True, on_delete=models.SET_NULL)
+  # osdistro = models.ForeignKey(
+  #   OSDistro,
+  #   blank=True, 
+  #   null=True, 
+  #   on_delete=models.SET_NULL,
+  #   verbose_name="OS Distrubution"
+  # )
+  # osrepos=models.ManyToManyField(
+  #   OSRepo, 
+  #   blank=True,
+  #   verbose_name="OS Repositories"
+  # )
   class Meta:
     ordering = ['hostname']
     verbose_name = 'Systems'
