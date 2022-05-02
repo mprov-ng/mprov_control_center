@@ -96,3 +96,8 @@
   fields:
     name: Dnsmasq Config Management
     slug: dnsmasq
+- model: jobqueue.jobmodule
+  pk: script-runner
+  fields:
+    name: Script Runner
+    slug: script-runner

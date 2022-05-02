@@ -61,5 +61,6 @@ urlpatterns = [
     path('jobmodules/', include('jobqueue.jobmodules_urls')),    
     path('jobservers/', include('jobqueue.jobservers_urls')),
     path('jobs/', include('jobqueue.jobs_urls')),
+    path('scripts/', include('scripts.scripts_urls')),
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)  
 ] 

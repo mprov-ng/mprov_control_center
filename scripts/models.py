@@ -19,7 +19,10 @@ class Script(models.Model):
   filename = models.FileField(upload_to='')
   scriptType = models.ForeignKey(ScriptType, on_delete=models.SET_NULL, null=True)
   version = models.BigIntegerField(default=1)
-  dependsOn = models.ManyToManyField('self',blank=True)
+  dependsOn = models.ManyToManyField('self',blank=True,symmetrical=False)
+
+  def __str__(self):
+    return self.name
 
   def save(self, *args, **kwargs):
     if not self.slug:
