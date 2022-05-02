@@ -68,7 +68,7 @@ class NetworkInterface(models.Model):
   name=models.CharField(max_length=120, verbose_name="Interface Name(eg. eth0)")
   hostname=models.CharField(max_length=255, )
   ipaddress=models.GenericIPAddressField(verbose_name="IP Address ")
-  mac=models.CharField(max_length=100, verbose_name="MAC Address")
+  mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)
   switch_port=models.ForeignKey(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
 
 
