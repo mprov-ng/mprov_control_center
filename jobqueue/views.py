@@ -37,9 +37,16 @@ class JobAPIView(MProvView, mixins.RetrieveModelMixin,
         # Let's see if someone is looking for something specific.
         queryset = self.model.objects.all()
         jobmodule = self.request.query_params.get('module')
-        # print(jobmodule)
+        
         if jobmodule is not None:
-            queryset = queryset.filter(module=jobmodule)
+            print(jobmodule)
+            if jobmodule[0] == "[":
+                # we are being passed an array
+                # convert the string to an array
+                modules = json.loads(jobmodule) 
+                queryset = queryset.filter(module__in=modules)
+            else:
+                queryset = queryset.filter(module=jobmodule)
         params = self.request.query_params.get('params')
         # print(params)
         if params is not None:
