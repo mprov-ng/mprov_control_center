@@ -1,0 +1,11 @@
+#!ipxe
+{% for nic in nics %}
+kernel /kernels/{{ nic.system.systemimage }} initrd={{ nic.system.systemimage }} console=tty0 selinux=0 enforcing=0 debug rdinit=/linuxrc
+initrd /images/{{ nic.system.systemimage }}.initramfs
+# insert our mprov setup script here and mount it on /linuxrc
+initrd /static/mprov_boot.sh /linuxrc mode=755
+initrd /static/busybox /bin/busybox mode=755
+initrd /static/default.script /bin/default.script mode=755
+# insert a few more files we are going to need.  wget, curl, 
+boot
+{% endfor %}

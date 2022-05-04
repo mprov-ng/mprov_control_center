@@ -1,4 +1,5 @@
 from http.client import NETWORK_AUTHENTICATION_REQUIRED
+import ipaddress
 from re import template
 from .serializers import NetworkInterfaceDetailsSerializer, NetworkInterfaceSerializer
 
@@ -55,4 +56,28 @@ class NetworkInterfaceDetailAPIView(MProvView):
       template = "networkinterface_docs.html"
       serializer_class = NetworkInterfaceDetailsSerializer
 
+class IPXEAPIView(MProvView):
+    model = NetworkInterface
+    serializer_class = NetworkInterfaceDetailsSerializer
+    authentication_classes = [] #disables authentication
+    permission_classes = [] #disables permission
+    def get(self, request, format=None, **kwargs):
+        # grab the IP
+        ip=""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        ip="172.16.0.1"
+        # now try to grab the nic for this IP
+        queryset = self.model.objects.all()
+        queryset = queryset.filter(ipaddress=ip)
+        context= {
+            'nics': queryset,
+        }
+        print(ip)
+        print(context['nics'])
+        return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
+        pass
 

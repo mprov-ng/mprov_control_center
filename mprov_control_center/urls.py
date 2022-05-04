@@ -21,7 +21,9 @@ from systems.views import (
     SystemAPIView,
     SystemGroupAPIView,
     NetworkInterfaceAPIView,
+    IPXEAPIView,
 )
+from systems.views_noauth import KernelImageAPIView
 
 from networks.views import (
     NetworkAPIView,
@@ -31,10 +33,6 @@ from networks.views import (
 
 )
 
-from jobqueue.views import (
-    JobServersAPIView,
-    JobAPIView,
-)
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -54,6 +52,7 @@ urlpatterns = [
     path('switchports/', SwitchPortAPIView.as_view()),
     path('systemgroups/', SystemGroupAPIView.as_view()),
     path('networkinterfaces/', NetworkInterfaceAPIView.as_view()),
+    path('ipxe/', IPXEAPIView.as_view()),
     
     path('images/', include('systems.systemimage_urls')),
     path('distros/', include('osmanagement.distros_urls')),
@@ -62,5 +61,7 @@ urlpatterns = [
     path('jobservers/', include('jobqueue.jobservers_urls')),
     path('jobs/', include('jobqueue.jobs_urls')),
     path('scripts/', include('scripts.scripts_urls')),
-    *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)  
+    path('kernels/', include('systems.kernels_urls')),
+    *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
+    
 ] 
