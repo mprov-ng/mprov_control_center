@@ -10,6 +10,9 @@ from rest_framework.response import Response
 from django.db.models import Prefetch
 from networks.models import SwitchPort, Network
 from rest_framework import status, generics
+from django.template import Template, Context
+
+
 
 
 
@@ -69,15 +72,25 @@ class IPXEAPIView(MProvView):
             ip = x_forwarded_for.split(',')[0]
         else:
             ip = request.META.get('REMOTE_ADDR')
-        ip="172.16.0.1"
+        # ip="172.16.0.1"
         # now try to grab the nic for this IP
         queryset = self.model.objects.all()
         queryset = queryset.filter(ipaddress=ip)
+
+        # the following lines allow recurive templating to be done on the kernel cmdline.
+        for nic in queryset:
+            template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
+            print(nic)
+            context = Context(dict(nic=nic))
+            rendered: str = template.render(context)
+            nic.system.systemimage.osdistro.install_kernel_cmdline = rendered
+
+
         context= {
             'nics': queryset,
         }
-        print(ip)
-        print(context['nics'])
+        print("PXE Request from: " + ip)
+        # print(context['nics'])
         return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
         pass
 
