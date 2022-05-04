@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
-
+from django.dispatch import receiver
+from django.db.models.signals import pre_save
 
 
 class NetworkType(models.Model):
@@ -58,7 +59,11 @@ class Network(models.Model):
 class Switch(models.Model):
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
   timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
-  created_by=models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING, verbose_name="Created By")
+  created_by=models.ForeignKey(
+    settings.AUTH_USER_MODEL, 
+    on_delete=models.SET(1),
+    verbose_name="Created By"
+  )
   updated=models.DateTimeField(auto_now=True, verbose_name="Last Updated")
   network=models.ForeignKey(Network, on_delete=models.DO_NOTHING, verbose_name='Management\nNetwork')
   mgmt_ip=models.GenericIPAddressField(verbose_name="Management IP")
@@ -77,3 +82,16 @@ class SwitchPort(models.Model):
   class Meta:
     verbose_name = 'Switch Port'  
    
+@receiver(pre_save, sender=Switch)
+def UpdateSystemAttributes(sender, instance, **kwargs):
+  
+  if sender == Switch:
+    import inspect
+    for frame_record in inspect.stack():
+        if frame_record[3]=='get_response':
+            request = frame_record[0].f_locals['request']
+            break
+    else:
+        request = None
+    if request is not None:
+      instance.created_by = request.user

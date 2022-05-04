@@ -23,6 +23,7 @@ class SwitchPortInline(admin.StackedInline):
 class SwitchAdmin(admin.ModelAdmin):
   model = Switch
   inlines = [SwitchPortInline]
+  readonly_fields = ['created_by']
   list_display = ['id', 'hostname', 'mgmt_ip', 'mgmt_mac', 'network']
   list_display_links = ['id', 'hostname']
 
