@@ -133,3 +133,4 @@ disks/
 locations/
 static/initrd.img
 static/vmlinuz
+media/
