@@ -1,5 +1,4 @@
 django>=3.2,<3.3
-dataclasses>=0.8
 djangorestframework
 pyyaml
 requests
@@ -9,3 +8,4 @@ django-autocomplete-light
 django-ckeditor
 djangorestframework-api-key
 django-session-timeout
+django-filter
