@@ -27,7 +27,8 @@ class Network(models.Model):
   for mask in range(1,32):
     masks.append((mask,mask))
   netmask=models.IntegerField(choices=masks, verbose_name="CIDR Mask")
-
+  gateway=models.GenericIPAddressField()
+  nameserver1=models.GenericIPAddressField()
   # Add domain
   domain=models.CharField(max_length=255)
 
