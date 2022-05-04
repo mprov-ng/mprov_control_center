@@ -2,8 +2,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 from django.dispatch import receiver
-from django.db.models.signals import pre_save
-
+from django.db.models.signals import pre_save, pre_delete
+from jobqueue.models import JobModule, JobStatus, Job
 
 class NetworkType(models.Model):
   name=models.CharField(max_length=120)
@@ -83,8 +83,7 @@ class SwitchPort(models.Model):
     verbose_name = 'Switch Port'  
    
 @receiver(pre_save, sender=Switch)
-def UpdateSystemAttributes(sender, instance, **kwargs):
-  
+def UpdateSwitch(sender, instance, **kwargs):
   if sender == Switch:
     import inspect
     for frame_record in inspect.stack():
@@ -95,3 +94,42 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
         request = None
     if request is not None:
       instance.created_by = request.user
+
+@receiver(pre_save, sender=Network)
+def UpdateNetwork(sender, instance, **kwargs):
+
+  for slug in ['pxe-update', 'dns-update', 'dhcp-update']:
+    JobType = None
+    try:
+        JobType = JobModule.objects.get(slug=slug)
+    except:
+        JobType = None
+    print(JobType)
+    # get or create the OSIMAGE_UPDATE job module in the DB
+    # get the jobtype, do nothing if it's not defined.
+    if JobType is not None:
+        # save a new job, if one doesn't already exist.
+
+        Job.objects.update_or_create(
+          name=JobType.name , module=JobType,
+          defaults={'status': JobStatus.objects.get(pk=1)}
+        )      
+
+@receiver(pre_delete, sender=Network)
+def DeleteNetwork(sender, instance, **kwargs):
+  for slug in ['pxe-delete', 'dns-delete', 'dhcp-delete']:
+    JobType = None
+    try:
+        JobType = JobModule.objects.get(slug=slug)
+    except:
+        JobType = None
+    print(JobType)
+    # get or create the job module in the DB
+    # get the jobtype, do nothing if it's not defined.
+    if JobType is not None:
+        # save a new job, if one doesn't already exist.
+
+        Job.objects.update_or_create(
+          name=JobType.name , module=JobType,
+          defaults={'status': JobStatus.objects.get(pk=1)}
+        )      

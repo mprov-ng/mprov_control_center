@@ -124,17 +124,18 @@ class SystemImage(models.Model):
 @receiver(pre_save, sender=System)
 @receiver(pre_save, sender=NetworkInterface)
 def UpdateSystemAttributes(sender, instance, **kwargs):
+  
+  if sender == SystemImage or sender == System:
+    import inspect
+    for frame_record in inspect.stack():
+        if frame_record[3]=='get_response':
+            request = frame_record[0].f_locals['request']
+            break
+    else:
+        request = None
+    if request is not None:
+      instance.created_by = request.user
   for slug in ['pxe-update', 'dns-update', 'dhcp-update']:
-    if sender == SystemImage or sender == System:
-      import inspect
-      for frame_record in inspect.stack():
-          if frame_record[3]=='get_response':
-              request = frame_record[0].f_locals['request']
-              break
-      else:
-          request = None
-      if request is not None:
-        instance.created_by = request.user
     JobType = None
     try:
         JobType = JobModule.objects.get(slug=slug)
