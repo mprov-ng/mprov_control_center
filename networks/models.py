@@ -65,7 +65,7 @@ class Switch(models.Model):
     verbose_name="Created By"
   )
   updated=models.DateTimeField(auto_now=True, verbose_name="Last Updated")
-  network=models.ForeignKey(Network, on_delete=models.DO_NOTHING, verbose_name='Management\nNetwork')
+  network=models.ForeignKey(Network, on_delete=models.DO_NOTHING, null=True, blank=True, verbose_name='Management\nNetwork')
   mgmt_ip=models.GenericIPAddressField(verbose_name="Management IP")
   mgmt_mac=models.CharField(max_length=100, verbose_name="Management MAC")
   class Meta:
@@ -78,7 +78,7 @@ class SwitchPort(models.Model):
   switch=models.ForeignKey(Switch, on_delete=models.CASCADE)
   def __str__(self):
     return "%s/%s" % (self.switch.hostname, self.name)
-  networks=models.ManyToManyField(Network, verbose_name='Networks')
+  networks=models.ForeignKey(Network, on_delete=models.DO_NOTHING, null=True, blank=True, verbose_name='Network')
   class Meta:
     verbose_name = 'Switch Port'  
    
