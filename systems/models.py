@@ -2,6 +2,7 @@ from operator import mod
 from django.db import models
 from django.conf import settings
 from django.dispatch import receiver
+from django.forms import CharField, PasswordInput, ModelForm
 from networks.models import SwitchPort
 from osmanagement.models import OSDistro, OSRepo
 from django.db.models.signals import pre_save, pre_delete, post_save
@@ -45,18 +46,7 @@ class System(models.Model):
     null=True,
   )
   systemimage = models.ForeignKey('SystemImage', blank=True, null=True, on_delete=models.SET_NULL)
-  # osdistro = models.ForeignKey(
-  #   OSDistro,
-  #   blank=True, 
-  #   null=True, 
-  #   on_delete=models.SET_NULL,
-  #   verbose_name="OS Distrubution"
-  # )
-  # osrepos=models.ManyToManyField(
-  #   OSRepo, 
-  #   blank=True,
-  #   verbose_name="OS Repositories"
-  # )
+ 
   class Meta:
     ordering = ['hostname']
     verbose_name = 'Systems'
@@ -64,7 +54,30 @@ class System(models.Model):
   
   def __str__(self):
     return self.hostname
- 
+
+
+class SystemBMC(models.Model):
+  
+  system = models.ForeignKey(System, on_delete=models.CASCADE)
+  ipaddress=models.GenericIPAddressField(verbose_name="IP Address ")
+  mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)
+  username=models.CharField(max_length=255, verbose_name="BMC User", blank=True, null=True)
+  password=models.CharField(max_length=100, verbose_name="BMC Password", blank=True, null=True)
+  switch_port=models.ForeignKey(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
+  class Meta:
+    verbose_name = 'Power Management'
+    verbose_name_plural = 'Power Management'
+
+  
+  def __str__(self):
+    return self.system.name + " BMC"
+
+class SystemBMCForm(ModelForm):
+  password = CharField(widget=PasswordInput())
+  class Meta:
+      model = SystemBMC
+      fields = '__all__'
+
 class NetworkInterface(models.Model):
   system = models.ForeignKey(System, on_delete=models.CASCADE)
   name=models.CharField(max_length=120, verbose_name="Interface Name(eg. eth0)")

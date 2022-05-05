@@ -1,9 +1,11 @@
 from csv import list_dialects
+from tabnanny import verbose
 from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericStackedInline
 
 from .models import (
   System,
+  SystemBMC,
   SystemGroup,
   NetworkInterface,
   SystemImage,
@@ -18,10 +20,17 @@ class NetworkInterfaceInline(admin.StackedInline):
   verbose_name="Network Interfaces"
   verbose_name_plural="Network Interfaces"
 
+class BMCInLine(admin.StackedInline):
+  model = SystemBMC
+  extra = 1
+  list_display = ['id', 'ipaddress']
+  list_display_links = ['id', 'ipaddress']
+  verbose_name="System BMC"
+  verbose_name="System BMCs"
 
 
 class SystemAdmin(admin.ModelAdmin):
-  inlines = [NetworkInterfaceInline]
+  inlines = [NetworkInterfaceInline, BMCInLine]
   list_display = ['id', 'hostname']
   readonly_fields = ['timestamp', 'updated', 'created_by']
   list_display_links = ['id', 'hostname']
