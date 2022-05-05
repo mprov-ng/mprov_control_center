@@ -12,7 +12,7 @@ from .models import (
 )
 
 
-class NetworkInterfaceInline(admin.StackedInline):
+class NetworkInterfaceInline(admin.TabularInline):
   model = NetworkInterface
   extra=1
   list_display = ['id', 'name']

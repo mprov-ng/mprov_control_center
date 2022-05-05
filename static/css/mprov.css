@@ -19,3 +19,34 @@ a {
 .timeline>div>.timeline-item>.time {
   width: 100%;
 }
+
+input[id^="id_networkinterface_set"]  {
+  width: 150px;
+}
+
+a.inline-deletelink {
+  float: none;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+  background-color: #20c997;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+  color: #FFF;
+  margin-left: 0px;
+  border-right: 1px solid black;
+
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__display {
+  padding-left: 10px;
+  color: white;
+}
+td.delete input {
+
+  width: 100%;
+}
+.nav-sidebar>.nav-header{
+ 
+  display: none !important;
+}

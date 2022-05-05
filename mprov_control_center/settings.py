@@ -31,10 +31,11 @@ ALLOWED_HOSTS = ['127.0.0.1','10.1.2.80','localhost','172.16.1.1']
 # Application definition
 
 INSTALLED_APPS = [
-    'dal',
-    'dal_select2',
-    'django_filters',
     'jazzmin',
+    # 'dal',
+    # 'dal_select2',
+    'django_filters',
+    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -53,7 +54,7 @@ INSTALLED_APPS = [
 
 ]
 JAZZMIN_SETTINGS={
-    "custom_css": "css/mprov.css",
+    # "custom_css": "css/mprov.css",
     'show_ui_builder': True,
     'site_logo': 'mProvLogo.png',
     'icons': {

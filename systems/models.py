@@ -80,7 +80,7 @@ class SystemBMCForm(ModelForm):
 
 class NetworkInterface(models.Model):
   system = models.ForeignKey(System, on_delete=models.CASCADE)
-  name=models.CharField(max_length=120, verbose_name="Interface Name(eg. eth0)")
+  name=models.CharField(max_length=50, verbose_name="Iface. Name",)
   hostname=models.CharField(max_length=255, )
   ipaddress=models.GenericIPAddressField(verbose_name="IP Address ")
   mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)

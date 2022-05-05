@@ -13,7 +13,7 @@ class NetworkTypeAdmin(admin.ModelAdmin):
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
 
-class SwitchPortInline(admin.StackedInline):
+class SwitchPortInline(admin.TabularInline):
   model = SwitchPort
   extra = 1
   list_display = ['name']
