@@ -101,3 +101,8 @@
   fields:
     name: Script Runner
     slug: script-runner
+- model:  jobqueue.jobmodule
+  pk: nads
+  fields:
+    name: Node Auto Detection System
+    slug: nads
