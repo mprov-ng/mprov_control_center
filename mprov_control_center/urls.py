@@ -22,6 +22,7 @@ from systems.views import (
     SystemGroupAPIView,
     NetworkInterfaceAPIView,
     IPXEAPIView,
+    SystemRegAPIView,
 )
 from systems.views_noauth import KernelImageAPIView
 
@@ -46,7 +47,7 @@ urlpatterns = [
     path('', IndexAPIView.as_view()),
     path('networks/', NetworkAPIView.as_view()),
     path('networktypes/', NetworkTypeAPIView.as_view()),
-    
+    path('systems/register', SystemRegAPIView.as_view()),
     path('systems/', SystemAPIView.as_view()),
     path('switches/', SwitchAPIView.as_view()),
     path('switchports/', SwitchPortAPIView.as_view()),

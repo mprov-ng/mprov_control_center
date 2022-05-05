@@ -1,20 +1,51 @@
 from http.client import NETWORK_AUTHENTICATION_REQUIRED
 import ipaddress
 from re import template
-from .serializers import NetworkInterfaceDetailsSerializer, NetworkInterfaceSerializer
+from unicodedata import name
+from .serializers import (
+    NetworkInterfaceDetailsSerializer,
+    NetworkInterfaceSerializer,
+    SystemSerializer,
+)
+from rest_framework.response import Response
 
 from common.views import MProvView
 from systems.models import NetworkInterface, System, SystemGroup, SystemImage
 from django.shortcuts import render
 from rest_framework.response import Response
 from django.db.models import Prefetch
-from networks.models import SwitchPort, Network
+from networks.models import SwitchPort, Network, Switch
 from rest_framework import status, generics
 from django.template import Template, Context
 
 
 
-
+class SystemRegAPIView(MProvView):
+    model = System
+    serializer_class = SystemSerializer
+    queryset = System.objects.none()
+    def post(self, request, *args, **kwargs):
+        print(request.data)
+        
+        switch = Switch.objects.get(hostname=request.data['switch'])
+        print(switch)
+        
+        port= SwitchPort.objects.get(name=request.data['port'], switch=switch)
+        print(port)
+        nicQueryset = NetworkInterface.objects.all()
+        nicQueryset = nicQueryset.filter(mac=None, switch_port=port)
+        print(nicQueryset)
+        if nicQueryset is not None and len(nicQueryset) > 0:
+            system = System.objects.get(pk=nicQueryset[0].system.pk)
+            if system is not None:
+                nicObj = nicQueryset.first()
+                nicObj.mac = request.data['mac']
+                nicObj.save()
+                
+                self.queryset = [system]
+                return  generics.ListAPIView.get(self, request, format=None)
+                return Response(self.get_serializer_class.serialize('json', [system]))
+        return  generics.ListAPIView.get(self, request, format=None)
 
 class SystemAPIView(MProvView):
       model = System

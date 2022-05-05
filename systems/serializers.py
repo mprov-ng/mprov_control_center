@@ -1,6 +1,12 @@
-from systems.models import NetworkInterface, SystemImage
+from pyexpat import model
+from systems.models import NetworkInterface, SystemImage, System
 from rest_framework import serializers
 
+class SystemSerializer(serializers.ModelSerializer): 
+    class Meta:
+        model = System
+        fields = '__all__'
+        depth = 3
 
 class SystemImageSerializer(serializers.ModelSerializer):
     class Meta:
