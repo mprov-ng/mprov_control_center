@@ -9,3 +9,4 @@ django-ckeditor
 djangorestframework-api-key
 django-session-timeout
 django-filter
+markdown

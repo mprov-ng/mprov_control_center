@@ -2,6 +2,7 @@ from csv import list_dialects
 from tabnanny import verbose
 from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericStackedInline
+from django.utils.html import mark_safe
 
 from .models import (
   System,
@@ -31,7 +32,7 @@ class BMCInLine(admin.StackedInline):
 
 class SystemAdmin(admin.ModelAdmin):
   inlines = [NetworkInterfaceInline, BMCInLine]
-  list_display = ['id', 'hostname']
+  list_display = ['id', 'hostname', 'getMacs', 'getSwitchPort']
   readonly_fields = ['timestamp', 'updated', 'created_by']
   list_display_links = ['id', 'hostname']
   fieldsets = (
@@ -51,6 +52,25 @@ class SystemAdmin(admin.ModelAdmin):
     }
     ),
   )
+  def getMacs(self, obj):
+
+    query = NetworkInterface.objects.all()
+    query = query.filter(system=obj)
+    netstr = ""
+    for netinf in query.all():
+      print(netinf)
+      netstr += netinf.name + ": [" + str(netinf.mac) + "]<br />"
+    return mark_safe(netstr)
+
+  def getSwitchPort(self, obj):
+    query = NetworkInterface.objects.all()
+    query = query.filter(system=obj)
+    portstr = ""
+    for netinf in query.all():
+      portstr += netinf.name + ": " + str(netinf.switch_port) + "<br />"
+    return mark_safe(portstr)
+  getSwitchPort.short_description = "Switch Ports"
+  getMacs.short_description = 'Network\nInterfaces'
 
 class SystemGroupAdmin(admin.ModelAdmin):
   list_display = ['id', 'name']

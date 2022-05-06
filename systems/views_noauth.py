@@ -14,13 +14,16 @@ from jobqueue.models import JobServer
 from rest_framework import generics
 
 
-class SystemImageAPIView(generics.ListAPIView):
+class SystemImageAPIView(MProvView, generics.ListAPIView):
       model = SystemImage
       # TODO: placeholder for now to test 302 redirects
       authentication_classes = [] #disables authentication
       permission_classes = [] #disables permission
       serializer_class = SystemImageSerializer
       def get(self, request, format=None, *args, **kwargs):
+        result = self.checkContentType(request, format=format, kwargs=kwargs)
+        if result is not None:
+            return result
         isInitRamFS=False
         if 'pk' in kwargs:
           req = kwargs['pk'].split('.', 1)
@@ -51,13 +54,16 @@ class SystemImageAPIView(generics.ListAPIView):
           imageURL += ".img"
 
         return redirect(imageURL)
-class KernelImageAPIView(generics.ListAPIView):
+class KernelImageAPIView(MProvView, generics.ListAPIView):
       model = SystemImage
       # TODO: placeholder for now to test 302 redirects
       authentication_classes = [] #disables authentication
       permission_classes = [] #disables permission
       serializer_class = SystemImageSerializer
       def get(self, request, format=None, *args, **kwargs):
+        result = self.checkContentType(request, format=format, kwargs=kwargs)
+        if result is not None:
+            return result
         if 'pk' in kwargs:
           image = SystemImage.objects.get(pk=kwargs['pk'])
         else: 

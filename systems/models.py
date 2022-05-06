@@ -70,7 +70,7 @@ class SystemBMC(models.Model):
 
   
   def __str__(self):
-    return self.system.name + " BMC"
+    return self.system.hostname + "-bmc"
 
 class SystemBMCForm(ModelForm):
   password = CharField(widget=PasswordInput())

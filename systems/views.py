@@ -60,8 +60,9 @@ class NetworkInterfaceAPIView(MProvView):
       template = "networkinterface_docs.html"
       serializer_class = NetworkInterfaceSerializer
       def get(self, request, format=None, **kwargs):
-        if(request.content_type != 'application/json'):
-            return render(request, self.template, {})
+        result = self.checkContentType(request, format=format, kwargs=kwargs)
+        if result is not None:
+            return result
         # if we are 'application/json' return an empty dict if
         # model is not set.
         if self.model == None:
@@ -96,6 +97,9 @@ class IPXEAPIView(MProvView):
     authentication_classes = [] #disables authentication
     permission_classes = [] #disables permission
     def get(self, request, format=None, **kwargs):
+        result = self.checkContentType(request, format=format, kwargs=kwargs)
+        if result is not None:
+            return result
         # grab the IP
         ip=""
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')

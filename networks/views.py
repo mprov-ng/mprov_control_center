@@ -1,4 +1,5 @@
 
+from django.http import HttpResponseNotAllowed
 from common.views import MProvView
 from networks.models import Network, NetworkType, Switch, SwitchPort
 from .serializers import NetworkAPISerializer, SwitchAPISerializer
@@ -9,14 +10,50 @@ from rest_framework import status, generics
 
 
 class NetworkAPIView(MProvView,mixins.RetrieveModelMixin):
+    '''
+# /networks/
+
+## Accepted HTTP Methods:
+- get
+
+## Documentation
+
+### get method
+Returns a json list of all networks in the MPCC
+
+Format returned:
+
+
+    [
+        {
+            "id": 1,
+            "name": "Cluster LAN",
+            "slug": "cluster-lan",
+            "vlan": "default",
+            "subnet": "172.16.0.0",
+            "netmask": 16,
+            "gateway": "172.16.1.1",
+            "nameserver1": "172.16.1.1",
+            "domain": "test.cluster",
+            "isdhcp": true,
+            "managedns": true,
+            "isbootable": true,
+            "dhcpstart": "172.16.254.1",
+            "dhcpend": "172.16.254.254",
+            "net_type": 1
+        }
+    ]
+
+    '''
     model = Network 
     template = 'network_docs.html'
     serializer_class = NetworkAPISerializer
 
     # Override the default get func, we need a bit more specialized query here
     def get(self, request, format=None, **kwargs):
-        if(request.content_type != 'application/json'):
-            return render(request, self.template, {})
+        result = self.checkContentType(request, format=format, kwargs=kwargs)
+        if result is not None:
+            return result
         # if we are 'application/json' return an empty dict if
         # model is not set.
         if self.model == None:
@@ -38,6 +75,18 @@ class NetworkAPIView(MProvView,mixins.RetrieveModelMixin):
         # return the super call for get.
         return generics.ListAPIView.get(self, request, format=None);
 
+    def post(self, request, *args, **kwargs):
+        return HttpResponseNotAllowed(["GET"])
+
+    def delete(self, request, *args, **kwargs):
+        return HttpResponseNotAllowed(["GET"])
+    
+    def put(self, request, *args, **kwargs):
+        return HttpResponseNotAllowed(["GET"])
+
+    def patch(self, request, *args, **kwargs):
+        return HttpResponseNotAllowed(["GET"])
+
 class NetworkTypeAPIView(MProvView):
     model = NetworkType
     template = 'networktype_docs.html'
@@ -48,8 +97,9 @@ class SwitchAPIView(MProvView):
     serializer_class = SwitchAPISerializer
 
     def get(self, request, format=None, **kwargs):
-        if(request.content_type != 'application/json'):
-            return render(request, self.template, {})
+        result = self.checkContentType(request, format=format, kwargs=kwargs)
+        if result is not None:
+            return result
         # if we are 'application/json' return an empty dict if
         # model is not set.
         if self.model == None:

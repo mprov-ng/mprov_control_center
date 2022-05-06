@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +10,7 @@ from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.contrib.auth.models import AnonymousUser, User
+import markdown
 
 
 class MProvView( 
@@ -30,10 +32,21 @@ class MProvView(
     search_fields = ['name']
     permission_classes = [HasAPIKey|IsAuthenticated]
     
+    def checkContentType(self,request,*args, **kwargs):
+        if(request.content_type != 'application/json'):
+            if self.__doc__ == "" or self.__doc__ == None :
+                message = "#" + self.__class__.__name__  + "\n\n"
+                message += "Documentation pending. \n\n"
+                message += "[Home](/)"
+            else:
+                message = self.__doc__
+            return HttpResponse(markdown.markdown(message), content_type='text/html')
+        return None
 
     def get(self, request, format=None):
-        if(request.content_type != 'application/json'):
-            return render(request, self.template, {})
+        result = self.checkContentType(request, format=format)
+        if result is not None:
+            return result
         # if we are 'application/json' return an empty dict if
         # model is not set.
         if self.model == None:
