@@ -47,7 +47,7 @@ class SystemImageAPIView(MProvView, generics.ListAPIView):
           raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
         print(js_set)
         js = random.choice(js_set)
-        imageURL = "http://" + js.address + "/" + image.slug
+        imageURL = "http://" + js.address + ":" + js.port + "/" + image.slug
         if isInitRamFS:
           imageURL += ".initramfs"
         else:
@@ -78,7 +78,7 @@ class KernelImageAPIView(MProvView, generics.ListAPIView):
           raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
         print(js_set)
         js = random.choice(js_set)
-        imageURL = "http://" + js.address + "/" + image.slug + ".vmlinuz"
+        imageURL = "http://" + js.address + ":" + js.port + "/" + image.slug + ".vmlinuz"
 
         return redirect(imageURL)        
 

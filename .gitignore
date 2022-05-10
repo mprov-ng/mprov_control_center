@@ -134,3 +134,7 @@ locations/
 static/initrd.img
 static/vmlinuz
 media/
+static/admin/
+static/jazzmin/
+static/rest_framework/
+static/vendor/
