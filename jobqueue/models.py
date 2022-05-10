@@ -37,7 +37,7 @@ class JobStatus(models.Model):
 class JobServer(models.Model):
     name = models.CharField(max_length=255, unique=True)
     address = models.GenericIPAddressField()
-    port = models.IntegerField(verbose_name="Port", default=80, )
+    port = models.IntegerField(verbose_name="Port", default=80, null=True)
     heartbeat_time = models.DateTimeField(auto_now=True, verbose_name="Last Heart Beat")
     jobmodules=models.ManyToManyField(JobModule, verbose_name="Handled Job Modules")
     def __str__(self):
