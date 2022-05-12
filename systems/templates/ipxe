@@ -1,6 +1,6 @@
 #!ipxe
 {% for nic in nics %}
-kernel /kernels/{{ nic.system.systemimage }} initrd={{ nic.system.systemimage }} console=tty0 selinux=0 enforcing=0 rdinit=/linuxrc {{ nic.system.systemimage.osdistro.install_kernel_cmdline}}
+kernel /kernels/{{ nic.system.systemimage }} initrd=initrd.magic console=tty0 selinux=0 enforcing=0 rdinit=/linuxrc {{ nic.system.systemimage.osdistro.install_kernel_cmdline }}
 initrd /images/{{ nic.system.systemimage }}.initramfs
 # insert our mprov setup script here and mount it on /linuxrc
 initrd /static/mprov_boot.sh /linuxrc mode=755

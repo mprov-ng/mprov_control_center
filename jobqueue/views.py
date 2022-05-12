@@ -39,7 +39,7 @@ class JobAPIView(MProvView, mixins.RetrieveModelMixin,
         jobmodule = self.request.query_params.get('module')
         
         if jobmodule is not None:
-            print(jobmodule)
+            # print(jobmodule)
             if jobmodule[0] == "[":
                 # we are being passed an array
                 # convert the string to an array
@@ -82,7 +82,8 @@ class JobServersAPIView(MProvView):
         defaults = {
             'heartbeat_time': datetime.now(),
             'address': request.data['address'],
-            'name': request.data['name']
+            'name': request.data['name'],
+            'port': request.data['port']
         }
         data = {}
         if request.data['name']:

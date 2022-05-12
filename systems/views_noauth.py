@@ -21,9 +21,9 @@ class SystemImageAPIView(MProvView, generics.ListAPIView):
       permission_classes = [] #disables permission
       serializer_class = SystemImageSerializer
       def get(self, request, format=None, *args, **kwargs):
-        result = self.checkContentType(request, format=format, kwargs=kwargs)
-        if result is not None:
-            return result
+        # result = self.checkContentType(request, format=format, kwargs=kwargs)
+        # if result is not None:
+        #     return result
         isInitRamFS=False
         if 'pk' in kwargs:
           req = kwargs['pk'].split('.', 1)
@@ -47,7 +47,7 @@ class SystemImageAPIView(MProvView, generics.ListAPIView):
           raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
         print(js_set)
         js = random.choice(js_set)
-        imageURL = "http://" + js.address + ":" + js.port + "/" + image.slug
+        imageURL = "http://" + js.address + ":" + str(js.port) + "/" + image.slug
         if isInitRamFS:
           imageURL += ".initramfs"
         else:
@@ -61,9 +61,9 @@ class KernelImageAPIView(MProvView, generics.ListAPIView):
       permission_classes = [] #disables permission
       serializer_class = SystemImageSerializer
       def get(self, request, format=None, *args, **kwargs):
-        result = self.checkContentType(request, format=format, kwargs=kwargs)
-        if result is not None:
-            return result
+        # result = self.checkContentType(request, format=format, kwargs=kwargs)
+        # if result is not None:
+        #     return result
         if 'pk' in kwargs:
           image = SystemImage.objects.get(pk=kwargs['pk'])
         else: 
@@ -78,7 +78,7 @@ class KernelImageAPIView(MProvView, generics.ListAPIView):
           raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
         print(js_set)
         js = random.choice(js_set)
-        imageURL = "http://" + js.address + ":" + js.port + "/" + image.slug + ".vmlinuz"
+        imageURL = "http://" + js.address + ":" + str(js.port) + "/" + image.slug + ".vmlinuz"
 
         return redirect(imageURL)        
 

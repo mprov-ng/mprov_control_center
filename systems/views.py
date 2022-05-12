@@ -97,9 +97,9 @@ class IPXEAPIView(MProvView):
     authentication_classes = [] #disables authentication
     permission_classes = [] #disables permission
     def get(self, request, format=None, **kwargs):
-        result = self.checkContentType(request, format=format, kwargs=kwargs)
-        if result is not None:
-            return result
+        # result = self.checkContentType(request, format=format, kwargs=kwargs)
+        # if result is not None:
+        #     return result
         # grab the IP
         ip=""
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -107,15 +107,16 @@ class IPXEAPIView(MProvView):
             ip = x_forwarded_for.split(',')[0]
         else:
             ip = request.META.get('REMOTE_ADDR')
-        # ip="172.16.0.1"
+        # ip="172.16.30.1"
+        # print(ip)
         # now try to grab the nic for this IP
         queryset = self.model.objects.all()
         queryset = queryset.filter(ipaddress=ip)
-
+        # print(queryset)
         # the following lines allow recurive templating to be done on the kernel cmdline.
         for nic in queryset:
             template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
-            print(nic)
+            # print(nic)
             context = Context(dict(nic=nic))
             rendered: str = template.render(context)
             nic.system.systemimage.osdistro.install_kernel_cmdline = rendered
