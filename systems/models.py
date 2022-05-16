@@ -85,6 +85,7 @@ class NetworkInterface(models.Model):
   ipaddress=models.GenericIPAddressField(verbose_name="IP Address ")
   mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)
   switch_port=models.ForeignKey(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
+  bootable=models.BooleanField(default=False,null=True, blank=True)
 
 
 class SystemImage(models.Model):
