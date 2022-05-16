@@ -79,6 +79,8 @@ class JobServersAPIView(MProvView):
     # TODO: Redefine post to create_or_update.
     
     def post(self, request, format=None):
+        if 'port' not in request.data:
+            request.data['port'] = None
         defaults = {
             'heartbeat_time': datetime.now(),
             'address': request.data['address'],
