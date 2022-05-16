@@ -17,6 +17,7 @@ from django.db.models import Prefetch
 from networks.models import SwitchPort, Network, Switch
 from rest_framework import status, generics
 from django.template import Template, Context
+from jobqueue.models import Job, JobModule, JobStatus
 
 
 
@@ -41,16 +42,37 @@ class SystemRegAPIView(MProvView):
                 nicObj = nicQueryset.first()
                 nicObj.mac = request.data['mac']
                 nicObj.save()
-                
+                # send in a pxe update job
+                pxejob = Job()
+                pxejob.module = JobModule.objects.get(id='pxe-update')
+                pxejob.status = JobStatus.objects.get(name="PENDING")
+                pxejob.save()
                 self.queryset = [system]
                 return  generics.ListAPIView.get(self, request, format=None)
                 return Response(self.get_serializer_class.serialize('json', [system]))
         return  generics.ListAPIView.get(self, request, format=None)
 
 class SystemAPIView(MProvView):
-      model = System
-      template = "systems_docs.html"
-      
+    model = System
+    template = "systems_docs.html"
+    serializer_class = SystemSerializer
+    queryset = None
+    def get(self, request, format=None, **kwargs):
+        result = self.checkContentType(request, format=format, kwargs=kwargs)
+        if result is not None:
+            return result
+        if self.model == None:
+            return Response(None)
+        self.queryset = self.model.objects.all()
+        if 'hostname' in request.query_params:
+            # someone is looking for a specific item.
+            queryset = self.queryset.filter(hostname=request.query_params['hostname'])
+            if queryset.count() == 0:
+                return Response(None, status=404)
+            return generics.ListAPIView.get(self, request, format=None)
+        return Response(None, status=500)
+
+
 class SystemGroupAPIView(MProvView):
       model = SystemGroup
       template = "systemgroup_docs.html"
@@ -83,7 +105,7 @@ class NetworkInterfaceAPIView(MProvView):
             queryset = self.model.objects.filter(switch_port__in=innerQ)
         self.queryset=queryset
         # return the super call for get.
-        return generics.ListAPIView.get(self, request, format=None);
+        return generics.ListAPIView.get(self, request, format=None)
 
 
 class NetworkInterfaceDetailAPIView(MProvView):
@@ -112,6 +134,25 @@ class IPXEAPIView(MProvView):
         # now try to grab the nic for this IP
         queryset = self.model.objects.all()
         queryset = queryset.filter(ipaddress=ip)
+
+        # our IP is not found, let's see if NADS is running on here.
+        if queryset.count() == 0:
+            imgQs = SystemImage.objects.get(name='__nads__')
+            
+            if type(imgQs) is SystemImage:  
+                # there is a __nads__ iamge, let's serve that.
+                # spoof a nics object
+                class Obj: pass
+                system=Obj()
+                system.systemimage = imgQs
+                # setattr(system, 'systemima?ge', imgQs)
+                nic = Obj()
+                nic.system = system
+                # setattr(nic, 'system', system)
+
+                nics = [ nic ]
+                queryset = nics
+
         # print(queryset)
         # the following lines allow recurive templating to be done on the kernel cmdline.
         for nic in queryset:
