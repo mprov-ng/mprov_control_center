@@ -20,20 +20,19 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'o+*)zk$*fomt^!ct6e8zliz68rxtg^@9a$*myo=_=5wejdpf_q'
+# default to an empty string, set this in the .env file!
+SECRET_KEY = os.environ.get('SECRET_KEY', '')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = str(os.environ.get('DEBUG')) == "1"
 
-ALLOWED_HOSTS = ['127.0.0.1','10.1.2.80','localhost','172.16.1.1']
-
+ALLOWED_HOSTS = ['127.0.0.1','localhost']
+ALLOWED_HOSTS += os.environ.get('ALLOWED_HOSTS', '').split(',')
 
 # Application definition
 
 INSTALLED_APPS = [
     'jazzmin',
-    # 'dal',
-    # 'dal_select2',
     'django_filters',
     
     'django.contrib.admin',
@@ -42,8 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 'core.common',
-    #'locations',
+    
     'networks',
     'osmanagement',
     'systems',
@@ -54,7 +52,6 @@ INSTALLED_APPS = [
 
 ]
 JAZZMIN_SETTINGS={
-    # "custom_css": "css/mprov.css",
     'show_ui_builder': True,
     'site_logo': 'mProvLogo.png',
     'icons': {
@@ -122,7 +119,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-SESSION_EXPIRE_SECONDS = 1800
+SESSION_EXPIRE_SECONDS = os.environ.get('SESSION_EXPIRE_SECONDS', 1800)
 SESSION_TIMEOUT_REDIRECT = '/admin/login/'
 SESSION_EXPIRE_AFTER_LAST_ACTIVITY = True
 ROOT_URLCONF = 'mprov_control_center.urls'
@@ -197,7 +194,7 @@ REST_FRAMEWORK = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = os.environ.get('TIME_ZONE', 'UTC')
 
 USE_I18N = True
 
