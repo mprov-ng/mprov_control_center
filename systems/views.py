@@ -43,10 +43,22 @@ class SystemRegAPIView(MProvView):
                 nicObj.mac = request.data['mac']
                 nicObj.save()
                 # send in a pxe update job
-                pxejob = Job()
-                pxejob.module = JobModule.objects.get(id='pxe-update')
-                pxejob.status = JobStatus.objects.get(name="PENDING")
-                pxejob.save()
+                JobType = None
+                try:
+                    JobType = JobModule.objects.get(slug='pxe-update')
+                except:
+                    JobType = None
+                print(JobType)
+                # get or create the job module in the DB
+                # get the jobtype, do nothing if it's not defined.
+                if JobType is not None:
+                    # save a new job, if one doesn't already exist.
+
+                    Job.objects.update_or_create(
+                    name=JobType.name , module=JobType,
+                    defaults={'status': JobStatus.objects.get(pk=1)}
+                    ) 
+                # return the system object.    
                 self.queryset = [system]
                 return  generics.ListAPIView.get(self, request, format=None)
                 return Response(self.get_serializer_class.serialize('json', [system]))
