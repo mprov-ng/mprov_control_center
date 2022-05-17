@@ -2,8 +2,9 @@ from csv import list_dialects
 from tabnanny import verbose
 from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericStackedInline
+from django.forms import BaseInlineFormSet
 from django.utils.html import mark_safe
-
+from networks.models import SwitchPort
 from .models import (
   System,
   SystemBMC,
@@ -12,14 +13,32 @@ from .models import (
   SystemImage,
 )
 
+class NetworkInterfaceInlineFormset(BaseInlineFormSet):
+  def __init__(self, *args, **kwargs):
+    super(NetworkInterfaceInlineFormset, self).__init__(*args, **kwargs)
+    print( SwitchPort.objects.filter(networkinterface=None) )
+    for form in self.forms:
+      form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
 
 class NetworkInterfaceInline(admin.TabularInline):
   model = NetworkInterface
   extra=1
+  formset = NetworkInterfaceInlineFormset
+
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
   verbose_name="Network Interfaces"
   verbose_name_plural="Network Interfaces"
+  # def get_form(self, request, obj=None, **kwargs):
+  #   form = super(NetworkInterfaceInline, self).get_form(request, obj, **kwargs)
+  #   print(SwitchPort.objects.filter(networkinterface=None))
+  #   form.base_fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
+  #   return form
+
+  # def render_change_form(self, request, context, *args, **kwargs):
+  #   context['adminform'].form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
+  #   return super(NetworkInterfaceInline, self).render_change_form(*args, **kwargs)
+  #   #self.fields['switch_port'] = 
 
 class BMCInLine(admin.StackedInline):
   model = SystemBMC
