@@ -13,7 +13,7 @@ from rest_framework import filters
 from rest_framework import mixins
 from rest_framework.generics import GenericAPIView
 
-class JobAPIView(MProvView, mixins.RetrieveModelMixin,
+class JobAPIView(MProvView,
                       GenericAPIView):
     model = Job
     template = "jobs_docs.html"

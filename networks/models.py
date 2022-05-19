@@ -16,7 +16,7 @@ class NetworkType(models.Model):
 
 class Network(models.Model):
   name=models.CharField(max_length=120)
-  slug=models.SlugField(unique=True,verbose_name="Network ID")
+  slug=models.SlugField(unique=True,blank=True,verbose_name="Network ID")
   net_type=models.ForeignKey(
     NetworkType, 
     on_delete=models.CASCADE, 
@@ -28,10 +28,10 @@ class Network(models.Model):
   for mask in range(1,32):
     masks.append((mask,mask))
   netmask=models.IntegerField(choices=masks, verbose_name="CIDR Mask")
-  gateway=models.GenericIPAddressField()
-  nameserver1=models.GenericIPAddressField()
+  gateway=models.GenericIPAddressField(blank=True,null=True)
+  nameserver1=models.GenericIPAddressField(blank=True,null=True)
   # Add domain
-  domain=models.CharField(max_length=255)
+  domain=models.CharField(max_length=255,blank=True,)
 
   # Add Enable DHCP?
   isdhcp = models.BooleanField(default=False)

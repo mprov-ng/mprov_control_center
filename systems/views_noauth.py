@@ -16,7 +16,6 @@ from rest_framework import generics
 
 class SystemImageAPIView(MProvView, generics.ListAPIView):
       model = SystemImage
-      # TODO: placeholder for now to test 302 redirects
       authentication_classes = [] #disables authentication
       permission_classes = [] #disables permission
       serializer_class = SystemImageSerializer
@@ -38,7 +37,7 @@ class SystemImageAPIView(MProvView, generics.ListAPIView):
         else: 
           # no pk in image, spit out a list then.
           self.queryset = SystemImage.objects.all()
-          return(generics.ListAPIView.get(self, request, format=None))
+          return(generics.ListAPIView.get(self, request, format='json'))
         # choose a random jobserver
         js_set = list(image.jobservers.all())
         js = None
@@ -82,7 +81,7 @@ class KernelImageAPIView(MProvView, generics.ListAPIView):
 
         return redirect(imageURL)        
 
-class SytemImageDetailsAPIView(MProvView, mixins.RetrieveModelMixin,
+class SytemImageDetailsAPIView(MProvView,
                       GenericAPIView):
   model = SystemImage
   queryset = SystemImage.objects.all()
@@ -92,7 +91,7 @@ class SytemImageDetailsAPIView(MProvView, mixins.RetrieveModelMixin,
     return self.retrieve(self, request, format=None, **kwargs)
 
 
-class SytemImageUpdateAPIView(MProvView, mixins.RetrieveModelMixin,
+class SytemImageUpdateAPIView(MProvView, 
                       GenericAPIView):
   model = SystemImage
   queryset = SystemImage.objects.all()

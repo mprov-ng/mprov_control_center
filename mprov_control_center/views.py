@@ -21,7 +21,6 @@ interface.  It will give you documentation on how to use that section of the api
 * [/switchports/](/switchports/)
 * [/systemgroups/](/systemgroups/)
 * [/networkinterfaces/](/networkinterfaces/)
-* [/ipxe/](/ipxe/)
 * [/images/](/images/)
 * [/distros/](/distros/)
 * [/repos/](/repos/)

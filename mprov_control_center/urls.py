@@ -46,13 +46,28 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', IndexAPIView.as_view()),
     path('networks/', NetworkAPIView.as_view()),
+    path('networks/<str:pk>/', NetworkAPIView.as_view()),
+    
     path('networktypes/', NetworkTypeAPIView.as_view()),
+    path('networktypes/<str:pk>/', NetworkTypeAPIView.as_view()),
+
     path('systems/register', SystemRegAPIView.as_view()),
+    
     path('systems/', SystemAPIView.as_view()),
+    path('systems/<str:pk>/', SystemAPIView.as_view()),
+    
     path('switches/', SwitchAPIView.as_view()),
+    path('switches/<str:pk>/', SwitchAPIView.as_view()),
+    
     path('switchports/', SwitchPortAPIView.as_view()),
+    path('switchports/<str:pk>/', SwitchPortAPIView.as_view()),
+    
     path('systemgroups/', SystemGroupAPIView.as_view()),
+    path('systemgroups/<str:pk>/', SystemGroupAPIView.as_view()),
+    
     path('networkinterfaces/', NetworkInterfaceAPIView.as_view()),
+    path('networkinterfaces/<str:pk>/', NetworkInterfaceAPIView.as_view()),
+
     path('ipxe/', IPXEAPIView.as_view()),
     
     path('images/', include('systems.systemimage_urls')),
