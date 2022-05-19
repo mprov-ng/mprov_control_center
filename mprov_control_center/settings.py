@@ -119,7 +119,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-SESSION_EXPIRE_SECONDS = os.environ.get('SESSION_EXPIRE_SECONDS', 1800)
+SESSION_EXPIRE_SECONDS = float(os.environ.get('SESSION_EXPIRE_SECONDS', '1800'))
 SESSION_TIMEOUT_REDIRECT = '/admin/login/'
 SESSION_EXPIRE_AFTER_LAST_ACTIVITY = True
 ROOT_URLCONF = 'mprov_control_center.urls'
