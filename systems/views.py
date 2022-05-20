@@ -81,8 +81,8 @@ class SystemAPIView(MProvView):
             queryset = self.queryset.filter(hostname=request.query_params['hostname'])
             if queryset.count() == 0:
                 return Response(None, status=404)
-            return generics.ListAPIView.get(self, request, format=None)
-        return Response(None, status=500)
+        return generics.ListAPIView.get(self, request, format=None)
+        # return Response(None, status=500)
 
 
 class SystemGroupAPIView(MProvView):
