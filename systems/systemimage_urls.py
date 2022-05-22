@@ -1,5 +1,6 @@
 from django.urls import path
-from systems.views_noauth import SystemImageAPIView, SytemImageDetailsAPIView, SytemImageUpdateAPIView
+from systems.views_noauth import SystemImageAPIView
+from systems.views import SytemImageDetailsAPIView, SytemImageUpdateAPIView
 
 urlpatterns = [
     path('<str:pk>/', SystemImageAPIView.as_view()),

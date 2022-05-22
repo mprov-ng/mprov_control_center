@@ -23,8 +23,10 @@ class JobAPIView(MProvView,
 
     # Override the default get func, we need a bit more specialized query here
     def get(self, request, format=None, **kwargs):
-        if(request.content_type != 'application/json'):
-            return render(request, self.template, {})
+        result = self.checkContentType(request, format=format)
+        if result is not None:
+            return result
+        
         # if we are 'application/json' return an empty dict if
         # model is not set.
         if self.model == None:

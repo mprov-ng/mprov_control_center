@@ -1,11 +1,14 @@
 from http.client import NETWORK_AUTHENTICATION_REQUIRED
-import ipaddress
+from django.http import HttpResponseNotAllowed
+
 from re import template
 from unicodedata import name
 from .serializers import (
     NetworkInterfaceDetailsSerializer,
     NetworkInterfaceSerializer,
     SystemSerializer,
+    SystemImageUpdateSerializer,
+    SystemImageSerializer,
 )
 from rest_framework.response import Response
 
@@ -13,18 +16,59 @@ from common.views import MProvView
 from systems.models import NetworkInterface, System, SystemGroup, SystemImage
 from django.shortcuts import render
 from rest_framework.response import Response
-from django.db.models import Prefetch
 from networks.models import SwitchPort, Network, Switch
-from rest_framework import status, generics
+from rest_framework import generics
 from django.template import Template, Context
 from jobqueue.models import Job, JobModule, JobStatus
 
 
 
 class SystemRegAPIView(MProvView):
+    '''
+# /systems/register/
+
+This is a special API Access point used by NADS.  It only accepts
+POST methods, and they must be formatted in a specific way.
+
+## Accepted HTTP Methods:
+- POST (with NADS packet)
+
+
+## Documentation
+
+### POST method (with NADS Packet)
+- This will register the mac in the packet, to the host that system
+that has a NIC on the specified switch and port.
+NADS Packet:
+
+
+        {
+            "switch": "some-switch-host-name",
+            "port": "someport-number"
+            "mac": "mac of the machine being registered"
+        }
+
+    '''
     model = System
     serializer_class = SystemSerializer
     queryset = System.objects.none()
+
+
+    def get(self, request, *args, **kwargs):
+        result = self.checkContentType(request, format=format)
+        if result is not None:
+            return result
+        return HttpResponseNotAllowed(["POST"])
+
+    def delete(self, request, *args, **kwargs):
+        return HttpResponseNotAllowed(["POST"])
+
+    def put(self, request, *args, **kwargs):
+        return HttpResponseNotAllowed(["POST"])
+
+    def patch(self, request, *args, **kwargs):
+        return HttpResponseNotAllowed(["POST"])
+
     def post(self, request, *args, **kwargs):
         print(request.data)
         
@@ -183,3 +227,18 @@ class IPXEAPIView(MProvView):
         return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
         pass
 
+
+class SytemImageDetailsAPIView(MProvView):
+  model = SystemImage
+  queryset = SystemImage.objects.all()
+  serializer_class = SystemImageSerializer
+  
+  def get(self, request, format=None, **kwargs):
+    return self.retrieve(self, request, format=None, **kwargs)
+
+
+class SytemImageUpdateAPIView(MProvView):
+  model = SystemImage
+  queryset = SystemImage.objects.all()
+  serializer_class = SystemImageUpdateSerializer
+ 

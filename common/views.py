@@ -53,7 +53,9 @@ and make sure to add documentation to the class so that it can be displayed if a
                 message += "Documentation pending. \n\n"
                 message += "[Home](/)"
             else:
-                message = self.__doc__
+                message = "#" + self.__class__.__name__  + "\n\n"
+                message += self.__doc__
+                message += "\n\n[Home](/)"
             return HttpResponse(markdown.markdown(message), content_type='text/html')
         return None
 
