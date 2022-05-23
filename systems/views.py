@@ -228,17 +228,32 @@ class IPXEAPIView(MProvView):
         pass
 
 
-class SytemImageDetailsAPIView(MProvView):
-  model = SystemImage
-  queryset = SystemImage.objects.all()
-  serializer_class = SystemImageSerializer
-  
-  def get(self, request, format=None, **kwargs):
-    return self.retrieve(self, request, format=None, **kwargs)
+class SytemImagesAPIView(MProvView):
+    '''
+    ### Class Attributes
+    - slug: a machine parsable version of the name
+    - name: A human readable name
+    - timestamp: (Optional) The time this entry was created
+    - created_by: The User that is creating this 
+    - updated: (Auto) The time this entry was last updated
+    - systemgroups: Array of system groups this system image is a part of
+    - needs_rebuild: If the user is asking to rebuild this image.
+    - version: used internally for tracking when an image changes
+    - jobservers: array of jobservers actively serving this version of this image.
+    - config_params: YAML of config parameters set on this system image, used by scripts
+    - osddistro: the distro to base this image off of.
+    - osrepos: (Optional) extra repos for this image.
+    '''
+    model = SystemImage
+    queryset = SystemImage.objects.all()
+    serializer_class = SystemImageSerializer
+    
+    # def get(self, request, format=None, **kwargs):
+    #     return self.retrieve(self, request, format=None, **kwargs)
 
 
-class SytemImageUpdateAPIView(MProvView):
-  model = SystemImage
-  queryset = SystemImage.objects.all()
-  serializer_class = SystemImageUpdateSerializer
+# class SytemImageUpdateAPIView(MProvView):
+#   model = SystemImage
+#   queryset = SystemImage.objects.all()
+#   serializer_class = SystemImageUpdateSerializer
  

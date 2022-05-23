@@ -9,30 +9,22 @@ from rest_framework import generics
 from django.http import HttpResponseNotAllowed
 
 
-class SystemImageAPIView(MProvView, generics.ListAPIView):
+class ImagesAPIView(MProvView, generics.ListAPIView):
     '''
 # /images/
 
+NOTE: This is a special API Access point for retrieving system images, initramfs, and such
+This API ONLY expects keys to images.  If they primary key does not exist, a 404 is returned.
+If no primary key is specified, 404 is returned.
+
 ## Accepted HTTP Methods:
-- GET (no parameters)
 - GET (with Primary Key, ie: /images/compute/)
 
 
 ## Documentation
 
-### Class Attributes
-- slug: a machine parsable version of the name
-- name: A human readable name
-
-### GET method (no parameters)
-Returns a json list of all objects in the MPCC of this type
-
-Format returned:
-
-
-
 ### GET (with primary key)
-    - Will return the image requested, regardless of requested content type.
+    - Will return the binary of the image requested, regardless of requested content type.
 
     '''
     model = SystemImage
@@ -57,8 +49,9 @@ Format returned:
         result = self.checkContentType(request, format=format, kwargs=kwargs)
         if result is not None:
             return result  
-        self.queryset = SystemImage.objects.all()
-        return(generics.ListAPIView.get(self, request, format='json'))
+        # No primary key specified and requesting JSON,
+        # in this instance, we will 404
+        raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
       # choose a random jobserver
       js_set = list(image.jobservers.all())
       js = None
@@ -88,27 +81,17 @@ Format returned:
 class KernelImageAPIView(MProvView, generics.ListAPIView):
       '''
 # /kernels/
-NOTE: This is a mimic of the /image/ function but specifically for serving 
+NOTE: This is a mimic of the /images/ function but specifically for serving 
 kernels to PXE.  This function may be merged into /images/ at some point.
 
 
 ## Accepted HTTP Methods:
-- GET (no parameters)
 - GET (with Primary Key, ie: /kernels/compute/)
-
 
 ## Documentation
 
 ### Class Attributes
-- slug: a machine parsable version of the name
-- name: A human readable name
-
-### GET method (no parameters)
-Returns a json list of all objects in the MPCC of this type
-
-Format returned:
-
-
+Note: See [/images/](/images/)
 
 ### GET (with primary key)
     - Will return the image requested, regardless of requested content type.

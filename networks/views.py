@@ -163,6 +163,60 @@ Format returned:
     serializer_class = NetworkTypeAPISerializer
 
 class SwitchAPIView(MProvView):
+    '''
+# /switches/
+
+## Accepted HTTP Methods:
+- GET (no parameters)
+- GET (with Primary Key, ie: /switches/1/)
+- POST (with primary key, ie: /switches/1/)
+- PATCH (with primary key, ie: /switches/1/)
+- DELETE (with primary key, ie: /switches/1/)
+
+## Documentation
+
+### Class Attributes
+    - id: Internal ID of this switch in the db
+    - hostname: hostname of this switch
+    - timestamp: (Auto) Creation time for this switch
+    - updated: (Auto) Last update time for this switch
+    - mgmt_ip: The IP Address of the management interface for this switch
+    - mgmt_mac: The MAC address of the management interface for this switch
+    - created_by: The user who made this swtich
+    - network: ID of the network for this switch.
+    
+### GET method (no parameters)
+Returns a json list of all objects of this type in the MPCC
+
+Format returned:
+
+    [
+    {
+        "id": 1,
+        "hostname": "office-pop-rack7",
+        "timestamp": "2022-05-10T15:48:34.403983-05:00",
+        "updated": "2022-05-19T15:58:21.610109-05:00",
+        "mgmt_ip": "172.16.253.1",
+        "mgmt_mac": "de:ad:be:ef:01:02",
+        "created_by": 1,
+        "network": 1
+    }
+    ]
+
+### GET, POST, PATCH, DELETE (with primary key)
+    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
+      Delete that entry in the database.  POST requires ALL required fields.  PATCH
+      will only update the fields passed, required fields can be omitted if changed.
+    
+    - GET returns the object specified or 404
+
+    - POST returns the new object created or a 500 style error
+
+    - PATCH returns the updated object.
+
+    - DELETE returns 204 No Content if the delete is successful.
+
+    '''
     model = Switch
     serializer_class = SwitchAPISerializer
 
@@ -191,5 +245,63 @@ class SwitchAPIView(MProvView):
         return generics.ListAPIView.get(self, request, format=None);
 
 class SwitchPortAPIView(MProvView):
+    '''
+# /switchports/
+
+## Accepted HTTP Methods:
+- GET (no parameters)
+- GET (with Primary Key, ie: /switchports/1/)
+- POST (with primary key, ie: /switchports/1/)
+- PATCH (with primary key, ie: /switchports/1/)
+- DELETE (with primary key, ie: /switchports/1/)
+
+## Documentation
+
+### Class Attributes
+    - id: Internal ID of this port in the db
+    - name: A human readable name for the port number
+    - switch: ID of the switch this port is associated with
+    - networks: ID of the network for this port.
+    
+### GET method (no parameters)
+Returns a json list of all objects of this type in the MPCC
+
+Format returned:
+
+    [
+    {
+        "id": 1,
+        "name": "1",
+        "switch": 1,
+        "networks": 1
+    },
+    {
+        "id": 2,
+        "name": "32",
+        "switch": 1,
+        "networks": 1
+    },
+    {
+        "id": 3,
+        "name": "31",
+        "switch": 1,
+        "networks": 1
+    }
+    ]
+
+### GET, POST, PATCH, DELETE (with primary key)
+    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
+      Delete that entry in the database.  POST requires ALL required fields.  PATCH
+      will only update the fields passed, required fields can be omitted if changed.
+    
+    - GET returns the object specified or 404
+
+    - POST returns the new object created or a 500 style error
+
+    - PATCH returns the updated object.
+
+    - DELETE returns 204 No Content if the delete is successful.
+
+    '''
     model = SwitchPort
     serializer_class = SwitchPortAPISerializer

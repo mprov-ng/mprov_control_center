@@ -70,7 +70,8 @@ urlpatterns = [
 
     path('ipxe/', IPXEAPIView.as_view()),
     
-    path('images/', include('systems.systemimage_urls')),
+    path('images/', include('systems.images_urls')),
+    path('systemimages/', include('systems.systemimage_urls')),
     path('distros/', include('osmanagement.distros_urls')),
     path('repos/', include('osmanagement.repos_urls')),
     path('jobmodules/', include('jobqueue.jobmodules_urls')),    
