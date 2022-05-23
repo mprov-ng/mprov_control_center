@@ -11,3 +11,4 @@ djangorestframework-api-key
 django-session-timeout
 django-filter
 markdown
+bs4

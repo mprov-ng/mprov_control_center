@@ -7,7 +7,8 @@ from .serializers import (
     NetworkInterfaceDetailsSerializer,
     NetworkInterfaceSerializer,
     SystemSerializer,
-    SystemImageUpdateSerializer,
+    SystemGroupSerializer,
+    SystemDetailSerializer,
     SystemImageSerializer,
 )
 from rest_framework.response import Response
@@ -105,20 +106,67 @@ NADS Packet:
                 # return the system object.    
                 self.queryset = [system]
                 return  generics.ListAPIView.get(self, request, format=None)
-                return Response(self.get_serializer_class.serialize('json', [system]))
         return  generics.ListAPIView.get(self, request, format=None)
 
 class SystemAPIView(MProvView):
+    '''
+# /systems/
+
+## Accepted HTTP Methods:
+- GET (no parameters)
+- GET (with Primary Key, ie: /systems/1/)
+- POST (with primary key, ie: /systems/1/)
+- PATCH (with primary key, ie: /systems/1/)
+- DELETE (with primary key, ie: /systems/1/)
+
+## Documentation
+
+### Class Attributes
+- id: The internal ID in the db
+- hostname: The hostname of the server
+- timestamp: The creation time of the entry
+- created_by: The user who created this entry
+- updated: Timestamp of the last update
+- systemgroups: array of system group ID's
+- config_params: The configuration parameters for this entry
+- systemimage: The ID of the system image.
+
+### GET method (no parameters)
+Returns a json list of all objects in the MPCC of this type
+
+Format returned:
+
+
+
+### GET, POST, PATCH, DELETE (with primary key)
+    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
+      Delete that entry in the database.  POST requires ALL required fields.  PATCH
+      will only update the fields passed, required fields can be omitted if changed.
+    
+    - GET returns the object specified or 404
+
+    - POST returns the new object created or a 500 style error
+
+    - PATCH returns the updated object.
+
+    - DELETE returns 204 No Content if the delete is successful.
+
+    '''
     model = System
     template = "systems_docs.html"
-    serializer_class = SystemSerializer
+    serializer_class = SystemDetailSerializer
     queryset = None
     def get(self, request, format=None, **kwargs):
+       
         result = self.checkContentType(request, format=format, kwargs=kwargs)
         if result is not None:
             return result
         if self.model == None:
             return Response(None)
+        if 'pk' in kwargs:
+            # someone is looking for a specific item.
+            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+        self.serializer_class = SystemSerializer
         self.queryset = self.model.objects.all()
         if 'hostname' in request.query_params:
             # someone is looking for a specific item.
@@ -126,18 +174,142 @@ class SystemAPIView(MProvView):
             if queryset.count() == 0:
                 return Response(None, status=404)
         return generics.ListAPIView.get(self, request, format=None)
-        # return Response(None, status=500)
-
 
 class SystemGroupAPIView(MProvView):
-      model = SystemGroup
-      template = "systemgroup_docs.html"
+    '''
+# /systemgroups/
+
+## Accepted HTTP Methods:
+- GET (no parameters)
+- GET (with Primary Key, ie: /systemgroups/1/)
+- POST (with primary key, ie: /systemgroups/1/)
+- PATCH (with primary key, ie: /systemgroups/1/)
+- DELETE (with primary key, ie: /systemgroups/1/)
+
+## Documentation
+
+### Class Attributes
+- id: The internal ID in the db
+- name: The name of the system group
+- config_params: The configuration parameters for this entry
+- scripts: A list of scripts that will run on this group
+
+### GET method (no parameters)
+Returns a json list of all objects in the MPCC of this type
+
+Format returned:
+
+
+    [
+    {
+        "id": 2,
+        "name": "compute",
+        "config_params": "extra_packages: 
+            - vim-enhanced
+            - wget
+            - epel-release
+            - tmux",
+        "scripts": [
+            "extra_packagessh"
+        ]
+    },
+    {
+        "id": 1,
+        "name": "login",
+        "config_params": "-- # Inherit from OS",
+        "scripts": []
+    }
+    ]
+
+
+### GET, POST, PATCH, DELETE (with primary key)
+    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
+      Delete that entry in the database.  POST requires ALL required fields.  PATCH
+      will only update the fields passed, required fields can be omitted if changed.
+    
+    - GET returns the object specified or 404
+
+    - POST returns the new object created or a 500 style error
+
+    - PATCH returns the updated object.
+
+    - DELETE returns 204 No Content if the delete is successful.
+
+    '''
+    model = SystemGroup
+    template = "systemgroup_docs.html"
+    serializer_class = SystemGroupSerializer
 
 class NetworkInterfaceAPIView(MProvView):
-      model = NetworkInterface
-      template = "networkinterface_docs.html"
-      serializer_class = NetworkInterfaceSerializer
-      def get(self, request, format=None, **kwargs):
+    '''
+# /networkinterfaces/
+
+## Accepted HTTP Methods:
+- GET (no parameters)
+- GET (with Primary Key, ie: /networkinterfaces/1/)
+- POST (with primary key, ie: /networkinterfaces/1/)
+- PATCH (with primary key, ie: /networkinterfaces/1/)
+- DELETE (with primary key, ie: /networkinterfaces/1/)
+
+## Documentation
+
+### Class Attributes
+- id: The internal ID in the db
+- name: The name of the interface
+- hostname: The hostname for this interface to be registered to DNS/DHCP
+- ipaddress: The IP address to be registered to DNS/DHCP for this interface
+- bootable: Is this NIC bootable?
+- system: The system ID this NIC is associated with
+- switch_port: The switch port ID this NIC is connected to.
+
+### GET method (no parameters)
+Returns a json list of all objects in the MPCC of this type
+
+Format returned:
+
+
+    [
+    {
+        "id": 1,
+        "name": "eno1",
+        "hostname": "compute001",
+        "ipaddress": "172.16.30.1",
+        "mac": "4c:d9:8f:3c:f5:ae",
+        "bootable": true,
+        "system": 1,
+        "switch_port": 3
+    },
+    {
+        "id": 2,
+        "name": "eno1",
+        "hostname": "compute002",
+        "ipaddress": "172.16.30.2",
+        "mac": "4c:d9:8f:3b:79:d9",
+        "bootable": true,
+        "system": 2,
+        "switch_port": 2
+    }
+    ]
+
+
+### GET, POST, PATCH, DELETE (with primary key)
+    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
+      Delete that entry in the database.  POST requires ALL required fields.  PATCH
+      will only update the fields passed, required fields can be omitted if changed.
+    
+    - GET returns the object specified or 404
+
+    - POST returns the new object created or a 500 style error
+
+    - PATCH returns the updated object.
+
+    - DELETE returns 204 No Content if the delete is successful.
+
+    '''
+    model = NetworkInterface
+    template = "networkinterface_docs.html"
+    serializer_class = NetworkInterfaceSerializer
+    def get(self, request, format=None, **kwargs):
         result = self.checkContentType(request, format=format, kwargs=kwargs)
         if result is not None:
             return result

@@ -11,7 +11,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.contrib.auth.models import AnonymousUser, User
 import markdown
-
+from bs4 import BeautifulSoup
 
 class MProvView( 
                 generics.ListAPIView,
@@ -26,7 +26,7 @@ class MProvView(
 ## Details
 This class is used as a super class for all the views within the mProv Control Center.
 It should be versatile enough to be used in just about any way as long as you set the
-attributes right, setup a urls.py file right to pass 'pk' in for GET, PATCH, DELETE, PUT, etc.
+attributes right, setup a urls.py file right to pass 'pk' in for GET, PATCH, DELETE, POST, etc.
 and make sure to add documentation to the class so that it can be displayed if anyone hits it.
 
 
@@ -56,7 +56,28 @@ and make sure to add documentation to the class so that it can be displayed if a
                 message = "#" + self.__class__.__name__  + "\n\n"
                 message += self.__doc__
                 message += "\n\n[Home](/)"
-            return HttpResponse(markdown.markdown(message), content_type='text/html')
+            html = markdown.markdown(message)
+            # let's dress up the HTML output a little.
+            bs = BeautifulSoup("<html><head></head><body></body></html>", 'html.parser')
+            body = bs.find('body')
+            head_tag = bs.find('head')
+            title_tag = bs.new_tag('title')
+            title_tag.string = f"mProv Documentation - {self.__class__.__name__}"
+            head_tag.insert_before(title_tag) 
+
+            
+            head_tag.append(BeautifulSoup('''
+                <!-- Font Awesome Icons -->
+                <link rel="stylesheet" href="/static/vendor/fontawesome-free/css/all.min.css">
+                <!-- Bootstrap and adminLTE -->
+                <link rel="stylesheet" href="/static/vendor/adminlte/css/adminlte.min.css" id="adminlte-css">
+                <link rel="stylesheet" href="/static/vendor/bootswatch/minty/bootstrap.min.css" id="jazzmin-theme" />
+                <!-- Custom fixes for django -->
+                <link rel="stylesheet" href="/static/jazzmin/css/main.css">
+                <link rel="stylesheet" href="/static/css/mprov.css">
+            '''))
+            body.append(BeautifulSoup(html))
+            return HttpResponse(bs, content_type='text/html')
         return None
 
     def get(self, request, format=None, **kwargs):
@@ -87,7 +108,6 @@ and make sure to add documentation to the class so that it can be displayed if a
     
     def put(self, request, *args, **kwargs):
         return HttpResponseNotAllowed(["GET","POST","PATCH","DELETE"])
-        #return self.update(request, args, kwargs)
 
     def patch(self, request, *args, **kwargs):
         if(type(request.user) == AnonymousUser ):

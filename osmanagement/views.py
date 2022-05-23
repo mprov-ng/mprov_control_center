@@ -39,7 +39,11 @@ Format returned:
         "name": "Rocky Linux 8 Latest",
         "vendor": "Rocky Linux",
         "version": "8",
-        "config_params": "rootpw: 'root:$6$80Lz0whR9xNVPouX$L3wyFx7h3oYS9RvzFTVJLFUkjApUCJ3kH5KtOUZgREMEDp7owSxVq5NlFCcR9s3knaz7g4YuCXBiqcbQJGRl91'\r\nextra_packages: \r\n  - vim-enhanced \r\n  - wget \r\n  - epel-release",
+        "config_params": "rootpw: 'root:$6$80Lz0whR9xNVPouX$L3wyFx7h3oYS9RvzFTVJLFUkjApUCJ3kH5KtOUZgREMEDp7owSxVq5NlFCcR9s3knaz7g4YuCXBiqcbQJGRl91'
+                          extra_packages: 
+                            - vim-enhanced
+                            - wget
+                            - epel-release",
         "install_kernel_cmdline": "mprov_tmpfs_size=8G mprov_image_url=http://${next-server}/images/{{ nic.system.systemimage.slug }} mprov_initial_mods=e1000e,tg3 mprov_prov_intf=eth0",
         "baserepo": 1,
         "osrepos": [],
