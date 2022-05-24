@@ -68,17 +68,17 @@ Format returned:
     ]
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''
     model = Network 
@@ -146,17 +146,17 @@ Format returned:
     ]
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''
     model = NetworkType
@@ -176,14 +176,14 @@ class SwitchAPIView(MProvView):
 ## Documentation
 
 ### Class Attributes
-    - id: Internal ID of this switch in the db
-    - hostname: hostname of this switch
-    - timestamp: (Auto) Creation time for this switch
-    - updated: (Auto) Last update time for this switch
-    - mgmt_ip: The IP Address of the management interface for this switch
-    - mgmt_mac: The MAC address of the management interface for this switch
-    - created_by: The user who made this swtich
-    - network: ID of the network for this switch.
+- id: Internal ID of this switch in the db
+- hostname: hostname of this switch
+- timestamp: (Auto) Creation time for this switch
+- updated: (Auto) Last update time for this switch
+- mgmt_ip: The IP Address of the management interface for this switch
+- mgmt_mac: The MAC address of the management interface for this switch
+- created_by: The user who made this swtich
+- network: ID of the network for this switch.
     
 ### GET method (no parameters)
 Returns a json list of all objects of this type in the MPCC
@@ -204,17 +204,17 @@ Format returned:
     ]
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''
     model = Switch
@@ -258,10 +258,10 @@ class SwitchPortAPIView(MProvView):
 ## Documentation
 
 ### Class Attributes
-    - id: Internal ID of this port in the db
-    - name: A human readable name for the port number
-    - switch: ID of the switch this port is associated with
-    - networks: ID of the network for this port.
+- id: Internal ID of this port in the db
+- name: A human readable name for the port number
+- switch: ID of the switch this port is associated with
+- networks: ID of the network for this port.
     
 ### GET method (no parameters)
 Returns a json list of all objects of this type in the MPCC
@@ -290,17 +290,17 @@ Format returned:
     ]
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''
     model = SwitchPort

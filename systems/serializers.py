@@ -15,13 +15,13 @@ class SystemDetailSerializer(serializers.ModelSerializer):
         model = System
         fields = '__all__'
         depth = 3
-class SystemImageSerializer(serializers.ModelSerializer):
+class SystemImageDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemImage
         fields = '__all__'
         depth = 3
         
-class SystemImageUpdateSerializer(serializers.ModelSerializer):
+class SystemImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemImage
         fields = '__all__'

@@ -137,19 +137,49 @@ Returns a json list of all objects in the MPCC of this type
 Format returned:
 
 
+    [
+    {
+        "id": 1,
+        "hostname": "compute001",
+        "timestamp": "2022-05-10T15:40:30.804398-05:00",
+        "updated": "2022-05-17T13:56:34.523913-05:00",
+        "config_params": "",
+        "created_by": 1,
+        "systemimage": "compute",
+        "systemgroups": [
+        2
+        ],
+        "scripts": []
+    },
+    {
+        "id": 2,
+        "hostname": "compute002",
+        "timestamp": "2022-05-13T09:38:58.211597-05:00",
+        "updated": "2022-05-23T16:00:11.526715-05:00",
+        "config_params": "-- #Inherit from System Group or Distrubtion.",
+        "created_by": 1,
+        "systemimage": "compute",
+        "systemgroups": [
+        2
+        ],
+        "scripts": []
+    }
+    ]
+
+
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified with a retrieval depth of 3 or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''
     model = System
@@ -223,17 +253,17 @@ Format returned:
 
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''
     model = SystemGroup
@@ -293,17 +323,17 @@ Format returned:
 
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''
     model = NetworkInterface
@@ -319,6 +349,7 @@ Format returned:
             return Response(None)
         
         if 'pk' in kwargs:
+            self.serializer_class = NetworkInterfaceDetailsSerializer
             # someone is looking for a specific item.
             return self.retrieve(self, request, format=None, pk=kwargs['pk'])
 
@@ -401,20 +432,102 @@ class IPXEAPIView(MProvView):
 
 
 class SytemImagesAPIView(MProvView):
+    
     '''
-    ### Class Attributes
-    - slug: a machine parsable version of the name
-    - name: A human readable name
-    - timestamp: (Optional) The time this entry was created
-    - created_by: The User that is creating this 
-    - updated: (Auto) The time this entry was last updated
-    - systemgroups: Array of system groups this system image is a part of
-    - needs_rebuild: If the user is asking to rebuild this image.
-    - version: used internally for tracking when an image changes
-    - jobservers: array of jobservers actively serving this version of this image.
-    - config_params: YAML of config parameters set on this system image, used by scripts
-    - osddistro: the distro to base this image off of.
-    - osrepos: (Optional) extra repos for this image.
+# /systemimages/
+
+## Accepted HTTP Methods:
+- GET (no parameters)
+- GET (with Primary Key, ie: /systemimages/compute/)
+- POST (with primary key, ie: /systemimages/compute/)
+- PATCH (with primary key, ie: /systemimages/compute/)
+- DELETE (with primary key, ie: /systemimages/compute/)
+
+## Documentation
+
+### Class Attributes
+- slug: a machine parsable version of the name
+- name: A human readable name
+- timestamp: (Optional) The time this entry was created
+- created_by: The User that is creating this 
+- updated: (Auto) The time this entry was last updated
+- systemgroups: Array of system groups this system image is a part of
+- needs_rebuild: If the user is asking to rebuild this image.
+- version: used internally for tracking when an image changes
+- jobservers: array of jobservers actively serving this version of this image.
+- config_params: YAML of config parameters set on this system image, used by scripts
+- osddistro: the distro to base this image off of.
+- osrepos: (Optional) extra repos for this image.
+
+### GET method (no parameters)
+Returns a json list of all objects in the MPCC of this type
+
+Format returned:
+
+    [
+    {
+        "slug": "nads",
+        "name": "__nads__",
+        "timestamp": "2022-05-13T07:55:11.100467-05:00",
+        "updated": "2022-05-16T15:21:09.903630-05:00",
+        "needs_rebuild": false,
+        "version": 12,
+        "config_params": "extra_packages:
+            - vim-enhanced
+            - wget
+            - curl
+            - epel-release
+            - tcpdump",
+        "created_by": 1,
+        "osdistro": 1,
+        "systemgroups": [],
+        "scripts": [
+        "extra_packagessh",
+        "nadssh",
+        "set_root_pwsh"
+        ],
+        "jobservers": [
+        3
+        ],
+        "osrepos": []
+    },
+    {
+        "slug": "compute",
+        "name": "compute",
+        "timestamp": "2022-05-10T11:55:51.419198-05:00",
+        "updated": "2022-05-12T16:20:51.588620-05:00",
+        "needs_rebuild": false,
+        "version": 7,
+        "config_params": "- rootpw: '$6$80Lz0whR9xNVPouX$L3wyFx7h3oYS9RvzFTVJLFUkjApUCJ3kH5KtOUZgREMEDp7owSxVq5NlFCcR9s3knaz7g4YuCXBiqcbQJGRl91'",
+        "created_by": 1,
+        "osdistro": 1,
+        "systemgroups": [
+        2
+        ],
+        "scripts": [],
+        "jobservers": [
+        3
+        ],
+        "osrepos": [
+        1
+        ]
+    }
+    ]
+
+### GET, POST, PATCH, DELETE (with primary key)
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
+
+- GET returns the object specified, with retrieval depth of 3 or 404
+
+- POST returns the new object created or a 500 style error
+
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
+
+
     '''
     model = SystemImage
     queryset = SystemImage.objects.all()

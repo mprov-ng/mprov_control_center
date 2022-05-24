@@ -24,7 +24,7 @@ If no primary key is specified, 404 is returned.
 ## Documentation
 
 ### GET (with primary key)
-    - Will return the binary of the image requested, regardless of requested content type.
+- Will return the binary of the image requested, regardless of requested content type.
 
     '''
     model = SystemImage
@@ -94,7 +94,7 @@ kernels to PXE.  This function may be merged into /images/ at some point.
 Note: See [/images/](/images/)
 
 ### GET (with primary key)
-    - Will return the image requested, regardless of requested content type.
+- Will return the image requested, regardless of requested content type.
 
     '''
       model = SystemImage

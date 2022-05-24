@@ -53,8 +53,8 @@ and make sure to add documentation to the class so that it can be displayed if a
                 message += "Documentation pending. \n\n"
                 message += "[Home](/)"
             else:
-                message = "#" + self.__class__.__name__  + "\n\n"
-                message += self.__doc__
+                #message = "#" + self.__class__.__name__  + "\n\n"
+                message = self.__doc__
                 message += "\n\n[Home](/)"
             html = markdown.markdown(message)
             # let's dress up the HTML output a little.
@@ -75,6 +75,7 @@ and make sure to add documentation to the class so that it can be displayed if a
                 <!-- Custom fixes for django -->
                 <link rel="stylesheet" href="/static/jazzmin/css/main.css">
                 <link rel="stylesheet" href="/static/css/mprov.css">
+                <link rel="stylesheet" href="/static/css/mprov_docs.css">
             '''))
             body.append(BeautifulSoup(html))
             return HttpResponse(bs, content_type='text/html')

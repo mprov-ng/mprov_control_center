@@ -4,13 +4,8 @@ from jobqueue.models import JobModule, JobServer, Job
 from jobqueue.serializers import JobAPISerializer, JobModuleAPISerializer, JobServerAPISerializer
 from rest_framework import status, generics
 from rest_framework.response import Response
-from django.shortcuts import render
-from django.core.serializers import serialize
 import json
 
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters
-from rest_framework import mixins
 from rest_framework.generics import GenericAPIView
 
 class JobAPIView(MProvView,
@@ -28,17 +23,17 @@ class JobAPIView(MProvView,
 ## Documentation
 
 ### Class Attributes
-    - id: Internal ID 
-    - name: Human readable name for the job
-    - create_time: (Auto) Time the job was created
-    - start_time: (Optional) Time the job is started, set by jobserver
-    - end_time: (Optional) Time the job finished, set by the jobserver
-    - last_update: (Auto) Time of the last modification
-    - return_code: (Optional) Any return code from the job
-    - params: (Optional) Any params for the job, in JSON
-    - module: ID of the job module this job is defined as
-    - status: ID of the current status of the job.
-    - jobserver: (Optional) ID of the job server currently assigned to this job
+- id: Internal ID 
+- name: Human readable name for the job
+- create_time: (Auto) Time the job was created
+- start_time: (Optional) Time the job is started, set by jobserver
+- end_time: (Optional) Time the job finished, set by the jobserver
+- last_update: (Auto) Time of the last modification
+- return_code: (Optional) Any return code from the job
+- params: (Optional) Any params for the job, in JSON
+- module: ID of the job module this job is defined as
+- status: ID of the current status of the job.
+- jobserver: (Optional) ID of the job server currently assigned to this job
 
 ### GET method (no parameters)
 Returns a json list of all objects of this type in the MPCC
@@ -75,17 +70,17 @@ Format returned:
     ]
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''
     model = Job
@@ -152,9 +147,9 @@ class JobModulesAPIView(MProvView):
 ## Documentation
 
 ### Class Attributes
-    - slug: The ID of the job module
-    - name: A human readable name for the job module
-    - active: Unused, will be removed in future updates
+- slug: The ID of the job module
+- name: A human readable name for the job module
+- active: Unused, will be removed in future updates
     
 ### GET method (no parameters)
 Returns a json list of all objects of this type in the MPCC
@@ -180,17 +175,17 @@ Format returned:
     ]
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''
     model = JobModule
@@ -214,12 +209,12 @@ class JobServersAPIView(MProvView):
 ## Documentation
 
 ### Class Attributes
-    - id: The internal ID of the job server
-    - name: The hostname of the job server
-    - address: The IP address of the jobserver
-    - port: What port is the job server on
-    - heartbeat_time: The last time of the last heartbeat from the job server
-    - jobmodules: array of job module IDs that this job server handles.
+- id: The internal ID of the job server
+- name: The hostname of the job server
+- address: The IP address of the jobserver
+- port: What port is the job server on
+- heartbeat_time: The last time of the last heartbeat from the job server
+- jobmodules: array of job module IDs that this job server handles.
 
     
 ### GET method (no parameters)
@@ -255,17 +250,17 @@ Format returned:
     ]
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''
     model = JobServer

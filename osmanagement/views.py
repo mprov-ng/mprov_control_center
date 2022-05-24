@@ -56,17 +56,17 @@ Format returned:
     ]
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''    
     model = OSDistro 
@@ -109,17 +109,17 @@ Format returned:
     ]
 
 ### GET, POST, PATCH, DELETE (with primary key)
-    - These methods, when passed a primary key, will Retrieve, Create, Update, or 
-      Delete that entry in the database.  POST requires ALL required fields.  PATCH
-      will only update the fields passed, required fields can be omitted if changed.
-    
-    - GET returns the object specified or 404
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
 
-    - POST returns the new object created or a 500 style error
+- GET returns the object specified or 404
 
-    - PATCH returns the updated object.
+- POST returns the new object created or a 500 style error
 
-    - DELETE returns 204 No Content if the delete is successful.
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
 
     '''   
     model = OSRepo
