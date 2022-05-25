@@ -1,14 +1,14 @@
-django>=3.2,<3.3
-django-dotenv
-djangorestframework
-pyyaml
-requests
-django-cors-headers
-django-jazzmin
-django-autocomplete-light
-django-ckeditor
-djangorestframework-api-key
-django-session-timeout
-django-filter
-markdown
-bs4
+django>=3.2,<3.3  #https://www.djangoproject.com/ - 3-clause BSD
+django-dotenv # https://pypi.org/project/django-dotenv/ - MIT
+djangorestframework # https://pypi.org/project/djangorestframework/ - BSD License (BSD)
+pyyaml # https://pypi.org/project/PyYAML/ - MIT
+requests # https://pypi.org/project/requests/ - Apache Software License (Apache 2.0)
+django-cors-headers # https://pypi.org/project/django-cors-headers/ - MIT
+django-jazzmin # https://pypi.org/project/django-jazzmin/ - MIT
+django-autocomplete-light # https://pypi.org/project/django-autocomplete-light/ - MIT
+django-ckeditor # https://pypi.org/project/django-ckeditor/ - BSD
+djangorestframework-api-key # https://pypi.org/project/djangorestframework-api-key/ - MIT
+django-session-timeout # https://pypi.org/project/django-session-timeout/ - MIT
+django-filter # https://pypi.org/project/django-filter/ - BSD
+markdown # https://pypi.org/project/Markdown/ - BSD
+bs4 # https://pypi.org/project/beautifulsoup4/ - MIT
