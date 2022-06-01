@@ -15,6 +15,8 @@ then
     exit 1
 fi
 
+chmod 755 init_mpcc.sh
+
 cd mprov_control_center
 python3.8 -m venv .
 . bin/activate
@@ -85,7 +87,7 @@ Require all granted
 EOF
 if [ "$BUILD_DOCKER" != "1" ]
 then
-        /var/www/mprov_control_center/mprov_control_center/init_mpcc.sh
+        /var/www/mprov_control_center/init_mpcc.sh
         systemctl enable httpd
         systemctl restart httpd
         firewall-cmd --zone=public --add-service=http
