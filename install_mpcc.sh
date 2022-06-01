@@ -15,9 +15,10 @@ then
     exit 1
 fi
 
-chmod 755 init_mpcc.sh
+
 
 cd mprov_control_center
+chmod 755 init_mpcc.sh
 python3.8 -m venv .
 . bin/activate
 pip install -r requirements.txt
