@@ -44,8 +44,8 @@ echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
 python manage.py collectstatic --noinput
 
 mkdir -p db/
-chgrp apache db/ -R
-chmod g+sw db/ -R
+chown apache db/ -R
+chmod u+sw db/ -R
 
 
 # set up the apache stuff
