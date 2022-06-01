@@ -1,8 +1,20 @@
 #!/bin/bash
+
+if [ "$1" == "-d" ]
+then
+  BUILD_DOCKER=1
+fi
+
 dnf -y install epel-release
 dnf -y install python38-mod_wsgi.x86_64 ipmitool dnsmasq ipxe-bootimgs jq golang git 
 cd /var/www/
-git clone git@github.com:mProv-Manager/mprov_control_center.git
+GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone git@github.com:mProv-Manager/mprov_control_center.git
+if [ "$?" != "0" ]
+then
+    echo "Unable to checkout git."
+    exit 1
+fi
+
 cd mprov_control_center
 python3.8 -m venv .
 . bin/activate
@@ -26,23 +38,16 @@ echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
 
 # other variables can be set directly in the ENV (for containers)
 # or via the .env file.   See the .env.example for possible varialbes.
-
-mkdir -p db/
-
-python ./manage.py migrate
-python ./manage.py  createsuperuser --noinput
-
-python ./manage.py loaddata */fixtures/*
 python manage.py collectstatic --noinput
 
-
+mkdir -p db/
 chgrp apache db/ -R
 chmod g+sw db/ -R
 
 
 # set up the apache stuff
 cd /etc/httpd/conf.d/
-cat << EOF > mprov_command_center.conf
+cat << EOF > mprov_control_center.conf
 WSGIScriptAlias / /var/www/mprov_control_center/mprov_control_center/wsgi.py
 WSGIPythonHome /var/www/mprov_control_center/
 WSGIPythonPath /var/www/mprov_control_center/
@@ -78,8 +83,11 @@ Require all granted
     WSGIAuthUserScript /var/www/mprov_control_center/mprov_control_center/wsgi.py
 </Location>
 EOF
-
-systemctl enable httpd
-systemctl restart httpd
-firewall-cmd --zone=public --add-service=http
-firewall-cmd --zone=public --add-service=http --permanent
+if [ "$BUILD_DOCKER" != "1" ]
+then
+        /var/www/mprov_control_center/mprov_control_center/init_mpcc.sh
+        systemctl enable httpd
+        systemctl restart httpd
+        firewall-cmd --zone=public --add-service=http
+        firewall-cmd --zone=public --add-service=http --permanent
+fi
