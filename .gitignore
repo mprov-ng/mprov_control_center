@@ -139,3 +139,4 @@ static/jazzmin/
 static/rest_framework/
 static/vendor/
 static/mprov_jobserver*.whl
+static/busybox
