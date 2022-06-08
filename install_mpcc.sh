@@ -1,14 +1,59 @@
 #!/bin/bash
 
-if [ "$1" == "-d" ]
+
+# time for some arg parsing.
+BUILD_DOCKER=0
+MYSQL_BUILD=0
+PGSQL_BUILD=0
+SQLIT_BUILD=0
+while [[ $# -gt 0 ]]
+do
+        case $1 in
+                -d)
+                        BUILD_DOCKER=1
+                        shift
+                        ;;
+                -m)
+                        MYSQL_BUILD=1
+                        shift
+                        ;;
+                -p)
+                        PGSQL_BUILD=1
+                        shift
+                        ;;
+
+                *)
+                        echo "Error: Unknown arg $1"
+                        exit 1
+                        ;;
+        esac
+done
+  
+if [ "$PGSQL_BUILD" == "1" ] && [ "$MYSQL_BUILD" == "1" ]
 then
-  BUILD_DOCKER=1
+    echo "Error: Please specify one or none of the database options (-m or -p or neither)"
+    exit 1
+fi
+
+if [ "$PGSQL_BUILD" == "0" ] && [ "$MYSQL_BUILD" == "0" ]
+then
+        SQLIT_BUILD=1
+fi
+
+extra_pkgs=""
+if [ "$PGSQL_BUILD" == "1" ]
+then
+        extra_pkgs="postgresql libpq-devel libpq gcc python38-devel"
+fi
+if [ "$MYSQL_BUILD" == "1" ]
+then
+        extra_pkgs="mariadb mariadb-common mariadb-devel gcc python38-devel"
 fi
 
 dnf -y install epel-release
-dnf -y install python38-mod_wsgi.x86_64 ipmitool dnsmasq ipxe-bootimgs jq golang git 
+dnf -y install python38-mod_wsgi.x86_64 jq git wget iproute $extra_pkgs
 cd /var/www/
-GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone git@github.com:mProv-Manager/mprov_control_center.git
+git clone https://github.com/mprov-ng/mprov_control_center.git
 if [ "$?" != "0" ]
 then
     echo "Unable to checkout git."
@@ -22,6 +67,22 @@ chmod 755 init_mpcc.sh
 python3.8 -m venv .
 . bin/activate
 pip install -r requirements.txt
+
+extra_pip=""
+if [ "$PGSQL_BUILD" == "1" ]
+then
+        extra_pip="psycopg2"
+fi
+if [ "$MYSQL_BUILD" == "1" ]
+then
+        extra_pip="mysqlclient"
+fi
+
+if [ "$extra_pip" != "" ]
+then
+        pip install $extra_pip
+fi
+
 
 # generates a secret from django's utils
 export SECRET_KEY=`python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'`
@@ -42,6 +103,9 @@ echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
 # other variables can be set directly in the ENV (for containers)
 # or via the .env file.   See the .env.example for possible varialbes.
 python manage.py collectstatic --noinput
+
+# grab a copy of busybox
+wget -q -O static/busybox https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox 
 
 mkdir -p db/
 chown apache db/ -R
