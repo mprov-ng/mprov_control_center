@@ -41,7 +41,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           build-args: |
-            MPROV_INSTALL_OPTS="-m"
+            MPROV_INSTALL_OPTS=-m
           tags: |
             ghcr.io/mprov-ng/mprov-control-center-mariadb:${{steps.vars.outputs.tag}}
             ghcr.io/mprov-ng/mprov-control-center-mariadb:latest
@@ -52,7 +52,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           build-args: |
-            MPROV_INSTALL_OPTS="-p"
+            MPROV_INSTALL_OPTS=-p
           tags: |
             ghcr.io/mprov-ng/mprov-control-center-pgsql:${{steps.vars.outputs.tag}}
             ghcr.io/mprov-ng/mprov-control-center-pgsql:latest
