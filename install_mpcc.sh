@@ -99,6 +99,12 @@ do
 done
 echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
 
+# append the db stuff if a file exists.
+if [ -e ".env.db" ]
+then
+        cat .env.db >> .env
+fi
+
 
 # other variables can be set directly in the ENV (for containers)
 # or via the .env file.   See the .env.example for possible varialbes.
