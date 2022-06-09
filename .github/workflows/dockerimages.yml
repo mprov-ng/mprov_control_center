@@ -34,7 +34,7 @@ jobs:
           tags: |
             ghcr.io/mprov-ng/mprov-control-center-sqlite:${{steps.vars.outputs.tag}}
             ghcr.io/mprov-ng/mprov-control-center-sqlite:latest
-        push: true
+          push: true
 
       - 
         name: Build the MariaDB Docker Image
@@ -45,7 +45,7 @@ jobs:
           tags: |
             ghcr.io/mprov-ng/mprov-control-center-mariadb:${{steps.vars.outputs.tag}}
             ghcr.io/mprov-ng/mprov-control-center-mariadb:latest
-        push: true
+          push: true
 
       - 
         name: Build the PostgreSQL DB Docker Image
@@ -56,4 +56,4 @@ jobs:
           tags: |
             ghcr.io/mprov-ng/mprov-control-center-pgsql:${{steps.vars.outputs.tag}}
             ghcr.io/mprov-ng/mprov-control-center-pgsql:latest
-        push: true
+          push: true
