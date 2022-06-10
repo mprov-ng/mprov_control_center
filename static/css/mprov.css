@@ -6,6 +6,10 @@ a {
   color: #20c997;
 }
 
+a.btn-default {
+  background-color: #56cc9d;
+}
+
 .card-primary.card-outline {
   border-top: 3px solid #20c997;
 }
