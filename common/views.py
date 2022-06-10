@@ -91,6 +91,7 @@ and make sure to add documentation to the class so that it can be displayed if a
             return Response(None)
         
         if 'pk' in kwargs:
+            self.serializer_class.Meta.depth = 3
             # someone is looking for a specific item.
             return self.retrieve(self, request, format=None, pk=kwargs['pk'])
         
