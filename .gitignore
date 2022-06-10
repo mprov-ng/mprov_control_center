@@ -131,6 +131,7 @@ dmypy.json
 # Excluded for now
 disks/
 locations/
+
 static/initrd.img
 static/vmlinuz
 media/
@@ -142,3 +143,6 @@ static/mprov_jobserver*.whl
 static/busybox
 id_rsa
 id_rsa.pub
+lib64
+bin/
+pyvenv.cfg
