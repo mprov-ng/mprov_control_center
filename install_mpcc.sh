@@ -53,16 +53,25 @@ fi
 dnf -y install epel-release
 dnf -y install python38-mod_wsgi.x86_64 jq git wget iproute $extra_pkgs
 cd /var/www/
-git clone https://github.com/mprov-ng/mprov_control_center.git
-if [ "$?" != "0" ]
-then
-    echo "Unable to checkout git."
-    exit 1
+if cd mprov_control_center
+then 
+        git pull
+        if [ "$?" != "0" ]
+        then
+            echo "Unable to checkout git."
+            exit 1
+        fi 
+else
+        git clone https://github.com/mprov-ng/mprov_control_center.git
+        if [ "$?" != "0" ]
+        then
+            echo "Unable to checkout git."
+            exit 1
+        fi
+	cd mprov_control_center
 fi
 
 
-
-cd mprov_control_center
 chmod 755 init_mpcc.sh
 python3.8 -m venv .
 . bin/activate
