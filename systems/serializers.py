@@ -1,6 +1,7 @@
 from pyexpat import model
 from systems.models import NetworkInterface, SystemImage, System, SystemGroup
 from rest_framework import serializers
+from jobqueue.models import JobServer
 
 class SystemSerializer(serializers.ModelSerializer): 
     class Meta:
@@ -25,6 +26,20 @@ class SystemImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemImage
         fields = '__all__'
+
+
+    def update(self, instance, validated_data):
+        jobservers_data = validated_data.pop('jobservers')
+        print("JS Data: " + str(jobservers_data))
+        image = super().update(instance, validated_data)
+        image.save()
+
+        for jobserver in jobservers_data:
+            # js = JobServer.objects.get(pk=jobserver.pk)
+            # print("Jobserver: " + str(js))
+            image.jobservers.add(jobserver.pk)
+        
+        return image
 class NetworkInterfaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = NetworkInterface
