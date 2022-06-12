@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# if this works, it would be great...
+err_hanlder() {
+  echo "Error: SOMETHING HAS GONE TERRIBLY WRONG! DROPPING TO SERIAL SHELL!"
+  # redirect stdio to tty1 and start a new process group, enables bash
+  # job control... hopefully
+  export -f get_kcmdline_opt
+  /bin/setsid /bin/bash -m  <> /dev/ttyS0 >&0 2>&1
+}
+
 echo "mProv boot setup..."
 
 cd /bin
@@ -19,6 +28,7 @@ ln -s /bin/busybox /bin/pkill
 ln -s /bin/busybox /bin/clear
 ln -s /bin/busybox /bin/chvt
 ln -s /bin/busybox /bin/env
+ln -s /bin/busybox /bin/awk
 
 sleep 2
 clear
@@ -40,6 +50,8 @@ get_kcmdline_opt(){
   done
 
 }
+
+trap err_hanlder ERR
 
 # grab some of our variables from the kernel cmdline.
 export MPROV_TMPFS_SIZE=`get_kcmdline_opt mprov_tmpfs_size`
@@ -67,7 +79,11 @@ ip link set $MPROV_PROV_INTF up
 udhcpc -s /bin/default.script
 
 echo "Network up."
-ifconfig $MPROV_PROV_INTF
+
+echo; 
+echo;
+
+/sbin/ifconfig $MPROV_PROV_INTF
 
 echo
 echo "Creating new root at /new_root..."
@@ -80,6 +96,7 @@ echo "New root setup."
 cd /new_root
 
 echo; echo "Downloading and extracting image to new root"
+echo "Retrieving $MPROV_IMAGE_URL"
 wget $MPROV_IMAGE_URL -O - | gunzip -c | cpio -id --quiet
 echo "New root Ready."
 mount -t proc proc /new_root/proc
@@ -120,6 +137,6 @@ mount -t devtmpfs devtmpfs /dev
 mount -t tmpfs tmpfs /run
 
 # redirect stdio to tty1 and start a new process group, enables bash
-# job control... hopefullycat 
+# job control... hopefully
 export -f get_kcmdline_opt
 /bin/setsid /bin/bash -m  <> /dev/tty1 >&0 2>&1
