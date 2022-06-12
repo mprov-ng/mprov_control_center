@@ -396,8 +396,11 @@ class IPXEAPIView(MProvView):
 
         # our IP is not found, let's see if NADS is running on here.
         if queryset.count() == 0:
-            imgQs = SystemImage.objects.get(name='__nads__')
-            
+            try:
+                imgQs = SystemImage.objects.get(name='__nads__')
+            except:
+                print(f"Error: You are missing a system image of the name '__nads__' so autodetection will fail.")
+                return Response(None, status=404)
             if type(imgQs) is SystemImage:  
                 # there is a __nads__ iamge, let's serve that.
                 # spoof a nics object
