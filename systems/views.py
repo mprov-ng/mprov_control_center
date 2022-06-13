@@ -21,6 +21,7 @@ from networks.models import SwitchPort, Network, Switch
 from rest_framework import generics
 from django.template import Template, Context
 from jobqueue.models import Job, JobModule, JobStatus
+from jobqueue.serializers import JobServerAPISerializer
 
 
 
@@ -535,6 +536,7 @@ Format returned:
     model = SystemImage
     queryset = SystemImage.objects.all()
     serializer_class = SystemImageSerializer
+    jobservers=JobServerAPISerializer(many=True)
     
     # def get(self, request, format=None, **kwargs):
     #     return self.retrieve(self, request, format=None, **kwargs)

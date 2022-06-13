@@ -29,14 +29,13 @@ class SystemImageSerializer(serializers.ModelSerializer):
 
 
     def update(self, instance, validated_data):
+        print(f"{validated_data}")
         jobservers_data = validated_data.pop('jobservers')
         print("JS Data: " + str(jobservers_data))
         image = super().update(instance, validated_data)
         image.save()
 
         for jobserver in jobservers_data:
-            # js = JobServer.objects.get(pk=jobserver.pk)
-            # print("Jobserver: " + str(js))
             image.jobservers.add(jobserver.pk)
         
         return image
