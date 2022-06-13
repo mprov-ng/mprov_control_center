@@ -123,9 +123,11 @@ python manage.py collectstatic --noinput
 # grab a copy of busybox
 wget -q -O static/busybox https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox 
 
-mkdir -p db/
+mkdir -p db/ media
 chown apache db/ -R
+chown apache media/ -R
 chmod u+sw db/ -R
+chmod u+sw media/ -R
 
 
 # set up the apache stuff
