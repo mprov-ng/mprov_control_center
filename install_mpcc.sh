@@ -52,6 +52,7 @@ fi
 
 dnf -y install epel-release
 dnf -y install python38-mod_wsgi.x86_64 jq git wget iproute $extra_pkgs
+RUNDIR=`pwd`
 cd /var/www/
 if cd mprov_control_center
 then 
@@ -109,9 +110,9 @@ done
 echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
 
 # append the db stuff if a file exists.
-if [ -e ".env.db" ]
+if [ -e "${RUNDIR}/env.db" ]
 then
-        cat .env.db >> .env
+        cat ${RUNDIR}/env.db >> .env
 fi
 
 
@@ -170,6 +171,11 @@ then
         /var/www/mprov_control_center/init_mpcc.sh
         systemctl enable httpd
         systemctl restart httpd
-        firewall-cmd --zone=public --add-service=http
-        firewall-cmd --zone=public --add-service=http --permanent
+	echo "Please remember!  You should open up port 80 or whatever port you want to run your webserver on to your firewall if you are running one."
+	echo 
+	echo -e "\tExample Commands:"
+        echo -e "\tfirewall-cmd --zone=public --add-service=http --runtime-to-permanent"
+	echo
+	echo
+	echo "mProv also has issues running with selinux enabled.  You can run 'setenforce 0' for now to disable selinux, but still get auditing."
 fi
