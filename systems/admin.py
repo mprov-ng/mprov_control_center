@@ -5,6 +5,9 @@ from django.contrib.contenttypes.admin import GenericStackedInline
 from django.forms import BaseInlineFormSet
 from django.utils.html import mark_safe
 from networks.models import SwitchPort
+from django.utils.text import slugify
+from jobqueue.models import JobModule, JobStatus, Job
+
 from .models import (
   System,
   SystemBMC,
@@ -95,10 +98,41 @@ class SystemGroupAdmin(admin.ModelAdmin):
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
 
+@admin.action(description="Mark images as needing rebuild.")
+def mark_rebuild(modeladmin, request, queryset):
+  queryset.update(needs_rebuild=True)
+  for instance in queryset:
+    if not instance.needs_rebuild: 
+      return
+    instance.slug = slugify(instance.name)
+
+    JobType = None
+    try:
+        JobType = JobModule.objects.get(slug='image-update')
+    except:
+        JobType = None
+    # print(str(JobType) + " post")
+
+    # get the jobtype, do nothing if it's not defined.
+    if JobType is not None:
+
+        # save a new job, if one doesn't already exist.
+        params = { 'imageId': instance.slug}
+        Job.objects.create( name=JobType.name, 
+            module=JobType, 
+            status=JobStatus.objects.get(pk=1), 
+            params = params,
+        )
+
+        # TODO: Increment version number and clear out jobservers field.
+        instance.jobservers.clear()
+        instance.version = instance.version + 1
+
 class SystemImageAdmin(admin.ModelAdmin):
   list_display = ['slug', 'name', 'version', 'registered_jobservers']
   readonly_fields = ['timestamp', 'updated', 'created_by',  'jobservers']
   list_display_links = ['slug', 'name']
+  actions= [mark_rebuild]
   fieldsets = (
     (None, {
       'fields': (
