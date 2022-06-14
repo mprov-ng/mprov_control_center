@@ -176,7 +176,8 @@ then
 	echo "Please remember!  You should open up port 80 or whatever port you want to run your webserver on to your firewall if you are running one."
 	echo 
 	echo -e "\tExample Commands:"
-        echo -e "\tfirewall-cmd --zone=public --add-service=http --runtime-to-permanent"
+        echo -e "\tfirewall-cmd --zone=public --add-service=http --permanent"
+        echo -e "\tfirewall-cmd --reload"
 	echo
 	echo
 	echo "mProv also has issues running with selinux enabled.  You can run 'setenforce 0' for now to disable selinux, but still get auditing."
