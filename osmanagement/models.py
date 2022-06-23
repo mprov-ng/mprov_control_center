@@ -27,7 +27,14 @@ class OSDistro(models.Model):
     verbose_name="Configuration\nParameters",
   )
   scripts = models.ManyToManyField(Script, blank=True, )
-  install_kernel_cmdline=models.CharField(max_length=4096, null=True, blank=True,help_text="Options to pass to the install kernel")
+  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel")
+  # install kernel parameters.
+  tmpfs_root_size = models.IntegerField(default=8, help_text="Size of the root tmpfs filesystem in Gibabytes")
+  initial_mods = models.CharField(default="e1000,tg3", help_text="Comma separated list of modules to load.", max_length=255)
+  prov_interface = models.CharField(default="eth0", help_text="Interface name to provision over.", max_length=255)
+
+
+
   class Meta:
     ordering=['name']
     verbose_name='OS Distrubution'

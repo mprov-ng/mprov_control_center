@@ -22,6 +22,28 @@ class OSDistroAdmin(admin.ModelAdmin):
   #inlines = [RepoInline]
   list_display=['id', 'name', 'vendor', 'version']
   list_display_links=['id', 'name']
+  fieldsets = (
+    (None, {
+      'fields': (
+        'name',
+        'vendor',
+        'baserepo',
+        'osrepos',
+
+      )
+    }),
+    ('OS Configuration', {
+      'fields':(
+        'config_params',
+        'scripts',
+        'install_kernel_cmdline',
+        'tmpfs_root_size',
+        'initial_mods',
+        'prov_interface',
+      )
+    }
+    ),
+  )
 
 
 admin.site.register(OSDistro, OSDistroAdmin)
