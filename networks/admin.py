@@ -3,7 +3,9 @@ from .models import Network, NetworkType, Switch, SwitchPort
 
 class NetworkAdmin(admin.ModelAdmin):
   model = Network
-  list_display = ['slug', 'name', 'net_type', 'vlan', 'subnet', 'netmask']
+  # Removing vlan for now.
+  #list_display = ['slug', 'name', 'net_type', 'vlan', 'subnet', 'netmask']
+  list_display = ['slug', 'name', 'net_type', 'subnet', 'netmask']
   readonly_fields = ['slug']
   list_display_links = ['slug', 'name',]
 
