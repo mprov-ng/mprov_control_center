@@ -1,0 +1,17 @@
+- model: networks.networktype
+  pk: 1
+  fields:
+    name: Ethernet
+    slug: ethernet
+- model: networks.networktype
+  pk: 2
+  fields:
+    name: Infiniband
+    slug: infiniband
+- model: networks.networktype
+  pk: 3
+  fields:
+    name: Fiber Channel
+    slug: fiber_channel
+
+  

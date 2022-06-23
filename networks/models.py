@@ -7,11 +7,17 @@ from jobqueue.models import JobModule, JobStatus, Job
 
 class NetworkType(models.Model):
   name=models.CharField(max_length=120)
+  slug=models.SlugField(unique=True,blank=True,verbose_name="Network Type ID",editable=False)
+  #id=models.IntegerField(unique=True, primary_key=False)
   description=models.TextField(blank=True, null=True)
   class Meta:
     verbose_name="Network Type"
   def __str__(self):
     return self.name
+  def save(self, *args, **kwargs):
+    if not self.slug:
+      self.slug = slugify(self.name)
+    super().save(*args, **kwargs)
 
 
 class Network(models.Model):
@@ -21,7 +27,9 @@ class Network(models.Model):
     NetworkType, 
     on_delete=models.CASCADE, 
     verbose_name="Network Type",
+    
   )
+  
   vlan=models.CharField(max_length=100,default='default')
   subnet=models.GenericIPAddressField(default='0.0.0.0')
   masks = []
