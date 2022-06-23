@@ -37,22 +37,22 @@ class Network(models.Model):
     masks.append((mask,mask))
   netmask=models.IntegerField(choices=masks, verbose_name="CIDR Mask")
   gateway=models.GenericIPAddressField(blank=True,null=True)
-  nameserver1=models.GenericIPAddressField(blank=True,null=True)
+  nameserver1=models.GenericIPAddressField(blank=True,null=True, verbose_name="Primary Nameserver")
   # Add domain
-  domain=models.CharField(max_length=255,blank=True,)
+  domain=models.CharField(max_length=255,blank=True,verbose_name="Domain Name")
 
   # Add Enable DHCP?
-  isdhcp = models.BooleanField(default=False)
+  isdhcp = models.BooleanField(default=False, verbose_name="Enable DHCP Server?")
 
   # Add Enable DNS?
-  managedns = models.BooleanField(default=False)
+  managedns = models.BooleanField(default=False, verbose_name="Manage DNS for network?")
   
   # Add Enable Network Booting?
-  isbootable = models.BooleanField(default=False)
+  isbootable = models.BooleanField(default=False, verbose_name="Enable network booting?")
 
   # dhcp net dynamic start
-  dhcpstart = models.GenericIPAddressField(blank=True, null=True)
-  dhcpend = models.GenericIPAddressField(blank=True, null=True)
+  dhcpstart = models.GenericIPAddressField(blank=True, null=True, verbose_name="DHCP Range Start")
+  dhcpend = models.GenericIPAddressField(blank=True, null=True, verbose_name="DHCP Range End")
 
   def __str__(self):
       return self.name
