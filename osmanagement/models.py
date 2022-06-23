@@ -21,7 +21,7 @@ class OSDistro(models.Model):
     related_name="+"
   )
   config_params=models.TextField(
-    default="-- # None", 
+    default="# None", 
     blank=True, 
     null=True,
     verbose_name="Configuration\nParameters",
