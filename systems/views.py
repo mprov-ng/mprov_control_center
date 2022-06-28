@@ -9,12 +9,14 @@ from .serializers import (
     SystemSerializer,
     SystemGroupSerializer,
     SystemDetailSerializer,
+    SystemBMCSerializer,
+    SystemBMCDetailSerializer,
     SystemImageSerializer,
 )
 from rest_framework.response import Response
 
 from common.views import MProvView
-from systems.models import NetworkInterface, System, SystemGroup, SystemImage
+from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC
 from django.shortcuts import render
 from rest_framework.response import Response
 from networks.models import SwitchPort, Network, Switch
@@ -547,3 +549,81 @@ Format returned:
 #   queryset = SystemImage.objects.all()
 #   serializer_class = SystemImageUpdateSerializer
  
+
+class SystemBMCAPIView(MProvView):
+    '''
+# /systembmcs/
+
+## Accepted HTTP Methods:
+- GET (no parameters)
+- GET (with Primary Key, ie: /systembmcs/1/)
+- POST (with primary key, ie: /systembmcs/1/)
+- PATCH (with primary key, ie: /systembmcs/1/)
+- DELETE (with primary key, ie: /systembmcs/1/)
+
+## Documentation
+
+### Class Attributes
+- id: The internal ID in the db
+- ipaddress: The IP of the entry
+- mac: The MAC address of the entry
+- username: The username for authentication with this entry
+- password: The pwassword for authentication with this entry
+- system: ID of the system this entry is associated with.
+- switch_port: ID of the switchport this entry resides on.
+
+### GET method (no parameters)
+Returns a json list of all objects in the MPCC of this type
+
+Format returned:
+
+
+    [
+    {
+        "id": 1,
+        "ipaddress": "172.16.20.1",
+        "mac": null,
+        "username": null,
+        "password": null,
+        "system": 1,
+        "switch_port": null
+    }
+    ]
+
+
+### GET, POST, PATCH, DELETE (with primary key)
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
+
+- GET returns the object specified with a retrieval depth of 3 or 404
+
+- POST returns the new object created or a 500 style error
+
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
+
+    '''
+    model = SystemBMC
+    template = "systems_docs.html"
+    serializer_class = SystemBMCDetailSerializer
+    queryset = None
+    def get(self, request, format=None, **kwargs):
+       
+        result = self.checkContentType(request, format=format, kwargs=kwargs)
+        if result is not None:
+            return result
+        if self.model == None:
+            return Response(None)
+        if 'pk' in kwargs:
+            # someone is looking for a specific item.
+            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+        self.serializer_class = SystemBMCSerializer
+        self.queryset = self.model.objects.all()
+        if 'hostname' in request.query_params:
+            # someone is looking for a specific item.
+            queryset = self.queryset.filter(hostname=request.query_params['hostname'])
+            if queryset.count() == 0:
+                return Response(None, status=404)
+        return generics.ListAPIView.get(self, request, format=None)

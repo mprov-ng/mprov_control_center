@@ -1,12 +1,16 @@
 from array import array
 from pyexpat import model
-from systems.models import NetworkInterface, SystemImage, System, SystemGroup
+from systems.models import NetworkInterface, SystemImage, System, SystemGroup, SystemBMC
 from rest_framework import serializers
 from jobqueue.models import JobServer
 
 class SystemSerializer(serializers.ModelSerializer): 
     class Meta:
         model = System
+        fields = '__all__'
+class SystemBMCSerializer(serializers.ModelSerializer): 
+    class Meta:
+        model = SystemBMC
         fields = '__all__'
 class SystemGroupSerializer(serializers.ModelSerializer): 
     class Meta:
@@ -17,6 +21,11 @@ class SystemDetailSerializer(serializers.ModelSerializer):
         model = System
         fields = '__all__'
         depth = 3
+class SystemBMCDetailSerializer(serializers.ModelSerializer): 
+    class Meta:
+        model = SystemBMC
+        fields = '__all__'
+        depth = 3        
 class SystemImageDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemImage

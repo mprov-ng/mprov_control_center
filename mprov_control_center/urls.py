@@ -19,6 +19,7 @@ from django.urls import path, include
 from .views import IndexAPIView
 from systems.views import (
     SystemAPIView,
+    SystemBMCAPIView,
     SystemGroupAPIView,
     NetworkInterfaceAPIView,
     IPXEAPIView,
@@ -56,6 +57,9 @@ urlpatterns = [
     path('systems/', SystemAPIView.as_view()),
     path('systems/<str:pk>/', SystemAPIView.as_view()),
     
+    path('systembmcs/', SystemBMCAPIView.as_view()),
+    path('systembmcs/<str:pk>/', SystemBMCAPIView.as_view()),
+
     path('switches/', SwitchAPIView.as_view()),
     path('switches/<str:pk>/', SwitchAPIView.as_view()),
     
