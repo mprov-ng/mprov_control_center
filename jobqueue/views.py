@@ -276,7 +276,8 @@ Format returned:
             'heartbeat_time': datetime.now(),
             'address': request.data['address'],
             'name': request.data['name'],
-            'port': request.data['port']
+            'port': request.data['port'],
+            'one_minute_load': request.data['one_minute_load']
         }
         data = {}
         if request.data['name']:
