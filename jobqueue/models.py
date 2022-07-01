@@ -1,5 +1,8 @@
+import ipaddress
 from tabnanny import verbose
 from django.db import models
+from django.apps import apps
+
 
 class Job(models.Model):
     name=models.CharField(max_length=255)
@@ -41,8 +44,26 @@ class JobServer(models.Model):
     heartbeat_time = models.DateTimeField(auto_now=True, verbose_name="Last Heart Beat")
     jobmodules=models.ManyToManyField(JobModule, verbose_name="Handled Job Modules")
     one_minute_load=models.IntegerField(verbose_name="1 Minute Load Avg.", default=0, null=True)
+    network=models.ForeignKey('networks.Network', blank=True, null=True, on_delete=models.SET_NULL)
     def __str__(self):
         return self.name
     
     class Meta:
         verbose_name="Job Server"
+    def save(self, *args, **kwargs):
+        # search for a network that our address is in.
+        myaddr = ipaddress.ip_address(self.address)
+        # get a ref to the networks class
+        networkcls = apps.get_model('networks.Network')
+        networks = networkcls.objects.all()
+        found_net = None
+        for network in networks:
+            ipnet = network.subnet
+            ipmask = network.netmask
+            mynet = ipaddress.ip_network(f"{ipnet}/{ipmask}")
+            if myaddr in mynet:
+                found_net = network
+                break
+        if found_net != None:
+            self.network = found_net
+        super().save(*args, **kwargs)
