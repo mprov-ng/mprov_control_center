@@ -10,6 +10,7 @@ class OSRepoAdmin(admin.ModelAdmin):
   model=OSRepo
   list_display=['id', 'name', 'repo_package_url']
   list_display_links=['id','name']
+  readonly_fields=['hosted_by']
 
 # class RepoInline(admin.StackedInline):
 #   model = OSRepo

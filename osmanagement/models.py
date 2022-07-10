@@ -48,6 +48,9 @@ class OSDistro(models.Model):
 class OSRepo(models.Model):
   name=models.CharField(max_length=100)
   repo_package_url=models.CharField(max_length=2048, verbose_name='Repo Package URL')
+  managed = models.BooleanField(default=False, verbose_name="mProv Managed?", help_text="Should mProv download and manage this repository?")
+  update = models.BooleanField(default=False, verbose_name="Update Repository?", help_text="Should we update a managed repository?")
+  hosted_by = models.ManyToManyField('jobqueue.JobServer', blank=True, verbose_name="Hosted by")
 
   osdistro=models.ManyToManyField(
     'OSDistro', 
@@ -101,7 +104,7 @@ def OSDistroDeleteJob(sender, **kwargs):
       )
         
 @receiver(pre_save, sender=OSRepo)
-def RepoUpdateJob(sender, **kwargs):
+def RepoUpdateJob(sender, instance, **kwargs):
   RepoJobType = None
   # get or create the OSIMAGE_UPDATE job module in the DB
   # TODO get the jobtype, do nothing if it's not defined.
@@ -110,12 +113,17 @@ def RepoUpdateJob(sender, **kwargs):
   except:
       RepoJobType = None
   print(RepoJobType)
-  if RepoJobType is not None:
+  if RepoJobType is not None and instance.update:
+
       # save a new job, if one doesn't already exist.
-      Job.objects.update_or_create(
-        name="Update Repos", module=RepoJobType,
-        defaults={'status': JobStatus.objects.get(pk=1)}
+      params = { 'repo_id': instance.id}
+
+      Job.objects.create( name=RepoJobType.name, 
+          module=RepoJobType, 
+          status=JobStatus.objects.get(pk=1), 
+          params=params,          
       )
+      instance.hosted_by.clear()
 
 @receiver(pre_delete, sender=OSRepo)
 def RepoDeleteJob(sender, **kwargs):
