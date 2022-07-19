@@ -4,10 +4,17 @@ from django.db.models.signals import pre_save, pre_delete
 from jobqueue.models import JobModule, Job, JobStatus
 from scripts.models import Script
 
+# This will be an object managed by the jobserver image-update and repo-update modules.
+class OSType(models.Model):
+  slug = models.SlugField(primary_key=True)
+  name = models.CharField(max_length=255)
+
+
 class OSDistro(models.Model):
   name=models.CharField(max_length=100)
   vendor=models.CharField(max_length=100)
   version=models.CharField(max_length=100)
+  
   baserepo=models.ForeignKey(
     'OSRepo', 
     on_delete=models.CASCADE, 
@@ -33,8 +40,6 @@ class OSDistro(models.Model):
   initial_mods = models.CharField(default="e1000,tg3", help_text="Comma separated list of modules to load.", max_length=255)
   prov_interface = models.CharField(default="eth0", help_text="Interface name to provision over.", max_length=255)
 
-
-
   class Meta:
     ordering=['name']
     verbose_name='OS Distrubution'
@@ -51,7 +56,7 @@ class OSRepo(models.Model):
   managed = models.BooleanField(default=False, verbose_name="mProv Managed?", help_text="Should mProv download and manage this repository?")
   update = models.BooleanField(default=False, verbose_name="Update Repository?", help_text="Should we update a managed repository?")
   hosted_by = models.ManyToManyField('jobqueue.JobServer', blank=True, verbose_name="Hosted by")
-
+  ostype = models.ForeignKey(OSType, on_delete=models.SET_NULL, blank=True, null=True)
   osdistro=models.ManyToManyField(
     'OSDistro', 
     blank=True,
