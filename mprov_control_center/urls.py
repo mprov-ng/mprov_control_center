@@ -78,6 +78,7 @@ urlpatterns = [
     path('systemimages/', include('systems.systemimage_urls')),
     path('distros/', include('osmanagement.distros_urls')),
     path('repos/', include('osmanagement.repos_urls')),
+    path('ostypes/', include('osmanagement.ostypes_urls')),
     path('jobmodules/', include('jobqueue.jobmodules_urls')),    
     path('jobservers/', include('jobqueue.jobservers_urls')),
     path('jobs/', include('jobqueue.jobs_urls')),

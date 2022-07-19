@@ -1,6 +1,6 @@
 from common.views import MProvView
-from osmanagement.models import OSDistro, OSRepo
-from osmanagement.serializers import OSDistroAPISerializer, OSRepoAPISerializer
+from osmanagement.models import OSDistro, OSRepo, OSType
+from osmanagement.serializers import OSDistroAPISerializer, OSRepoAPISerializer, OSTypeAPISerializer
 from jobqueue.models import Job, JobModule
 from pprint import pprint
 
@@ -126,3 +126,52 @@ Format returned:
     template = 'osrepo_docs.html'
     serializer_class = OSRepoAPISerializer
     queryset = OSRepo.objects.all()
+
+    
+class OSTypeAPIView(MProvView):
+    '''
+# /ostypes/
+
+## Accepted HTTP Methods:
+- GET (no parameters)
+- GET (with Primary Key, ie: /ostypes/1/)
+- POST (with primary key, ie: /ostypes/1/)
+- PATCH (with primary key, ie: /ostypes/1/)
+- DELETE (with primary key, ie: /ostypes/1/)
+
+## Documentation
+
+### Class Attributes
+- slug: The internal ID in the db
+- name: A human readable name 
+
+
+### GET method (no parameters)
+Returns a json list of all objects in the MPCC of this type
+
+Format returned:
+
+    [
+    {
+        "slug": "rhel",
+        "name": "Yum/dnf based Linux OS",
+    }
+    ]
+
+### GET, POST, PATCH, DELETE (with primary key)
+- These methods, when passed a primary key, will Retrieve, Create, Update, or 
+    Delete that entry in the database.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if changed.
+
+- GET returns the object specified or 404
+
+- POST returns the new object created or a 500 style error
+
+- PATCH returns the updated object.
+
+- DELETE returns 204 No Content if the delete is successful.
+
+    '''   
+    model = OSType
+    serializer_class = OSTypeAPISerializer
+    queryset = OSType.objects.all()

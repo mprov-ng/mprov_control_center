@@ -1,4 +1,4 @@
-from osmanagement.models import OSDistro, OSRepo
+from osmanagement.models import OSDistro, OSRepo, OSType
 from rest_framework import serializers
 
 class OSDistroAPISerializer(serializers.ModelSerializer):
@@ -10,3 +10,7 @@ class OSRepoAPISerializer(serializers.ModelSerializer):
     class Meta:
         model = OSRepo
         fields = '__all__'
+class OSTypeAPISerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OSType
+        fields = '__all__'        
