@@ -9,7 +9,10 @@ class OSType(models.Model):
   slug = models.SlugField(primary_key=True)
   name = models.CharField(max_length=255)
 
+  def __str__(self):
+      return self.name
 
+ 
 class OSDistro(models.Model):
   name=models.CharField(max_length=100)
   vendor=models.CharField(max_length=100)
@@ -56,7 +59,7 @@ class OSRepo(models.Model):
   managed = models.BooleanField(default=False, verbose_name="mProv Managed?", help_text="Should mProv download and manage this repository?")
   update = models.BooleanField(default=False, verbose_name="Update Repository?", help_text="Should we update a managed repository?")
   hosted_by = models.ManyToManyField('jobqueue.JobServer', blank=True, verbose_name="Hosted by")
-  ostype = models.ForeignKey(OSType, on_delete=models.SET_NULL, blank=True, null=True)
+  ostype = models.ForeignKey(OSType, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="OS Type")
   osdistro=models.ManyToManyField(
     'OSDistro', 
     blank=True,
