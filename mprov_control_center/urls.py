@@ -84,6 +84,7 @@ urlpatterns = [
     path('jobs/', include('jobqueue.jobs_urls')),
     path('scripts/', include('scripts.scripts_urls')),
     path('kernels/', include('systems.kernels_urls')),
+    path('osrepos/', include('osmanagement.osrepos_urls')),
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
     
 ] 
