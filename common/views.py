@@ -58,7 +58,7 @@ and make sure to add documentation to the class so that it can be displayed if a
                 message += "\n\n[Home](/)"
             html = markdown.markdown(message)
             # let's dress up the HTML output a little.
-            bs = BeautifulSoup("<html><head></head><body></body></html>", 'html.parser')
+            bs = BeautifulSoup("<html><head></head><body></body></html>", features="html.parser")
             body = bs.find('body')
             head_tag = bs.find('head')
             title_tag = bs.new_tag('title')
@@ -77,7 +77,7 @@ and make sure to add documentation to the class so that it can be displayed if a
                 <link rel="stylesheet" href="/static/css/mprov.css">
                 <link rel="stylesheet" href="/static/css/mprov_docs.css">
             '''))
-            body.append(BeautifulSoup(html))
+            body.append(BeautifulSoup(html, features="html.parser"))
             return HttpResponse(bs, content_type='text/html')
         return None
 
