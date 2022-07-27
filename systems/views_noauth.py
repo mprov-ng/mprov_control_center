@@ -60,7 +60,7 @@ If no primary key is specified, 404 is returned.
         raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
       print(js_set)
       js = random.choice(js_set)
-      imageURL = "http://" + js.address + ":" + str(js.port) + "/" + image.slug
+      imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug 
       if isInitRamFS:
         imageURL += ".initramfs"
       else:
@@ -123,7 +123,7 @@ Note: See [/images/](/images/)
           raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
         print(js_set)
         js = random.choice(js_set)
-        imageURL = "http://" + js.address + ":" + str(js.port) + "/" + image.slug + ".vmlinuz"
+        imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
 
         return redirect(imageURL)        
       def post(self, request, *args, **kwargs):

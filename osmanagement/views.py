@@ -2,6 +2,7 @@ from common.views import MProvView
 from osmanagement.models import OSDistro, OSRepo, OSType
 from osmanagement.serializers import OSDistroAPISerializer, OSRepoAPISerializer, OSTypeAPISerializer
 from jobqueue.models import Job, JobModule
+from jobqueue.serializers import JobServerAPISerializer
 from pprint import pprint
 
 class OSDistroAPIView(MProvView):
@@ -126,6 +127,7 @@ Format returned:
     template = 'osrepo_docs.html'
     serializer_class = OSRepoAPISerializer
     queryset = OSRepo.objects.all()
+    hosted_by=JobServerAPISerializer(many=True)
 
     
 class OSTypeAPIView(MProvView):

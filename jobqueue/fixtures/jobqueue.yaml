@@ -87,10 +87,10 @@
     name: Image Sync Job
     slug: image-sync
 - model: jobqueue.jobmodule
-  pk: image-server
+  pk: mprov-webserver
   fields:
-    name: Image Server
-    slug: image-server
+    name: mProv Webserver
+    slug: mprov-webserver
 - model: jobqueue.jobmodule
   pk: dnsmasq
   fields:
