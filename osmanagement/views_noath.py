@@ -66,7 +66,11 @@ None
           raise NotFound(detail="Error 404, No Jobservers for Repo", code=404) 
         print(js_set)
         js = random.choice(js_set)
-        imageURL = f"http://{js.address}:{str(js.port)}/repos/{repo.id}/"
+        if 'redirect_url' in kwargs:
+          rurl = kwargs['redirect_url']
+        else:
+          rurl = ""
+        imageURL = f"http://{js.address}:{str(js.port)}/repos/{repo.id}/{rurl}"
 
         return redirect(imageURL)        
       def post(self, request, *args, **kwargs):

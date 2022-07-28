@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.views.generic import RedirectView
-from django.urls import path, include
+from django.urls import path, include, re_path
 from .views import IndexAPIView
 from systems.views import (
     SystemAPIView,
@@ -34,6 +34,8 @@ from networks.views import (
     SwitchPortAPIView
 
 )
+
+from osmanagement.views_noath import OSRepoURLAPIView
 
 from django.conf import settings
 from django.conf.urls.static import static
@@ -84,7 +86,9 @@ urlpatterns = [
     path('jobs/', include('jobqueue.jobs_urls')),
     path('scripts/', include('scripts.scripts_urls')),
     path('kernels/', include('systems.kernels_urls')),
+
     path('osrepos/', include('osmanagement.osrepos_urls')),
+    
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
     
 ] 
