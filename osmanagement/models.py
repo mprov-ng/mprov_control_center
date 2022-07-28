@@ -37,7 +37,7 @@ class OSDistro(models.Model):
     verbose_name="Configuration\nParameters",
   )
   scripts = models.ManyToManyField(Script, blank=True, )
-  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel")
+  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
   # install kernel parameters.
   tmpfs_root_size = models.IntegerField(default=8, help_text="Size of the root tmpfs filesystem in Gibabytes")
   initial_mods = models.CharField(default="e1000,tg3", help_text="Comma separated list of modules to load.", max_length=255)
@@ -60,13 +60,13 @@ class OSRepo(models.Model):
   update = models.BooleanField(default=False, verbose_name="Update Repository?", help_text="Should we update a managed repository?")
   hosted_by = models.ManyToManyField('jobqueue.JobServer', blank=True, verbose_name="Hosted by")
   ostype = models.ForeignKey(OSType, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="OS Type")
-  osdistro=models.ManyToManyField(
-    'OSDistro', 
-    blank=True,
-    through=OSDistro.osrepos.through,
-    verbose_name='OS Distrubution'
+  # osdistro=models.ManyToManyField(
+  #   'OSDistro', 
+  #   blank=True,
+  #   through=OSDistro.osrepos.through,
+  #   verbose_name='OS Distrubution'
 
-  )
+  # )
 
   def __str__(self):
       return self.name
