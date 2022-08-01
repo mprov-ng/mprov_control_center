@@ -20,9 +20,11 @@ from .models import (
 class NetworkInterfaceInlineFormset(BaseInlineFormSet):
   def __init__(self, *args, **kwargs):
     super(NetworkInterfaceInlineFormset, self).__init__(*args, **kwargs)
-    print( SwitchPort.objects.filter(networkinterface=None) )
-    for form in self.forms:
-      form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
+    # print( SwitchPort.objects.filter(networkinterface=None) )
+   
+    # for form in self.forms:
+    #   form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
+    
 
 class NetworkInterfaceInline(admin.TabularInline):
   model = NetworkInterface

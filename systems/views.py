@@ -16,7 +16,7 @@ from .serializers import (
 from rest_framework.response import Response
 
 from common.views import MProvView
-from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC
+from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, SystemModel
 from django.shortcuts import render
 from rest_framework.response import Response
 from networks.models import SwitchPort, Network, Switch
@@ -24,6 +24,7 @@ from rest_framework import generics
 from django.template import Template, Context
 from jobqueue.models import Job, JobModule, JobStatus
 from jobqueue.serializers import JobServerAPISerializer
+from django.utils.text import slugify
 
 
 
@@ -47,8 +48,10 @@ NADS Packet:
 
 
         {
-            "switch": "some-switch-host-name",
-            "port": "someport-number"
+            "vendor": The vendor associated with the system you which to register, must match what mPCC knows.
+            "model": The model associated with the system you which to register, must match what mPCC knows.
+            "switch": "some-switch-host-name", must match what mPCC knows.
+            "port": "someport-number", must match what mPCC knows.
             "mac": "mac of the machine being registered"
         }
 
@@ -56,7 +59,8 @@ NADS Packet:
     model = System
     serializer_class = SystemSerializer
     queryset = System.objects.none()
-
+    authentication_classes = [] #disables authentication
+    permission_classes = [] #disables permission
 
     def get(self, request, *args, **kwargs):
         result = self.checkContentType(request, format=format)
@@ -78,6 +82,8 @@ NADS Packet:
         
         switch = Switch.objects.get(hostname=request.data['switch'])
         print(switch)
+
+        model_slug = slugify(f"{request.data['vendor']} {request.data['model']}")
         
         port= SwitchPort.objects.get(name=request.data['port'], switch=switch)
         print(port)
@@ -86,6 +92,10 @@ NADS Packet:
         print(nicQueryset)
         if nicQueryset is not None and len(nicQueryset) > 0:
             system = System.objects.get(pk=nicQueryset[0].system.pk)
+            print(model_slug)
+            print(system.systemmodel.slug)
+            if system.systemmodel.slug != model_slug:
+                system=None
             if system is not None:
                 nicObj = nicQueryset.first()
                 nicObj.mac = request.data['mac']
@@ -109,7 +119,12 @@ NADS Packet:
                 # return the system object.    
                 self.queryset = [system]
                 return  generics.ListAPIView.get(self, request, format=None)
-        return  generics.ListAPIView.get(self, request, format=None)
+        # return 404
+        #self.queryset = []
+        # TODO insert MAC ban code here if needed.
+        return Response(None, status=404)
+        # pass
+        # return  generics.ListAPIView.get(self, request, format=None)
 
 class SystemAPIView(MProvView):
     '''
