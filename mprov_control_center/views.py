@@ -13,23 +13,26 @@ however, you are looking for the documentation on how to use this API, you shoul
 one of the following links.   Each link is a section of the API that corresponds to a section of the admin 
 interface.  It will give you documentation on how to use that section of the api.
 
-* [/distros/](/distros/) .
-* [/images/](/images/)  .
-* [/jobs/](/jobs/)  .
-* [/jobmodules/](/jobmodules/)  .
-* [/jobservers/](/jobservers/)  .
-* [/kernels/](/kernels/)  .
-* [/networkinterfaces/](/networkinterfaces/)   .
-* [/networks/](/networks/)  .
-* [/networktypes/](/networktypes/)  .
-* [/repos/](/repos/)  .
+* [/distros/](/distros/)
+* [/images/](/images/)
+* [/jobs/](/jobs/)
+* [/jobmodules/](/jobmodules/)
+* [/jobservers/](/jobservers/)
+* [/kernels/](/kernels/)
+* [/networkinterfaces/](/networkinterfaces/)
+* [/networks/](/networks/)
+* [/networktypes/](/networktypes/)
+* [/repos/](/repos/)
 * [/scripts/](/scripts/)
-* [/switches/](/switches/)  .
-* [/switchports/](/switchports/)  .
-* [/systemgroups/](/systemgroups/)  .
-* [/systemimages/](/systemimages/)  .
-* [/systems/](/systems/)  .
-* [/systems/register](/systems/register)  .
+* [/switches/](/switches/)
+* [/switchports/](/switchports/)
+* [/systemgroups/](/systemgroups/)
+* [/systemimages/](/systemimages/)
+* [/systems/](/systems/)
+* [/systems/register](/systems/register)
+
 
     """
     template = 'docs.html'
+    authentication_classes = [] #disables authentication
+    permission_classes = [] #disables permission
