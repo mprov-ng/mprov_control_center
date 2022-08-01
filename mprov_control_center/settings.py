@@ -71,6 +71,7 @@ JAZZMIN_SETTINGS={
         'systems.systemimage': 'fas fa-save',
         'rest_framework_api_key.apikey': 'fas fa-key',
         'scripts.script': 'fas fa-scroll',
+        'systems.systemmodel': 'far fa-object-group',
     },
     'copyright': ' ',
     #"related_modal_active": True

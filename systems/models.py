@@ -27,6 +27,23 @@ class SystemGroup(models.Model):
   def __str__(self):
     return self.name
 
+class SystemModel(models.Model):
+  slug = models.SlugField(primary_key=True, blank=True )
+  name = models.CharField(verbose_name="Model Name", max_length=255)
+  vendor = models.CharField(verbose_name="Vendor Name", max_length=255)
+
+  class Meta:
+    verbose_name = "System Models"
+    verbose_name_plural = "System Models"
+
+  def __str__(self) -> str:
+     return f"{self.vendor}/{self.name}"
+
+  def save(self, *args, **kwargs):
+    if not self.slug:
+      self.slug = slugify(f"{self.vendor} {self.name}")
+    super(SystemModel, self).save(*args, **kwargs)
+
 
 class System(models.Model):
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
@@ -45,7 +62,8 @@ class System(models.Model):
     blank=True,
     null=True,
   )
-  systemimage = models.ForeignKey('SystemImage', blank=True, null=True, on_delete=models.SET_NULL)
+  systemimage = models.ForeignKey('SystemImage', blank=True, null=True, on_delete=models.SET_NULL, verbose_name="System Image")
+  systemmodel = models.ForeignKey('SystemModel', blank=True, null=True, on_delete=models.SET_NULL, verbose_name="System Model")
  
   class Meta:
     ordering = ['hostname']

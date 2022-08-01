@@ -14,6 +14,7 @@ from .models import (
   SystemGroup,
   NetworkInterface,
   SystemImage,
+  SystemModel,
 )
 
 class NetworkInterfaceInlineFormset(BaseInlineFormSet):
@@ -69,8 +70,8 @@ class SystemAdmin(admin.ModelAdmin):
         'config_params',
       )
     }),
-    ('OS Management', {
-      'fields': ['systemimage',]
+    ('System Parameters', {
+      'fields': ['systemimage','systemmodel']
     }
     ),
   )
@@ -97,6 +98,12 @@ class SystemAdmin(admin.ModelAdmin):
 class SystemGroupAdmin(admin.ModelAdmin):
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
+
+class SystemModelAdmin(admin.ModelAdmin):
+  list_display = ['slug', 'vendor', 'name']
+  verbose_name = "System Models"
+  verbose_name_plural = "System Models"
+  readonly_fields = ['slug']
 
 @admin.action(description="Mark images as needing rebuild.")
 def mark_rebuild(modeladmin, request, queryset):
@@ -161,3 +168,4 @@ class SystemImageAdmin(admin.ModelAdmin):
 admin.site.register(SystemImage, SystemImageAdmin)
 admin.site.register(SystemGroup, SystemGroupAdmin)
 admin.site.register(System, SystemAdmin)
+admin.site.register(SystemModel, SystemModelAdmin)
