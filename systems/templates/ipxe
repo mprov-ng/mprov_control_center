@@ -1,5 +1,6 @@
 #!ipxe
 {% for nic in nics %}
+{% if nic.bootable %}
 kernel /kernels/{{ nic.system.systemimage.slug }} initrd=initrd.magic console=tty0 selinux=0 enforcing=0 rdinit=/linuxrc mprov_image_url=http://${next-server}/images/{{ nic.system.systemimage.slug }} mprov_initial_mods={{ nic.system.systemimage.osdistro.initial_mods }} mprov_prov_intf={{ nic.system.systemimage.osdistro.prov_interface }} mprov_tmpfs_size={{ nic.system.systemimage.osdistro.tmpfs_root_size }}G {% if nic.system.systemimage.osdistro.install_kernel_cmdline != None %} {{ nic.system.systemimage.osdistro.install_kernel_cmdline }} {% endif %}
 initrd /images/{{ nic.system.systemimage.slug }}.initramfs
 # insert our mprov setup script here and mount it on /linuxrc
@@ -8,4 +9,7 @@ initrd /static/busybox /bin/busybox mode=755
 initrd /static/default.script /bin/default.script mode=755
 # insert a few more files we are going to need.  wget, curl, 
 boot
+{% else %}
+exit
+{% endif %}
 {% endfor %}
