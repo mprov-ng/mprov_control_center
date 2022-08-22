@@ -1,0 +1,23 @@
+type: scsi disk
+  disk: /dev/sda
+	part: /dev/sda[0-9]
+
+
+type: md software raid
+  disk: /dev/md0
+	member: /dev/sda[0-9]
+	member: /dev/nvme[0-9]n[0-9]p[0-9]
+
+type: nvme
+  disk: /dev/nvme[0-9]n[0-9]
+	part: /dev/nvme[0-9]n[0-9]p[0-9]
+
+type: vol-grp
+  disk: /dev/vg000
+      part/pvol: 
+
+type: lvol
+  disk
+
+- create code will run scsi and nvme disks first.
+- then run md software raid.

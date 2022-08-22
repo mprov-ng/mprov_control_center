@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'systems',
     'jobqueue',
     'scripts',
+    'disklayouts',
     'rest_framework',
     'rest_framework_api_key',
 
@@ -72,6 +73,8 @@ JAZZMIN_SETTINGS={
         'rest_framework_api_key.apikey': 'fas fa-key',
         'scripts.script': 'fas fa-scroll',
         'systems.systemmodel': 'far fa-object-group',
+        'disklayouts.disklayout': 'fas fa-chart-pie',
+        'disklayouts.raidlayout': 'fas fa-database',
     },
     'copyright': ' ',
     #"related_modal_active": True
@@ -209,7 +212,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 STATIC_ROOT = os.path.join(BASE_DIR,"static")
 STATIC_URL = '/static/'
-#STATICFILES_DIRS = [
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'common/static/')
+]
 #    os.path.join(BASE_DIR,"static"),
     #'/var/www/static/',
 #]

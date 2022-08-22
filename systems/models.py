@@ -3,12 +3,14 @@ from django.db import models
 from django.conf import settings
 from django.dispatch import receiver
 from django.forms import CharField, PasswordInput, ModelForm
+from disklayouts.models import DiskLayout
 from networks.models import SwitchPort
 from osmanagement.models import OSDistro, OSRepo
 from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, JobStatus, Job, JobServer
 from django.utils.text import slugify
 from scripts.models import Script
+from disklayouts.models import DiskLayout
 
 class SystemGroup(models.Model):
   name=models.CharField(max_length=255)
@@ -64,7 +66,9 @@ class System(models.Model):
   )
   systemimage = models.ForeignKey('SystemImage', blank=True, null=True, on_delete=models.SET_NULL, verbose_name="System Image")
   systemmodel = models.ForeignKey('SystemModel', blank=True, null=True, on_delete=models.SET_NULL, verbose_name="System Model")
- 
+  disks = models.ManyToManyField('disklayouts.Disklayout', blank=True, through=DiskLayout.systems.through)
+  # bootdisk = models.ForeignKey(DiskLayout, blank=True, null=True, on_delete=models.SET_NULL, verbose_name="Boot Disk Layout", help_text="Boot disk layout for stateful installs")
+  stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system use images to disk?")
   class Meta:
     ordering = ['hostname']
     verbose_name = 'Systems'

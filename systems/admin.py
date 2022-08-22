@@ -67,13 +67,19 @@ class SystemAdmin(admin.ModelAdmin):
         'created_by',
         'timestamp',
         'updated',
-        'systemgroups',
-        'scripts',
-        'config_params',
+        
       )
     }),
     ('System Parameters', {
-      'fields': ['systemimage','systemmodel']
+      'fields': [
+        'stateful',
+        'disks',
+        'systemimage',
+        'systemmodel',
+        'systemgroups',
+        'scripts',
+        'config_params',
+        ]
     }
     ),
   )
