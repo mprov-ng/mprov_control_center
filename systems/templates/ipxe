@@ -1,11 +1,34 @@
 #!ipxe
 {% for nic in nics %}
-{% if nic.bootable %}
-kernel /kernels/{{ nic.system.systemimage.slug }} initrd=initrd.magic console=tty0 selinux=0 enforcing=0 rdinit=/linuxrc mprov_image_url=http://${next-server}/images/{{ nic.system.systemimage.slug }} mprov_initial_mods={{ nic.system.systemimage.osdistro.initial_mods }} mprov_prov_intf={{ nic.system.systemimage.osdistro.prov_interface }} mprov_tmpfs_size={{ nic.system.systemimage.osdistro.tmpfs_root_size }}G {% if nic.system.systemimage.osdistro.install_kernel_cmdline != None %} {{ nic.system.systemimage.osdistro.install_kernel_cmdline }} {% endif %}
+{% if nic.bootable or nic.system.systemimage.slug == "nads" %}
+
+# static commandline stuff
+set kernel-cmdline initrd=initrd.magic console=tty0 selinux=0 enforcing=0 rdinit=/linuxrc
+
+# mProv dynamic stuff
+set kernel-cmdline ${kernel-cmdline} mprov_image_url=http://${next-server}/images/{{ nic.system.systemimage.slug }}
+set kernel-cmdline ${kernel-cmdline} mprov_initial_mods={{ nic.system.systemimage.osdistro.initial_mods }}
+set kernel-cmdline ${kernel-cmdline} mprov_prov_intf={{ nic.system.systemimage.osdistro.prov_interface }}
+set kernel-cmdline ${kernel-cmdline} mprov_tmpfs_size={{ nic.system.systemimage.osdistro.tmpfs_root_size }}G
+{% if nic.system.systemimage.osdistro.install_kernel_cmdline != "" %} 
+set kernel-cmdline ${kernel-cmdline} {{ nic.system.systemimage.osdistro.install_kernel_cmdline }}
+{% endif %}
+{% if nic.system.stateful %}
+set kernel-cmdline ${kernel-cmdline} mprov_stateful=1
+set kernel-cmdline ${kernel-cmdline} mprov_bootdisk={{ nic.system.bootdisk.diskname }}
+{% else %}
+set kernel-cmdline ${kernel-cmdline} mprov_stateful=0
+{% endif %}
+
+kernel /kernels/{{ nic.system.systemimage.slug }} ${kernel-cmdline}
 initrd /images/{{ nic.system.systemimage.slug }}.initramfs
 # insert our mprov setup script here and mount it on /linuxrc
 initrd /static/mprov_boot.sh /linuxrc mode=755
 initrd /static/busybox /bin/busybox mode=755
+{% if nic.system.stateful %}
+initrd /static/mprov_stateful.py /tmp/mprov_stateful.py mode=755
+initrd /static/mprov_stateful.sh /tmp/mprov_stateful.sh mode=755
+{% endif %}
 initrd /static/default.script /bin/default.script mode=755
 # insert a few more files we are going to need.  wget, curl, 
 boot

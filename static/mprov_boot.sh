@@ -29,6 +29,7 @@ ln -s /bin/busybox /bin/clear
 ln -s /bin/busybox /bin/chvt
 ln -s /bin/busybox /bin/env
 ln -s /bin/busybox /bin/awk
+ln -s /bin/busybox /bin/chmod
 
 sleep 2
 clear
@@ -58,6 +59,8 @@ export MPROV_TMPFS_SIZE=`get_kcmdline_opt mprov_tmpfs_size`
 export MPROV_IMAGE_URL=`get_kcmdline_opt mprov_image_url`
 export MPROV_INITIAL_MODS=`get_kcmdline_opt mprov_initial_mods`
 export MPROV_PROV_INTF=`get_kcmdline_opt mprov_prov_intf`
+export MPROV_STATEFUL=`get_kcmdline_opt mprov_stateful`
+export MPROV_BOOTDISK=`get_kcmdline_opt mporv_bootdisk`
 
 # load our initial modules
 oldIFS=$IFS
@@ -86,30 +89,58 @@ echo;
 /sbin/ifconfig $MPROV_PROV_INTF
 
 echo
-echo "Creating new root at /new_root..."
-mkdir -p /new_root/tmp 
-date > /new_root/tmp/boot_timing
-mount -t tmpfs -o size=$MPROV_TMPFS_SIZE tmpfs /new_root
-mkdir /new_root/tmp
-date > /new_root/tmp/boot_timing
-echo "New root setup."
-cd /new_root
+echo -n "Creating image directory at /image... "
+mkdir -p /image/tmp 
+date > /image/tmp/boot_timing
+mount -t tmpfs -o size=$MPROV_TMPFS_SIZE tmpfs /image
+mkdir /image/tmp
+date > /image/tmp/boot_timing
+echo "Image directory setup."
+cd /image
 
-echo; echo "Downloading and extracting image to new root"
+echo; echo "Downloading and extracting image to image directory... "
 echo "Retrieving $MPROV_IMAGE_URL"
 wget $MPROV_IMAGE_URL -O - | gunzip -c | cpio -id --quiet
-echo "New root Ready."
-mount -t proc proc /new_root/proc
-mount -t sysfs sysfs /new_root/sys
-mount -t devtmpfs devtmpfs /new_root/dev/
-mount -t tmpfs tmpfs /new_root/run
+echo "Image Extracted."
+mount -t proc proc /image/proc
+mount -t sysfs sysfs /image/sys
+mount -t devtmpfs devtmpfs /image/dev/
+mount -t tmpfs tmpfs /image/run
 
 
+echo -n "Staring mProv for: "
+if [ "$MPROV_STATEFUL" == "1" ]
+then
+  echo "Stateful Installation"
+ 
+  # copy the stateful installer to the /image root
+  /bin/mv /tmp/mprov_stateful.py /image/tmp/mprov_stateful.py
+  /bin/cp /tmp/mprov_stateful.sh /image/tmp/mprov_stateful.sh
+  /bin/chmod 755 /image/tmp/mprov_stateful.py /image/tmp/mprov_stateful.sh 
+  /bin/cp /etc/resolv.conf /image/etc/resolv.conf
+  # mount devpts
+  mkdir -p /image/dev/pts
+  mount -t devpts devpts /image/dev/pts
+  ln -s /proc/self/fd /image/dev/fd 
+  
+  # note we are not expecting to return from this.
+  exec /sbin/switch_root -c /dev/console /image /tmp/mprov_stateful.sh
+  
 
+  # if we return, something bad has happened...mmmkay...
+  export -f get_kcmdline_opt
+  # /bin/sh 
+  /bin/setsid /bin/bash -m  <> /dev/tty1 >&0 2>&1
+
+else
+  echo "Stateless Installation"
+fi
+
+# Stateful should never get here.
 echo "Shutting down network"
 pkill udhcpc
-ifconfig eth0 down
-ip link set eth0 down
+ifconfig $MPROV_PROV_INTF down
+ip link set $MPROV_PROV_INTF down
 oldIFS=$IFS
 IFS=,
 for mod in $MPROV_INITIAL_MODS
@@ -127,14 +158,14 @@ umount /dev
 umount /run
 
 echo "Switching to new root.... LEEEEROY JENKINS!!!....."
-date >> /new_root/tmp/boot_timing
-exec /sbin/switch_root -c /dev/console /new_root /sbin/init
+date >> /image/tmp/boot_timing
+exec /sbin/ls  -c /dev/console /image /sbin/init
 echo "Something's WRONG!!!! Emergency Shell"
 
-mount -t proc proc /proc
-mount -t sysfs sysfs /sys
-mount -t devtmpfs devtmpfs /dev
-mount -t tmpfs tmpfs /run
+mount -t proc proc /proc &
+mount -t sysfs sysfs /sys &
+mount -t devtmpfs devtmpfs /dev &
+mount -t tmpfs tmpfs /run &
 
 # redirect stdio to tty1 and start a new process group, enables bash
 # job control... hopefully
