@@ -221,6 +221,30 @@ Format returned:
             queryset = self.queryset.filter(hostname=request.query_params['hostname'])
             if queryset.count() == 0:
                 return Response(None, status=404)
+        if 'self' in request.query_params:
+            # someone would like us to tell them who they are.
+            # grab the IP
+            ip=""
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+            # for testing
+            # ip="172.16.12.1"
+            
+            # now try to grab the nic for this IP
+            nicQueryset = NetworkInterface.objects.all()
+            nicQueryset = nicQueryset.filter(ipaddress=ip)
+            if nicQueryset.count() == 0:
+                return Response(None, status=404)
+            # self.model = Network
+            # self.serializer_class = NetworkInterfaceDetailsSerializer
+            self.queryset = self.queryset.filter(pk=nicQueryset[0].system.id)
+            self.serializer_class = SystemDetailSerializer
+
+            # return self.retrieve(self, request, format=None,pk=nicQueryset[0].system.id)
+
         return generics.ListAPIView.get(self, request, format=None)
 
 class SystemGroupAPIView(MProvView):
