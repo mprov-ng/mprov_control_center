@@ -2,6 +2,7 @@ from curses.ascii import FF
 from urllib import request
 from django.db import models
 from django.utils.text import slugify
+from django.core.validators import MinValueValidator
 
 # partitions
 # partiion mount point
@@ -18,7 +19,7 @@ from django.utils.text import slugify
 # disklayout
 
 class DiskPartition(models.Model):
-  partnum = models.IntegerField(default=0, verbose_name="Part. Number")
+  partnum = models.PositiveIntegerField(default=0, verbose_name="Part. Number", validators=[MinValueValidator(1)])
   mount=models.CharField(verbose_name="Mount Point", max_length=4096, help_text="The directory this partition will mount to or 'raid' if it is a Software RAID member.")
   size=models.BigIntegerField(verbose_name="Size")
   fill=models.BooleanField(default=False, verbose_name="Grow to fill?")
