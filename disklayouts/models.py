@@ -8,9 +8,9 @@ from django.core.validators import MinValueValidator
 
 
 class DiskPartition(models.Model):
-  partnum = models.PositiveIntegerField(default=0, verbose_name="Part. Number", validators=[MinValueValidator(1)],default=1)
+  partnum = models.PositiveIntegerField(verbose_name="Part. Number", validators=[MinValueValidator(1)],default=1)
   mount=models.CharField(verbose_name="Mount Point", max_length=4096, help_text="The directory this partition will mount to or 'raid' if it is a Software RAID member.")
-  size=models.BigIntegerField(verbose_name="Size")
+  size=models.BigIntegerField(verbose_name="Size (in MB)")
   fill=models.BooleanField(default=False, verbose_name="Grow to fill?")
   filesystem=models.CharField(verbose_name="Filesysetm", max_length=255)
   disklayout = models.ForeignKey("DiskLayout", on_delete=models.CASCADE, verbose_name="Associated Layout", related_name='partitions')
