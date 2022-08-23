@@ -26,6 +26,7 @@ class DiskPartitionInline(admin.TabularInline):
   model = DiskPartition
   extra = 1
   ordering = ['partnum']
+  description = "When adding physical partitions that will be used as software RAID members, add the word 'raid' to mount point AND filesystem."
   
 
 class DiskLayoutAdmin(AdminWizardModel):
