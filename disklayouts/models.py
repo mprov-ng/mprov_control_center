@@ -18,7 +18,7 @@ from django.utils.text import slugify
 # disklayout
 
 class DiskPartition(models.Model):
-  partnum = models.IntegerField(default=0, verbose_name="Part. Number", max_length=4)
+  partnum = models.IntegerField(default=0, verbose_name="Part. Number")
   mount=models.CharField(verbose_name="Mount Point", max_length=4096, help_text="The directory this partition will mount to or 'raid' if it is a Software RAID member.")
   size=models.BigIntegerField(verbose_name="Size")
   fill=models.BooleanField(default=False, verbose_name="Grow to fill?")
@@ -70,6 +70,7 @@ class RaidLayout(DiskLayout):
     NVME = 'nvme', 'NVMe'
     MDRD = 'mdrd', 'Software RAID'
   partion_members = models.ManyToManyField('disklayouts.DiskPartition', blank=True)
+  filesystem = models.CharField(max_length=100, blank=True)
   # disk_members = 
 RaidLayout._meta.get_field('dtype').default=RaidLayout.DiskTypes.MDRD
   
