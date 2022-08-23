@@ -76,7 +76,7 @@ JAZZMIN_SETTINGS={
         'disklayouts.disklayout': 'fas fa-chart-pie',
         'disklayouts.raidlayout': 'fas fa-database',
     },
-    'copyright': ' ',
+    'copyright': ' 2022 The Johns Hopkins University ',
     #"related_modal_active": True
 
 }
