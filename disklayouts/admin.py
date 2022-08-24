@@ -58,5 +58,9 @@ class RaidLayoutAdmin(AdminWizardModel):
     form.base_fields['diskname'].label = "RAID Device"
     return form
 
+  def formfield_for_manytomany(self, db_field, request, **kwargs):
+    if db_field.name == 'partition_members':
+      kwargs['queryset'] = DiskPartition.objects.filter(mount="raid", filesystem="raid")
+    return super().formfield_for_manytomany(db_field, request, **kwargs)
 admin.site.register(DiskLayout, DiskLayoutAdmin)
 admin.site.register(RaidLayout, RaidLayoutAdmin)
