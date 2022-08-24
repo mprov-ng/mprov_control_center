@@ -59,8 +59,15 @@ class RaidLayout(DiskLayout):
     SCSI = 'scsi', 'SCSI Disk'
     NVME = 'nvme', 'NVMe'
     MDRD = 'mdrd', 'Software RAID'
-  partion_members = models.ManyToManyField('disklayouts.DiskPartition', blank=True)
+  class RaidLevels(models.TextChoices):
+    RAID0 = 'raid0', 'RAID 0'
+    RAID1 = 'raid1', 'RAID 1'
+    RAID5 = 'raid5', 'RAID 5'
+    RAID6 = 'raid6', 'RAID 6'
+
+  partition_members = models.ManyToManyField('disklayouts.DiskPartition', blank=True)
   filesystem = models.CharField(max_length=100, blank=True)
-  # disk_members = 
+  raidlevel = models.CharField(max_length=6, choices=RaidLevels.choices, verbose_name="RAID Level", default=RaidLevels.RAID0)
+  
 RaidLayout._meta.get_field('dtype').default=RaidLayout.DiskTypes.MDRD
   
