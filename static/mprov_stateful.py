@@ -202,12 +202,14 @@ class mProvStatefulInstaller():
     
 
   def mountDisks(self):
-    # TODO: step through /tmp/fstab and mount the filesystems into /newroot/
+    # step through /tmp/fstab and mount the filesystems into /newroot/
+    # Sort the fstab by path hierarchy.
     os.makedirs("/newroot", exist_ok=True)
     with open("/tmp/fstab", "r") as file:
-      while (line := file.readline().rstrip()):
-        print(line)
-
+      lines = file.readlines()
+      lines = sorted(lines, key=lambda line:(line.split()[1]))
+      for line in lines:
+        line=line.rstrip()
         fstab_entry = line.split()
         os.makedirs(f"/newroot{fstab_entry[1]}", exist_ok=True)
         if fstab_entry[1] != "none":
@@ -229,6 +231,9 @@ class mProvStatefulInstaller():
     pass
 
   def switchRoot(self):
+    # copy in a script to do the boot loader config, and switch root to that script
+    # before we run the REAL init.
+    
     pass
 
   def to_mebibytes(self, value):
@@ -257,11 +262,18 @@ class mProvStatefulInstaller():
       sys.exit(1)
 
   def _createPartition(self, device, disk, part, sectorsize, start):
-    geometry = parted.Geometry(
-      device=device,
-      start=start,
-      length=self.from_mebibytes(part['size'],sectorsize)
-    )
+    if part['fill']:
+      geometry = parted.Geometry(
+        device=device,
+        start=start,
+        end=device.getLength() - 1
+      )
+    else:
+      geometry = parted.Geometry(
+        device=device,
+        start=start,
+        length=self.from_mebibytes(part['size'],sectorsize)
+      )
     if part['filesystem'] == 'linux-swap':
       part['filesystem'] = 'linux-swap(v1)'
     if part['filesystem'] != 'raid':
