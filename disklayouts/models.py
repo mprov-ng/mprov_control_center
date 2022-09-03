@@ -68,6 +68,7 @@ class RaidLayout(DiskLayout):
   partition_members = models.ManyToManyField('disklayouts.DiskPartition', blank=True)
   filesystem = models.CharField(max_length=100, blank=True)
   raidlevel = models.CharField(max_length=6, choices=RaidLevels.choices, verbose_name="RAID Level", default=RaidLevels.RAID0)
+  mount = models.CharField(max_length=4096, verbose_name="Mount Point")
   
 RaidLayout._meta.get_field('dtype').default=RaidLayout.DiskTypes.MDRD
   

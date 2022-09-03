@@ -8,6 +8,7 @@ class DiskPartitionAPISerializer(serializers.ModelSerializer):
   class Meta:
     model = DiskPartition
     fields = '__all__'
+    depth=2
 
 
 class  RaidLayoutAPISerializer(serializers.ModelSerializer):
@@ -25,14 +26,20 @@ class DiskLayoutAPISerializer(serializers.ModelSerializer):
 
   partitions = DiskPartitionAPISerializer(many=True, read_only=True)
   members = serializers.SerializerMethodField("getMembers")
+  filesystem = serializers.SerializerMethodField("getRaidFS")
+  raidlevel = serializers.SerializerMethodField("getRaidLevel")
+  mount = serializers.SerializerMethodField("getMount")
   class Meta:
       model = DiskLayout
-      fields = ['name', 'slug', 'diskname','partitions','dtype', 'members']
-      depth = 3
-
+      fields = ['name', 'slug', 'diskname','partitions','dtype', 'members', 'filesystem', 'raidlevel', 'mount']
+      depth = 6
+  def getMount(self, obj):
+    if obj.dtype == DiskLayout.DiskTypes.MDRD:
+      rlayout = RaidLayout.objects.all()
+      rlayout = rlayout.filter(slug=obj.slug)
+      return rlayout[0].mount
+    return None
   def getMembers(self, obj):
-    request = self.context.get('request')
-    serializer_context = {'request': request }
     if obj.dtype == DiskLayout.DiskTypes.MDRD:
       # we have a raid layout
       rlayout = RaidLayout.objects.all()
@@ -41,3 +48,19 @@ class DiskLayoutAPISerializer(serializers.ModelSerializer):
       return serializer.data
     return None
 
+  def getRaidLevel(self, obj):
+    if obj.dtype == DiskLayout.DiskTypes.MDRD:
+      rlayout = RaidLayout.objects.all()
+      rlayout = rlayout.filter(slug=obj.slug)
+      return rlayout[0].raidlevel
+      # return serializer.data
+    return None
+
+  def getRaidFS(self, obj):
+    if obj.dtype == DiskLayout.DiskTypes.MDRD:
+      rlayout = RaidLayout.objects.all()
+      rlayout = rlayout.filter(slug=obj.slug)
+      return rlayout[0].filesystem
+      # return serializer.data
+
+    return None
