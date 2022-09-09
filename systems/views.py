@@ -204,6 +204,41 @@ Format returned:
     template = "systems_docs.html"
     serializer_class = SystemDetailSerializer
     queryset = None
+
+    def post(self, request, *args, **kwargs):
+        if 'self' in request.query_params:
+            # someone would like modify themselves.
+            # grab the IP
+            ip=""
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+            # for testing
+            ip="172.16.12.1"
+            nicQueryset = NetworkInterface.objects.all()
+            nicQueryset = nicQueryset.filter(ipaddress=ip)
+            if nicQueryset.count() == 0:
+                return Response(None, status=404)
+            system = nicQueryset[0].system
+            print(system)
+            for arg in request.data:
+                if arg == "netboot":
+                    # we should only be working on disabling netboot.
+                    nicQueryset = NetworkInterface.objects.all()
+                    nicQueryset = nicQueryset.filter(system=system)
+                    for nic in nicQueryset:
+                        nic.bootable = False
+                        nic.save()
+                else:
+                    # Unsupported, return 403 forbidden
+                    return Response(None, status=403)
+            # done with the for loop, return status 200
+            return Response(None, status=200)
+
+
+        return super().post(request, *args, **kwargs)
     def get(self, request, format=None, **kwargs):
        
         result = self.checkContentType(request, format=format, kwargs=kwargs)
