@@ -58,4 +58,14 @@ td.delete input {
   margin-left: 5px;
   margin-right: 5px;
 }
+.col-lg-9 {
+  -ms-flex: 0 0 80%;
+  flex: 0 0 80%;
+  max-width: 80%;
+}
 
+.col-lg-3 {
+  -ms-flex: 0 0 20%;
+  flex: 0 0 20%;
+  max-width: 20%;
+}
