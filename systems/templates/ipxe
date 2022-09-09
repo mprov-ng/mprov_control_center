@@ -3,7 +3,7 @@
 {% if nic.bootable or nic.system.systemimage.slug == "nads" %}
 
 # static commandline stuff
-set kernel-cmdline initrd=initrd.magic console=tty0 selinux=0 enforcing=0 rdinit=/linuxrc
+set kernel-cmdline initrd=initrd.magic console=tty0 rdinit=/linuxrc
 
 # mProv dynamic stuff
 set kernel-cmdline ${kernel-cmdline} mprov_image_url=http://${next-server}/images/{{ nic.system.systemimage.slug }}
