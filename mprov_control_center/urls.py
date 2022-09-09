@@ -22,10 +22,10 @@ from systems.views import (
     SystemBMCAPIView,
     SystemGroupAPIView,
     NetworkInterfaceAPIView,
-    IPXEAPIView,
     SystemRegAPIView,
 )
-from systems.views_noauth import KernelImageAPIView
+from systems.views_noauth import IPXEAPIView
+
 
 from networks.views import (
     NetworkAPIView,

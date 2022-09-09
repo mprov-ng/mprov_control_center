@@ -1,12 +1,15 @@
 
-from .models import SystemImage
+from .models import SystemImage, NetworkInterface
 from django.shortcuts import redirect
 from rest_framework.exceptions import NotFound
 import random
 from common.views import MProvView
-from systems.serializers import SystemImageSerializer
+from systems.serializers import SystemImageSerializer, NetworkInterfaceDetailsSerializer
 from rest_framework import generics
 from django.http import HttpResponseNotAllowed
+from rest_framework.response import Response
+from django.template import Template, Context
+from django.shortcuts import render
 
 
 class ImagesAPIView(MProvView, generics.ListAPIView):
@@ -137,3 +140,65 @@ Note: See [/images/](/images/)
 
       def patch(self, request, *args, **kwargs):
           return HttpResponseNotAllowed(["GET"])
+
+
+class IPXEAPIView(MProvView):
+    model = NetworkInterface
+    serializer_class = NetworkInterfaceDetailsSerializer
+    authentication_classes = [] #disables authentication
+    permission_classes = [] #disables permission
+    def get(self, request, format=None, **kwargs):
+        # result = self.checkContentType(request, format=format, kwargs=kwargs)
+        # if result is not None:
+        #     return result
+        # grab the IP
+        ip=""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        # ip="172.16.30.1"
+        # print(ip)
+        # now try to grab the nic for this IP
+        queryset = self.model.objects.all()
+        queryset = queryset.filter(ipaddress=ip)
+
+        # our IP is not found, let's see if NADS is running on here.
+        if queryset.count() == 0:
+            try:
+                imgQs = SystemImage.objects.get(name='__nads__')
+            except:
+                print(f"Error: You are missing a system image of the name '__nads__' so autodetection will fail.")
+                return Response(None, status=404)
+            if type(imgQs) is SystemImage:  
+                # there is a __nads__ iamge, let's serve that.
+                # spoof a nics object
+                class Obj: pass
+                system=Obj()
+                system.systemimage = imgQs
+                # setattr(system, 'systemima?ge', imgQs)
+                nic = Obj()
+                nic.system = system
+                # setattr(nic, 'system', system)
+
+                nics = [ nic ]
+                queryset = nics
+
+        # print(queryset)
+        # the following lines allow recurive templating to be done on the kernel cmdline.
+        for nic in queryset:
+            template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
+            # print(nic)
+            context = Context(dict(nic=nic))
+            rendered: str = template.render(context)
+            nic.system.systemimage.osdistro.install_kernel_cmdline = rendered
+
+
+        context= {
+            'nics': queryset,
+        }
+        print("PXE Request from: " + ip)
+        # print(context['nics'])
+        return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
+        pass
