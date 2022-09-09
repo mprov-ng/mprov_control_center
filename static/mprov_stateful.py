@@ -349,14 +349,9 @@ class mProvStatefulInstaller():
     
   def cleanupAndSwitchroot(self):
     # disable netboot
-    if os.path.exists("/tmp/mprov/entity.json"):
-      with open("/tmp/mprov/entity.json") as entityJson:
-        entity = json.load(entityJson)
-    else:
-      print("ERROR: Unable to load the enity.json file.  Did this machine boot from mProv?")
-      sys.exit(1)
-    mprovUrl = entity['mprovURL']
-    apiKey = entity['apikey']
+
+    mprovUrl = self.mprovURL
+    apiKey = self.apikey
 
     reqHeaders = {
       'Content-Type': 'application/json',
