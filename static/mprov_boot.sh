@@ -6,6 +6,8 @@ err_hanlder() {
   # redirect stdio to tty1 and start a new process group, enables bash
   # job control... hopefully
   export -f get_kcmdline_opt
+  mount -t devtmpfs devtmpfs /dev 
+
   /bin/setsid /bin/bash -m  <> /dev/ttyS0 >&0 2>&1
 }
 
@@ -154,12 +156,12 @@ IFS=$oldIFS
 
 umount /proc
 umount /sys
-umount /dev
+#umount /dev
 umount /run
 
 echo "Switching to new root.... LEEEEROY JENKINS!!!....."
 date >> /image/tmp/boot_timing
-exec /sbin/ls  -c /dev/console /image /sbin/init
+exec /sbin/switch_root  -c /dev/console /image /sbin/init
 echo "Something's WRONG!!!! Emergency Shell"
 
 mount -t proc proc /proc &
