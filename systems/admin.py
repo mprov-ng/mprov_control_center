@@ -7,6 +7,8 @@ from django.utils.html import mark_safe
 from networks.models import SwitchPort
 from django.utils.text import slugify
 from jobqueue.models import JobModule, JobStatus, Job
+from django import forms
+
 
 from .models import (
   System,
@@ -17,20 +19,37 @@ from .models import (
   SystemModel,
 )
 
-class NetworkInterfaceInlineFormset(BaseInlineFormSet):
-  def __init__(self, *args, **kwargs):
-    super(NetworkInterfaceInlineFormset, self).__init__(*args, **kwargs)
-    # print( SwitchPort.objects.filter(networkinterface=None) )
+class NetForm(forms.ModelForm):
+    class Meta:
+        widgets = {
+            'name': forms.TextInput(attrs={
+              'size': '5',
+              'class': 'vTextField',
+              'style': 'width: 5em;',
+            }),
+            'bootable': forms.CheckboxInput(attrs={
+              'style': 'width: 5em;',
+            }),
+            'ipaddress': forms.TextInput(attrs={
+              'style': 'width: 7em;',
+              'class': 'vTextField',
+            }),
+        }
+
+# class NetworkInterfaceInlineFormset(BaseInlineFormSet):
+#   def __init__(self, *args, **kwargs):
+#     super(NetworkInterfaceInlineFormset, self).__init__(*args, **kwargs)
+#     # print( SwitchPort.objects.filter(networkinterface=None) )
    
-    # for form in self.forms:
-    #   form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
+#     # for form in self.forms:
+#     #   form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
     
 
 class NetworkInterfaceInline(admin.TabularInline):
   model = NetworkInterface
   extra=1
-  formset = NetworkInterfaceInlineFormset
-
+  #formset = NetworkInterfaceInlineFormset
+  form = NetForm
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
   verbose_name="Network Interfaces"
