@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# TODO: Detect if selinux is enabled, and die if it is.
+selinuxStat=`getenforce`
+
+if [ '$selinuxStat' == 'Enforcing' ]
+then
+    echo "ERROR: Selinux enabled and enforcing.  This is likely to cause issues.  Not continuing."
+    exit 1
+fi
+if [ '$selinuxState' == 'Permissive' ]
+then
+    echo "WARN: Selinux enabled but is permissive.  This may still cause issues, but might still work.  You have been warned."
+fi
+
+# TODO: Display a summary of the config to the user.
+
 
 # time for some arg parsing.
 BUILD_DOCKER=0
