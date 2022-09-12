@@ -67,7 +67,7 @@ fi
 dnf -y install epel-release
 dnf -y install python38-mod_wsgi.x86_64 jq git wget iproute $extra_pkgs
 # why is this in a separate repo?!
-dnf --enable-repo=powertools install parted-devel
+dnf -y --enablerepo=powertools install parted-devel
 RUNDIR=`pwd`
 cd /var/www/
 if cd mprov_control_center
