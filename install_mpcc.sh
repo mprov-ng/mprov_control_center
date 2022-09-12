@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# TODO: Detect if selinux is enabled, and die if it is.
+# Detect if selinux is enabled, and die if it is.
 selinuxStat=`getenforce`
 
 if [ '$selinuxStat' == 'Enforcing' ]
@@ -13,7 +13,6 @@ then
     echo "WARN: Selinux enabled but is permissive.  This may still cause issues, but might still work.  You have been warned."
 fi
 
-# TODO: Display a summary of the config to the user.
 
 
 # time for some arg parsing.
@@ -130,8 +129,12 @@ echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
 if [ -e "${RUNDIR}/env.db" ]
 then
         cat ${RUNDIR}/env.db >> .env
+else
+        echo "No env.db, continuing with Sqlite"
 fi
 
+# display the ENV file
+cat .env 
 
 # other variables can be set directly in the ENV (for containers)
 # or via the .env file.   See the .env.example for possible varialbes.
