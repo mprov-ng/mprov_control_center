@@ -34,7 +34,7 @@ Format returned:
       {
         "slug": "set_root_pwsh",
         "name": "set_root_pw.sh",
-        "filename": "http://10.99.130.149/media/set_root_pwsh-v10",
+        "filename": "http://127.0.0.1/media/set_root_pwsh-v10",
         "version": 10,
         "scriptType": "image-gen",
         "dependsOn": []
@@ -42,7 +42,7 @@ Format returned:
       {
         "slug": "install_yqsh",
         "name": "install yq",
-        "filename": "http://10.99.130.149/media/install_yqsh-v3",
+        "filename": "http://127.0.0.1/media/install_yqsh-v3",
         "version": 3,
         "scriptType": "image-gen",
         "dependsOn": []
