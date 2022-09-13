@@ -1,6 +1,6 @@
 from django.db import models
 from django.dispatch import receiver
-from django.db.models.signals import pre_save, pre_delete
+from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, Job, JobStatus
 from scripts.models import Script
 
@@ -111,7 +111,7 @@ def OSDistroDeleteJob(sender, **kwargs):
         defaults={'status': JobStatus.objects.get(pk=1)}
       )
         
-@receiver(pre_save, sender=OSRepo)
+@receiver(post_save, sender=OSRepo)
 def RepoUpdateJob(sender, instance, **kwargs):
   RepoJobType = None
   # get or create the OSIMAGE_UPDATE job module in the DB
