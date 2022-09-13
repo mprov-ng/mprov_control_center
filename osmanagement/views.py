@@ -1,9 +1,10 @@
+import re
 from common.views import MProvView
 from osmanagement.models import OSDistro, OSRepo, OSType
 from osmanagement.serializers import OSDistroAPISerializer, OSRepoAPISerializer, OSTypeAPISerializer
 from jobqueue.models import Job, JobModule
 from jobqueue.serializers import JobServerAPISerializer
-from pprint import pprint
+from rest_framework.response import Response
 
 class OSDistroAPIView(MProvView):
     '''
@@ -136,10 +137,10 @@ class OSTypeAPIView(MProvView):
 
 ## Accepted HTTP Methods:
 - GET (no parameters)
-- GET (with Primary Key, ie: /ostypes/1/)
-- POST (with primary key, ie: /ostypes/1/)
-- PATCH (with primary key, ie: /ostypes/1/)
-- DELETE (with primary key, ie: /ostypes/1/)
+- GET (with Primary Key, ie: /ostypes/rhel/)
+- POST (with primary key, ie: /ostypes/rhel/)
+- PATCH (with primary key, ie: /ostypes/rhel/)
+- DELETE (with primary key, ie: /ostypes/rhel/)
 
 ## Documentation
 
@@ -177,3 +178,16 @@ Format returned:
     model = OSType
     serializer_class = OSTypeAPISerializer
     queryset = OSType.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        if 'slug' in request.data:
+            queryset = OSType.objects.all().filter(pk=request.data['slug'])
+            print(queryset)
+            if queryset.count() > 0:
+                # update the entry
+                obj = queryset[0]
+                obj.name = request.data['name']
+                obj.save()
+                return Response(None, status=200)
+        
+        return super().post(request, *args, **kwargs)
