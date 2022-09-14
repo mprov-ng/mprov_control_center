@@ -10,7 +10,8 @@ from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, JobStatus, Job, JobServer
 from django.utils.text import slugify
 from scripts.models import Script
-from disklayouts.models import DiskLayout
+from disklayouts.models import *
+from django.contrib.auth.models import AnonymousUser, User
 
 class SystemGroup(models.Model):
   name=models.CharField(max_length=255)
@@ -170,7 +171,12 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
     else:
         request = None
     if request is not None:
-      instance.created_by = request.user
+      if type(request.user) == AnonymousUser:
+          instance.created_by = User.objects.get(pk=1)
+      else:
+        instance.created_by = request.user
+
+      
   for slug in ['pxe-update', 'dns-update', 'dhcp-update']:
     JobType = None
     try:

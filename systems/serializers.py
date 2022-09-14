@@ -19,6 +19,7 @@ class SystemGroupSerializer(serializers.ModelSerializer):
         fields = '__all__'
 class SystemDetailSerializer(serializers.ModelSerializer): 
     disklayouts = DiskLayoutAPISerializer(many=True, read_only=True)
+    systemimage = serializers.PrimaryKeyRelatedField(many=False, read_only=False)
     class Meta:
         model = System
         fields = '__all__'

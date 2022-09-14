@@ -3,8 +3,10 @@ from dataclasses import field
 from rest_framework import serializers
 
 from .models import DiskLayout, DiskPartition, RaidLayout
+from systems.models import *
 
 class DiskPartitionAPISerializer(serializers.ModelSerializer):
+  disklayout = serializers.PrimaryKeyRelatedField(queryset=DiskLayout.objects.all())
   class Meta:
     model = DiskPartition
     fields = '__all__'
@@ -12,6 +14,8 @@ class DiskPartitionAPISerializer(serializers.ModelSerializer):
 
 
 class  RaidLayoutAPISerializer(serializers.ModelSerializer):
+  systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
+
   class Meta:
     model = RaidLayout
     fields = '__all__'
@@ -23,7 +27,7 @@ class  RaidLayoutAPISerializer(serializers.ModelSerializer):
   #   super().__init__(*args, **kwargs)
 
 class DiskLayoutAPISerializer(serializers.ModelSerializer):
-
+  systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
   partitions = DiskPartitionAPISerializer(many=True, read_only=True)
   members = serializers.SerializerMethodField("getMembers")
   filesystem = serializers.SerializerMethodField("getRaidFS")

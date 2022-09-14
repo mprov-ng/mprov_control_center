@@ -50,6 +50,8 @@ class JobServer(models.Model):
     
     class Meta:
         verbose_name="Job Server"
+
+    # XXX: With the correct related fields on the serializer, do we need this?
     def save(self, *args, **kwargs):
         # search for a network that our address is in.
         myaddr = ipaddress.ip_address(self.address)

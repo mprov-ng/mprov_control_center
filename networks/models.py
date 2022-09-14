@@ -4,6 +4,8 @@ from django.utils.text import slugify
 from django.dispatch import receiver
 from django.db.models.signals import pre_save, pre_delete
 from jobqueue.models import JobModule, JobStatus, Job
+from django.contrib.auth.models import AnonymousUser, User
+
 
 class NetworkType(models.Model):
   name=models.CharField(max_length=120)
@@ -101,8 +103,10 @@ def UpdateSwitch(sender, instance, **kwargs):
     else:
         request = None
     if request is not None:
-      instance.created_by = request.user
-
+      if type(request.user) == AnonymousUser:
+          instance.created_by = User.objects.get(pk=1)
+      else:
+        instance.created_by = request.user
 @receiver(pre_save, sender=Network)
 def UpdateNetwork(sender, instance, **kwargs):
 

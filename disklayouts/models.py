@@ -6,7 +6,6 @@ from django.utils.text import slugify
 from django.core.validators import MinValueValidator
 
 
-
 class DiskPartition(models.Model):
   partnum = models.PositiveIntegerField(verbose_name="Part. Number", validators=[MinValueValidator(1)],default=1)
   mount=models.CharField(verbose_name="Mount Point", max_length=4096, help_text="The directory this partition will mount to or 'raid' if it is a Software RAID member.")
