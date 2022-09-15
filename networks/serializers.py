@@ -1,6 +1,6 @@
 
 from yaml import serialize
-from django.conf import settings
+from django.contrib.auth.models import User
 
 from rest_framework import serializers
 from .models import Network, Switch, NetworkType, SwitchPort
@@ -17,7 +17,7 @@ class NetworkTypeAPISerializer(serializers.ModelSerializer):
     fields = '__all__'
 
 class SwitchAPISerializer(serializers.ModelSerializer):
-  created_by = serializers.PrimaryKeyRelatedField(queryset=settings.AUTH_USER_MODEL.objects.all())
+  created_by = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
   network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
   class Meta:
     model = Switch
