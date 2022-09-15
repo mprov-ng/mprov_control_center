@@ -1,5 +1,9 @@
 from common.views import MProvView
-
+from django.apps import apps
+from rest_framework.response import Response
+from rest_framework import serializers
+from django.views import View
+from django.http import JsonResponse
 # Default view for the index.
 class IndexAPIView(MProvView):
     """
@@ -36,3 +40,29 @@ interface.  It will give you documentation on how to use that section of the api
     template = 'docs.html'
     authentication_classes = [] #disables authentication
     permission_classes = [] #disables permission
+
+class DataTypeView(View):
+    """
+    Class used to get the data type of a model, or a list of all registered 
+    data models.
+    """
+   
+    def get(self, request, format=None, **kwargs):
+        model_list = []
+        for model in apps.get_models():
+            full_class_name = model.__module__ + "." + model.__name__ 
+            if full_class_name.startswith('django') or full_class_name.startswith('rest_framework'):
+                continue
+            model_list.append(full_class_name)
+        if 'model' in request.GET:
+            self.model = request.GET['model']
+            if self.model not in model_list:
+                self.model = None
+                return JsonResponse({'error': 'Unknown Model Requested'}, status=500)
+        else:
+            self.model = None
+   
+
+        if self.model == None:
+            return JsonResponse({'datamodels': model_list})
+        return JsonResponse(MProvView().getJSONDataStructure(self.model))

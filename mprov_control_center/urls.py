@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.views.generic import RedirectView
 from django.urls import path, include, re_path
-from .views import IndexAPIView
+from .views import DataTypeView, IndexAPIView
 from systems.views import (
     SystemAPIView,
     SystemBMCAPIView,
@@ -88,6 +88,8 @@ urlpatterns = [
     path('kernels/', include('systems.kernels_urls')),
 
     path('osrepos/', include('osmanagement.osrepos_urls')),
+
+    path('datamodel/', DataTypeView.as_view()),
     
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
     

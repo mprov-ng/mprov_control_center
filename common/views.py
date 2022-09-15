@@ -6,12 +6,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_api_key.permissions import HasAPIKey
 from rest_framework.views import APIView
 from rest_framework import mixins, generics
-from django.db import models
+from django.db.models import *
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.contrib.auth.models import AnonymousUser, User
 import markdown
 from bs4 import BeautifulSoup
+from django.apps import apps
 
 class MProvView( 
                 generics.ListAPIView,
@@ -40,6 +41,39 @@ and make sure to add documentation to the class so that it can be displayed if a
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
     permission_classes = [HasAPIKey|IsAuthenticated]
+
+    model_to_json_type_map = {
+        AutoField: 'number',
+        BigAutoField: 'number',
+        BigIntegerField: 'number',
+        BooleanField: 'boolean',
+        CharField: 'string',
+        CommaSeparatedIntegerField: 'string',
+        DateField: 'string',
+        DateTimeField: 'string',
+        DecimalField: 'number',
+        DurationField: 'string',
+        EmailField: 'string',
+        Field: 'object',
+        FileField: 'object',
+        FloatField: 'number',
+        ForeignKey: 'string',
+        ImageField: 'object',
+        IntegerField: 'number',
+        NullBooleanField: 'boolean',
+        PositiveIntegerField: 'number',
+        PositiveSmallIntegerField: 'number',
+        OneToOneField:'object',
+        SlugField: 'string',
+        SmallIntegerField: 'number',
+        TextField: 'string',
+        TimeField: 'string',
+        URLField: 'string',
+        UUIDField: 'string',
+        GenericIPAddressField: 'string',
+        FilePathField: 'string',
+    }
+
 
     def __init__(self, **kwargs) -> None:
         if self.model is not None:
@@ -115,3 +149,19 @@ and make sure to add documentation to the class so that it can be displayed if a
         if(type(request.user) == AnonymousUser ):
             request.user = User.objects.get(username='admin')
         return self.partial_update(request, args, kwargs)
+
+    def getJSONDataStructure(self, model):
+        if model == None:
+            return ""
+        
+        app, _, modelName = model.split(".")
+        self.model = apps.get_app_config(app).get_model(modelName)
+        jsonDataModel = {}
+        for field in self.model._meta.get_fields():
+            datatype="string"
+            if field.__class__ in self.model_to_json_type_map:
+                datatype=self.model_to_json_type_map[field.__class__]
+            else:
+                print(f"WARN: Unmapped field type {field.__class__} please open a ticket to have it added.  Defaulting to string.")
+            jsonDataModel.update({field.name: {'type:': datatype, 'required': not getattr(field, 'blank', False) }})
+        return jsonDataModel
