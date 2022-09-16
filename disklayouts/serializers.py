@@ -14,7 +14,7 @@ class DiskPartitionAPISerializer(serializers.ModelSerializer):
 
 
 class  RaidLayoutAPISerializer(serializers.ModelSerializer):
-  systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
+  # systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
 
   class Meta:
     model = RaidLayout
@@ -27,7 +27,7 @@ class  RaidLayoutAPISerializer(serializers.ModelSerializer):
   #   super().__init__(*args, **kwargs)
 
 class DiskLayoutAPISerializer(serializers.ModelSerializer):
-  systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
+  #systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
   partitions = DiskPartitionAPISerializer(many=True, read_only=True)
   members = serializers.SerializerMethodField("getMembers")
   filesystem = serializers.SerializerMethodField("getRaidFS")
@@ -35,8 +35,8 @@ class DiskLayoutAPISerializer(serializers.ModelSerializer):
   mount = serializers.SerializerMethodField("getMount")
   class Meta:
       model = DiskLayout
-      fields = ['name', 'slug', 'diskname','partitions','dtype', 'members', 'filesystem', 'raidlevel', 'mount']
-      depth = 6
+      fields = ['name', 'slug', 'diskname','partitions','dtype', 'members', 'filesystem', 'raidlevel', 'mount']#, 'systems']
+      depth = 3
   def getMount(self, obj):
     if obj.dtype == DiskLayout.DiskTypes.MDRD:
       rlayout = RaidLayout.objects.all()
