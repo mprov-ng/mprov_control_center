@@ -226,7 +226,10 @@ class mProvStatefulInstaller():
       #  mdadm --create /dev/md0 --level=1 --raid-devices=2 /dev/hd[ac]1
       mdadm_cmd = f"--create {pdisk['diskname']} -R --force --level={pdisk['raidlevel']} --raid-devices={len(pdisk['members'])} "
       for member in pdisk['members']:
-        dev = member['disklayout']['diskname']
+        # find our dev from the disklayouts.
+        for sdisk in self.disklayout:
+          if sdisk['slug'] == member['disklayout']:
+            dev = sdisk['diskname']
         partOffset = 0
         if dev == self.bootdisk:
           # boot disk, we are going to add 2 more to partOffset
@@ -417,7 +420,7 @@ class mProvStatefulInstaller():
       except:
         print("Error: Unable to parse server response.")
         sys.exit(1)
-      self.disklayout = systemDetails['disklayouts']
+      self.disklayout = systemDetails['disks']
       return
     else:
       print(f"Error: Unable to get disk info from mPCC.  Server returned {response.status_code}")

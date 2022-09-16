@@ -18,7 +18,7 @@ class SystemGroupSerializer(serializers.ModelSerializer):
         model = SystemGroup
         fields = '__all__'
 class SystemDetailSerializer(serializers.ModelSerializer): 
-    disklayouts = DiskLayoutAPISerializer(many=True, read_only=True)
+    disks = DiskLayoutAPISerializer(many=True, read_only=True)
     systemimage = serializers.PrimaryKeyRelatedField(many=False, queryset=SystemImage.objects.all())
     class Meta:
         model = System
