@@ -16,6 +16,7 @@ from django.contrib.auth.models import AnonymousUser, User
 class SystemGroup(models.Model):
   name=models.CharField(max_length=255)
   scripts = models.ManyToManyField(Script, blank=True, )
+  endpoint="/systemgroups/"
   config_params=models.TextField(
     blank=True, 
     default="# Inherit from OS", 
@@ -49,6 +50,7 @@ class SystemModel(models.Model):
 
 
 class System(models.Model):
+  endpoint="/systems/"
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
   timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
   created_by=models.ForeignKey(
