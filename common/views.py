@@ -156,12 +156,15 @@ and make sure to add documentation to the class so that it can be displayed if a
         
         app, _, modelName = model.split(".")
         self.model = apps.get_app_config(app).get_model(modelName)
-        jsonDataModel = {}
+        try:
+            jsonDataModel = {'endpoint': self.model.endpoint, 'fields':{}}
+        except:
+            jsonDataModel = {'fields':{}}
         for field in self.model._meta.get_fields():
             datatype="string"
             if field.__class__ in self.model_to_json_type_map:
                 datatype=self.model_to_json_type_map[field.__class__]
             else:
                 print(f"WARN: Unmapped field type {field.__class__} please open a ticket to have it added.  Defaulting to string.")
-            jsonDataModel.update({field.name: {'type:': datatype, 'required': not getattr(field, 'blank', False) }})
+            jsonDataModel['fields'].update({field.name: {'type:': datatype, 'required': not getattr(field, 'blank', False) }})
         return jsonDataModel
