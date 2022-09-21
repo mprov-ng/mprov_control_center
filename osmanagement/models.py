@@ -6,6 +6,7 @@ from scripts.models import Script
 
 # This will be an object managed by the jobserver image-update and repo-update modules.
 class OSType(models.Model):
+  endpoint="/ostypes/"
   slug = models.SlugField(primary_key=True)
   name = models.CharField(max_length=255)
 
@@ -14,6 +15,7 @@ class OSType(models.Model):
 
  
 class OSDistro(models.Model):
+  endpoint="/distros/"
   name=models.CharField(max_length=100)
   vendor=models.CharField(max_length=100)
   version=models.CharField(max_length=100)
@@ -54,6 +56,7 @@ class OSDistro(models.Model):
   
 
 class OSRepo(models.Model):
+  endpoint="/repos/"
   name=models.CharField(max_length=100)
   repo_package_url=models.CharField(max_length=2048, verbose_name='Repo Package URL')
   managed = models.BooleanField(default=False, verbose_name="mProv Managed?", help_text="Should mProv download and manage this repository?")

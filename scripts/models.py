@@ -16,6 +16,7 @@ class ScriptType(models.Model):
     return self.name
 
 class Script(models.Model):
+  endpoint="/scripts/"
   name=models.CharField(max_length=120, verbose_name=("Script Name"))
   slug=models.SlugField(unique=True, primary_key=True)
   filename = models.FileField(upload_to='')

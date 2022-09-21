@@ -82,7 +82,7 @@ class System(models.Model):
 
 
 class SystemBMC(models.Model):
-  
+  endpoint="/systembmcs/"
   system = models.ForeignKey(System, on_delete=models.CASCADE)
   ipaddress=models.GenericIPAddressField(verbose_name="IP Address ")
   mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)
@@ -104,6 +104,7 @@ class SystemBMCForm(ModelForm):
       fields = '__all__'
 
 class NetworkInterface(models.Model):
+  endpoint="/networkinterfaces/"
   system = models.ForeignKey(System, on_delete=models.CASCADE)
   name=models.CharField(max_length=50, verbose_name="Iface. Name",)
   hostname=models.CharField(max_length=255, )
@@ -114,6 +115,7 @@ class NetworkInterface(models.Model):
 
 
 class SystemImage(models.Model):
+  endpoint="/systemimages/"
   name=models.CharField(max_length=255, verbose_name="Image Name",unique=True,)
   slug=models.SlugField(max_length=255, unique=True, editable=False, verbose_name='Image ID', primary_key=True)
   timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")

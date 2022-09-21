@@ -5,6 +5,7 @@ from django.apps import apps
 
 
 class Job(models.Model):
+    endpoint="/jobs/"
     name=models.CharField(max_length=255)
     create_time=models.DateTimeField(auto_now_add=True, verbose_name="Created Time")
     start_time=models.DateTimeField(blank=True, null=True, verbose_name="Start Time")
@@ -22,6 +23,7 @@ class Job(models.Model):
         verbose_name_plural="Jobs"
 
 class JobModule(models.Model):
+    endpoint="/jobmodules/"
     name = models.CharField(max_length=255)
     active = models.IntegerField(default=0)
     slug = models.SlugField(max_length=255, unique=True, editable=False, verbose_name='Module ID', primary_key=True)
@@ -38,6 +40,7 @@ class JobStatus(models.Model):
         verbose_name="Job Status"
 
 class JobServer(models.Model):
+    endpoint="/jobservers/"
     name = models.CharField(max_length=255, unique=True)
     address = models.GenericIPAddressField()
     port = models.IntegerField(verbose_name="Port", default=80, null=True)

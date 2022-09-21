@@ -8,6 +8,7 @@ from django.contrib.auth.models import AnonymousUser, User
 
 
 class NetworkType(models.Model):
+  endpoint="/networktypes/"
   name=models.CharField(max_length=120)
   slug=models.SlugField(unique=True,blank=True,verbose_name="Network Type ID",editable=False)
   #id=models.IntegerField(unique=True, primary_key=False)
@@ -23,6 +24,7 @@ class NetworkType(models.Model):
 
 
 class Network(models.Model):
+  endpoint="/networks/"
   name=models.CharField(max_length=120)
   slug=models.SlugField(unique=True,blank=True,verbose_name="Network ID")
   net_type=models.ForeignKey(
@@ -67,6 +69,7 @@ class Network(models.Model):
  
 
 class Switch(models.Model):
+  endpoint="/switches/"
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
   timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
   created_by=models.ForeignKey(
@@ -84,6 +87,7 @@ class Switch(models.Model):
   
 
 class SwitchPort(models.Model):
+  endpoint="/switchports/"
   name=models.CharField(max_length=100)
   switch=models.ForeignKey(Switch, on_delete=models.CASCADE)
   def __str__(self):
