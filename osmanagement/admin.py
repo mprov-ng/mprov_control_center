@@ -28,6 +28,7 @@ class OSDistroAdmin(admin.ModelAdmin):
       'fields': (
         'name',
         'vendor',
+        'version',
         'baserepo',
         'osrepos',
 
