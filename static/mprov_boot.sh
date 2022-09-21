@@ -8,7 +8,7 @@ err_hanlder() {
   export -f get_kcmdline_opt
   mount -t devtmpfs devtmpfs /dev 
 
-  /bin/setsid /bin/bash -m  <> /dev/ttyS0 >&0 2>&1
+  /bin/setsid /bin/bash -m  <> /dev/tty0 >&0 2>&1
 }
 
 echo "mProv boot setup..."
