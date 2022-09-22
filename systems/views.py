@@ -238,22 +238,22 @@ Format returned:
         
         return super().post(request, *args, **kwargs)
     def get(self, request, format=None, **kwargs):
-       
-        result = self.checkContentType(request, format=format, kwargs=kwargs)
-        if result is not None:
-            return result
-        if self.model == None:
-            return Response(None)
-        if 'pk' in kwargs:
-            # someone is looking for a specific item.
-            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
-        self.serializer_class = SystemSerializer
-        self.queryset = self.model.objects.all()
-        if 'hostname' in request.query_params:
-            # someone is looking for a specific item.
-            self.queryset = self.queryset.filter(hostname=request.query_params['hostname'])
-            if self.queryset.count() == 0:
-                return Response(None, status=404)
+        super().get(request, format=None, **kwargs)
+        # result = self.checkContentType(request, format=format, kwargs=kwargs)
+        # if result is not None:
+        #     return result
+        # if self.model == None:
+        #     return Response(None)
+        # if 'pk' in kwargs:
+        #     # someone is looking for a specific item.
+        #     return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+        # self.serializer_class = SystemSerializer
+        # self.queryset = self.model.objects.all()
+        # if 'hostname' in request.query_params:
+        #     # someone is looking for a specific item.
+        #     self.queryset = self.queryset.filter(hostname=request.query_params['hostname'])
+        #     if self.queryset.count() == 0:
+        #         return Response(None, status=404)
         if 'self' in request.query_params:
             # someone would like us to tell them who they are.
             # grab the IP
@@ -415,29 +415,17 @@ Format returned:
     template = "networkinterface_docs.html"
     serializer_class = NetworkInterfaceSerializer
     def get(self, request, format=None, **kwargs):
-        result = self.checkContentType(request, format=format, kwargs=kwargs)
-        if result is not None:
-            return result
-        # if we are 'application/json' return an empty dict if
-        # model is not set.
-        if self.model == None:
-            return Response(None)
+        super().get(request, format=None, **kwargs)
         
-        if 'pk' in kwargs:
-            self.serializer_class = NetworkInterfaceDetailsSerializer
-            # someone is looking for a specific item.
-            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
-
-        # Let's see if someone is looking for something specific.
-        queryset = self.model.objects.all()
-        network = self.request.query_params.get('network')
-        print(network)
-        if network is not None:
+        if 'network' in self.request.query_params:
+            network = self.request.query_params['network']
             # get the Network ID
+            print(network)
             net = Network.objects.filter(slug=network)
+            print(net)
             innerQ = SwitchPort.objects.filter(networks__in=net)
-            queryset = self.model.objects.filter(switch_port__in=innerQ)
-        self.queryset=queryset
+            self.queryset = self.queryset.filter(switch_port__in=innerQ)
+        
         # return the super call for get.
         return generics.ListAPIView.get(self, request, format=None)
 
@@ -620,21 +608,21 @@ Format returned:
     template = "systems_docs.html"
     serializer_class = SystemBMCDetailSerializer
     queryset = None
-    def get(self, request, format=None, **kwargs):
+    # def get(self, request, format=None, **kwargs):
        
-        result = self.checkContentType(request, format=format, kwargs=kwargs)
-        if result is not None:
-            return result
-        if self.model == None:
-            return Response(None)
-        if 'pk' in kwargs:
-            # someone is looking for a specific item.
-            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
-        self.serializer_class = SystemBMCSerializer
-        self.queryset = self.model.objects.all()
-        if 'hostname' in request.query_params:
-            # someone is looking for a specific item.
-            queryset = self.queryset.filter(hostname=request.query_params['hostname'])
-            if queryset.count() == 0:
-                return Response(None, status=404)
-        return generics.ListAPIView.get(self, request, format=None)
+    #     result = self.checkContentType(request, format=format, kwargs=kwargs)
+    #     if result is not None:
+    #         return result
+    #     if self.model == None:
+    #         return Response(None)
+    #     if 'pk' in kwargs:
+    #         # someone is looking for a specific item.
+    #         return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+    #     self.serializer_class = SystemBMCSerializer
+    #     self.queryset = self.model.objects.all()
+    #     if 'hostname' in request.query_params:
+    #         # someone is looking for a specific item.
+    #         queryset = self.queryset.filter(hostname=request.query_params['hostname'])
+    #         if queryset.count() == 0:
+    #             return Response(None, status=404)
+    #     return generics.ListAPIView.get(self, request, format=None)

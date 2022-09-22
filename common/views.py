@@ -132,6 +132,19 @@ and make sure to add documentation to the class so that it can be displayed if a
         
         self.queryset = self.model.objects.all()
 
+        # check our query and see if we can get filters based on the query
+        print(self.model._meta.get_fields())
+        for field in request.query_params:
+            print(field)
+            if any(x for x in self.model._meta.get_fields() if x.name == field):
+                # we found a field.
+                print(f"Filter {field}")
+                print(f"{field}, {request.query_params[field]}")
+                self.queryset = self.queryset.filter((field,request.query_params[field]))
+                if self.queryset.count() == 0:
+                    return Response(None, status=404)
+
+
         # return the super call for get.
         return generics.ListAPIView.get(self, request, format=None);
 
