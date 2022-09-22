@@ -10,19 +10,6 @@ from bs4 import BeautifulSoup
 
 
 class OSRepoURLAPIView(MProvView, generics.ListAPIView):
-      '''
-# /osrepos/
-
-## Accepted HTTP Methods:
-- GET (with Primary Key, ie: /repos/2/)
-
-## Documentation
-None
-
-### GET (with primary key)
-- Redirect to a mProv hosted version of the repo requested, regardless of requested content type.
-
-    '''
       model = OSRepo
       # TODO: placeholder for now to test 302 redirects
       authentication_classes = [] #disables authentication
