@@ -251,8 +251,8 @@ Format returned:
         self.queryset = self.model.objects.all()
         if 'hostname' in request.query_params:
             # someone is looking for a specific item.
-            queryset = self.queryset.filter(hostname=request.query_params['hostname'])
-            if queryset.count() == 0:
+            self.queryset = self.queryset.filter(hostname=request.query_params['hostname'])
+            if self.queryset.count() == 0:
                 return Response(None, status=404)
         if 'self' in request.query_params:
             # someone would like us to tell them who they are.
