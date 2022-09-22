@@ -221,26 +221,12 @@ Format returned:
     serializer_class = SwitchAPISerializer
 
     def get(self, request, format=None, **kwargs):
-        result = self.checkContentType(request, format=format, kwargs=kwargs)
-        if result is not None:
-            return result
-        # if we are 'application/json' return an empty dict if
-        # model is not set.
-        if self.model == None:
-            return Response(None)
-        
-        if 'pk' in kwargs:
-            # someone is looking for a specific item.
-            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
-
-        # Let's see if someone is looking for something specific.
-        queryset = self.model.objects.all()
-        network = self.request.query_params.get('network')
-        # print(network)
-        if network is not None:
+        super().get(request, format=None, **kwargs)
+        if 'network' in self.request.query_params:
+            network = self.request.query_params['network']
             net = Network.objects.get(slug=network)
-            queryset = self.model.objects.filter(network=net)
-        self.queryset=queryset
+            self.queryset = self.model.objects.filter(network=net)
+        
         # return the super call for get.
         return generics.ListAPIView.get(self, request, format=None);
 
