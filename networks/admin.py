@@ -20,6 +20,7 @@ class SwitchPortInline(admin.TabularInline):
   extra = 1
   list_display = ['name']
   list_display_links = ['id', 'name']
+  ordering = ('name',)
     
 
 class SwitchAdmin(admin.ModelAdmin):
