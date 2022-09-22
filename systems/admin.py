@@ -36,34 +36,45 @@ class NetForm(forms.ModelForm):
             }),
         }
 
-# class NetworkInterfaceInlineFormset(BaseInlineFormSet):
-#   def __init__(self, *args, **kwargs):
-#     super(NetworkInterfaceInlineFormset, self).__init__(*args, **kwargs)
-#     # print( SwitchPort.objects.filter(networkinterface=None) )
-   
-#     # for form in self.forms:
-#     #   form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
+class NetworkInterfaceInlineFormset(BaseInlineFormSet):
+  def __init__(self, *args, **kwargs):
+    super(NetworkInterfaceInlineFormset, self).__init__(*args, **kwargs)
+    
+    for form in self.forms:
+      if 'switch_port' in form.initial:
+        form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None) | SwitchPort.objects.filter(id=form.initial['switch_port'])
+      else:
+        form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
     
 
 class NetworkInterfaceInline(admin.TabularInline):
   model = NetworkInterface
   extra=1
-  #formset = NetworkInterfaceInlineFormset
+  formset = NetworkInterfaceInlineFormset
   form = NetForm
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
   verbose_name="Network Interfaces"
   verbose_name_plural="Network Interfaces"
-  # def get_form(self, request, obj=None, **kwargs):
-  #   form = super(NetworkInterfaceInline, self).get_form(request, obj, **kwargs)
+  
+  
   #   print(SwitchPort.objects.filter(networkinterface=None))
-  #   form.base_fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
-  #   return form
 
   # def render_change_form(self, request, context, *args, **kwargs):
-  #   context['adminform'].form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
-  #   return super(NetworkInterfaceInline, self).render_change_form(*args, **kwargs)
-  #   #self.fields['switch_port'] = 
+  # def get_form(self, request, obj=None, **kwargs):
+  #   form = super(NetworkInterfaceInline, self).get_form(request, obj, **kwargs)
+  #   obj = kwargs['obj']
+  #   print(obj)
+  #   portId=obj.switch_port
+  #   print(portId)
+  #   queryset = SwitchPort.objects.filter(networkinterface=None) & SwitchPort.objects.filter(id=portId)
+  #   form.base_fields['switch_port'].queryset = SwitchPort.objects.order_by(('name',))
+  #   return form
+
+    #context['adminform'].form.fields['switch_port'].queryset = queryset
+
+    #return super(NetworkInterfaceInline, self).render_change_form(*args, **kwargs)
+    #self.fields['switch_port'] = 
 
 class BMCInLine(admin.StackedInline):
   model = SystemBMC
@@ -108,7 +119,7 @@ class SystemAdmin(admin.ModelAdmin):
     query = query.filter(system=obj)
     netstr = ""
     for netinf in query.all():
-      print(netinf)
+      # print(netinf)
       netstr += netinf.name + ": [" + str(netinf.mac) + "]<br />"
     return mark_safe(netstr)
 
