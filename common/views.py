@@ -166,7 +166,10 @@ and make sure to add documentation to the class so that it can be displayed if a
             if field.__class__ in self.model_to_json_type_map:
                 datatype=self.model_to_json_type_map[field.__class__]
             else:
-                print(f"WARN: Unmapped field type {field.__class__} please open a ticket to have it added.  Excluding field.")
+                print(f"WARN: Unmapped field type {field.__class__} please open a ticket to have it added.  Defaulting to string.")
+            if "reverse" in field.__class__.__module__:
                 continue
+            if(not getattr(field, 'blank', False)):
+                print(f"DEBUG: {self.model}.{field.name} is {field.__class__} and is required")
             jsonDataModel['fields'].update({field.name: {'type:': datatype, 'required': not getattr(field, 'blank', False) }})
         return jsonDataModel
