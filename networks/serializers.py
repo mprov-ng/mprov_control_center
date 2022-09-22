@@ -25,6 +25,8 @@ class SwitchAPISerializer(serializers.ModelSerializer):
 
 class SwitchPortAPISerializer(serializers.ModelSerializer):
   switch = serializers.PrimaryKeyRelatedField(queryset=Switch.objects.all())
+  networks = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
+
   class Meta:
     model = SwitchPort
     fields = '__all__'
