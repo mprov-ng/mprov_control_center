@@ -187,6 +187,16 @@ Require all granted
     AuthBasicProvider wsgi
     WSGIAuthUserScript /var/www/mprov_control_center/mprov_control_center/wsgi.py
 </Location>
+
+# we need to up the workers.
+<IfModule mpm_prefork_module>
+      StartServers              10
+      MinSpareServers           10
+      MaxSpareServers           20
+      ServerLimit               2000
+      MaxRequestWorkers         1500
+      MaxConnectionsPerChild    10000
+</IfModule>
 EOF
 if [ "$BUILD_DOCKER" != "1" ]
 then
