@@ -140,7 +140,10 @@ and make sure to add documentation to the class so that it can be displayed if a
                 # we found a field.
                 print(f"Filter {field}")
                 print(f"{field}, {request.query_params[field]}")
-                self.queryset = self.queryset.filter((field,request.query_params[field]))
+                try:
+                    self.queryset = self.queryset.filter((field,request.query_params[field]))
+                except:
+                    pass # should be safe.
                 if self.queryset.count() == 0:
                     return Response(None, status=404)
 
