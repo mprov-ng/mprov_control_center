@@ -1,6 +1,6 @@
 from array import array
 from pyexpat import model
-from systems.models import NetworkInterface, SystemImage, System, SystemGroup, SystemBMC
+from systems.models import NetworkInterface, SystemImage, System, SystemGroup, SystemBMC, SystemModel
 from rest_framework import serializers
 from jobqueue.models import JobServer
 from disklayouts.serializers import DiskLayoutAPISerializer
@@ -17,9 +17,15 @@ class SystemGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemGroup
         fields = '__all__'
+class SystemImageDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SystemImage
+        fields = '__all__'
+        depth = 3
 class SystemDetailSerializer(serializers.ModelSerializer): 
     disks = DiskLayoutAPISerializer(many=True, read_only=True)
-    systemimage = serializers.PrimaryKeyRelatedField(many=False, queryset=SystemImage.objects.all())
+    systemimage = SystemImageDetailsSerializer(many=False)
+    systemmodel =  serializers.PrimaryKeyRelatedField(queryset=SystemModel.objects.all())
     class Meta:
         model = System
         fields = '__all__'
@@ -29,11 +35,7 @@ class SystemBMCDetailSerializer(serializers.ModelSerializer):
         model = SystemBMC
         fields = '__all__'
         depth = 3        
-class SystemImageDetailsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SystemImage
-        fields = '__all__'
-        depth = 3
+
         
 class SystemImageSerializer(serializers.ModelSerializer):
     class Meta:
