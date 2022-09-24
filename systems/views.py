@@ -91,6 +91,7 @@ NADS Packet:
         if nicQueryset is not None and len(nicQueryset) > 0:
             system = System.objects.get(pk=nicQueryset[0].system.pk)
             print(model_slug)
+            print(system)
             print(system.systemmodel.slug)
             if system.systemmodel.slug != model_slug:
                 system=None
