@@ -264,7 +264,7 @@ Format returned:
             else:
                 ip = request.META.get('REMOTE_ADDR')
             # for testing
-            ip="172.16.12.1"
+            #ip="172.16.12.1"
             
             # now try to grab the nic for this IP
             nicQueryset = NetworkInterface.objects.all()
