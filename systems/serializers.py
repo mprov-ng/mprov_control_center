@@ -18,6 +18,7 @@ class SystemGroupSerializer(serializers.ModelSerializer):
         model = SystemGroup
         fields = '__all__'
 class SystemImageDetailsSerializer(serializers.ModelSerializer):
+    jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all())
     class Meta:
         model = SystemImage
         fields = '__all__'
@@ -38,9 +39,11 @@ class SystemBMCDetailSerializer(serializers.ModelSerializer):
 
         
 class SystemImageSerializer(serializers.ModelSerializer):
+    jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all(),)
     class Meta:
         model = SystemImage
-        fields = '__all__'
+        fields = ['version', 'name', 'slug', 'jobservers', 'osdistro']#'__all__'
+        
 
     def validate_jobservers(self, value):
         print(f"Prevalidation jobservers:'{value}'")

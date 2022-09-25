@@ -11,7 +11,7 @@ from .serializers import (
     SystemDetailSerializer,
     SystemBMCSerializer,
     SystemBMCDetailSerializer,
-    SystemImageSerializer,
+    SystemImageDetailsSerializer,
 )
 from rest_framework.response import Response
 
@@ -537,7 +537,7 @@ Format returned:
     '''
     model = SystemImage
     queryset = SystemImage.objects.all()
-    serializer_class = SystemImageSerializer
+    serializer_class = SystemImageDetailsSerializer
     jobservers=JobServerAPISerializer(many=True)
     
     # def get(self, request, format=None, **kwargs):

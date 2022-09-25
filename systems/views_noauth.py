@@ -1,4 +1,5 @@
 
+import os
 from .models import SystemImage, NetworkInterface
 from django.shortcuts import redirect
 from rest_framework.exceptions import NotFound
@@ -52,9 +53,10 @@ If no primary key is specified, 404 is returned.
         result = self.checkContentType(request, format=format, kwargs=kwargs)
         if result is not None:
             return result  
-        # No primary key specified and requesting JSON,
-        # in this instance, we will 404
-        raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
+        # no pk in image, spit out a list then.
+        self.queryset = SystemImage.objects.all()
+        print(self.queryset)
+        return(generics.ListAPIView.get(self, request, format=None)) 
       # choose a random jobserver
       js_set = list(image.jobservers.all())
       js = None
@@ -94,10 +96,10 @@ kernels to PXE.  This function may be merged into /images/ at some point.
 ## Documentation
 
 ### Class Attributes
-Note: See [/images/](/images/)
+
 
 ### GET (with primary key)
-- Will return the image requested, regardless of requested content type.
+- Will return the kernel requested, regardless of requested content type.
 
     '''
       model = SystemImage
@@ -110,7 +112,8 @@ Note: See [/images/](/images/)
         # if result is not None:
         #     return result
         if 'pk' in kwargs:
-          image = SystemImage.objects.get(pk=kwargs['pk'])
+          image, _= os.path.splitext(kwargs['pk'])
+          image = SystemImage.objects.get(pk=image)
         else: 
           result = self.checkContentType(request, format=format, kwargs=kwargs)
           if result is not None:
