@@ -57,14 +57,14 @@ If no primary key is specified, 404 is returned.
         self.queryset = SystemImage.objects.all()
         print(self.queryset)
         return(generics.ListAPIView.get(self, request, format=None)) 
-      # choose a random jobserver
-      js_set = list(image.jobservers.all())
+      
+      # choose a jobserver with the lowest one minute load avg.
+      js_set = list(image.jobservers.all().order_by('-one_minute_load')[:1])
       js = None
       if(len(js_set)==0):
         # if there are no jobservers, return 404
         raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
-      print(js_set)
-      js = random.choice(js_set)
+      js = js_set[0]
       imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug 
       if isInitRamFS:
         imageURL += ".initramfs"
@@ -121,14 +121,13 @@ kernels to PXE.  This function may be merged into /images/ at some point.
           # no pk in image, spit out a list then.
           self.queryset = SystemImage.objects.all()
           return(generics.ListAPIView.get(self, request, format=None))
-        # choose a random jobserver
-        js_set = list(image.jobservers.all())
+        # choose a jobserver with the lowest one minute load avg.
+        js_set = list(image.jobservers.all().order_by('-one_minute_load')[:1])
         js = None
         if(len(js_set)==0):
           # if there are no jobservers, return 404
           raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
-        print(js_set)
-        js = random.choice(js_set)
+        js = js_set[0]
         imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
 
         return redirect(imageURL)        
