@@ -1,5 +1,6 @@
 
 import os
+from urllib import response
 from .models import SystemImage, NetworkInterface
 from django.shortcuts import redirect
 from rest_framework.exceptions import NotFound
@@ -11,6 +12,7 @@ from django.http import HttpResponseNotAllowed
 from rest_framework.response import Response
 from django.template import Template, Context
 from django.shortcuts import render
+import requests
 
 
 class ImagesAPIView(MProvView, generics.ListAPIView):
@@ -70,6 +72,7 @@ If no primary key is specified, 404 is returned.
         imageURL += ".initramfs"
       else:
         imageURL += ".img"
+      print(imageURL)
       return redirect(imageURL)
     def post(self, request, *args, **kwargs):
       return HttpResponseNotAllowed(["GET"])
@@ -122,14 +125,31 @@ kernels to PXE.  This function may be merged into /images/ at some point.
           self.queryset = SystemImage.objects.all()
           return(generics.ListAPIView.get(self, request, format=None))
         # choose a jobserver with the lowest one minute load avg.
-        js_set = list(image.jobservers.all().order_by('-one_minute_load')[:1])
+        js_set = self.getJobserver(image)
         js = None
-        if(len(js_set)==0):
-          # if there are no jobservers, return 404
-          raise NotFound(detail="Error 404, No Jobservers for Image", code=404) 
         js = js_set[0]
         imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
-
+        
+        try: 
+          response = requests.head(imageURL,timeout=1)
+          statCode = response.status_code
+        except:
+          statCode = 0
+        while ( statCode <= 199 or statCode >=400):
+          # jobsever gave a bad response, remove it and retry.
+          js_set.remove(js)
+          image.jobservers.set(js_set)
+          image.save()
+          js_set = self.getJobserver(image)
+          js = None
+          js = js_set[0]
+          imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
+          try: 
+            response = requests.head(imageURL,timeout=1)
+            statCode = response.status_code
+          except: 
+            statCode=0
+        print(imageURL)
         return redirect(imageURL)        
       def post(self, request, *args, **kwargs):
         return HttpResponseNotAllowed(["GET"])
@@ -143,6 +163,14 @@ kernels to PXE.  This function may be merged into /images/ at some point.
       def patch(self, request, *args, **kwargs):
           return HttpResponseNotAllowed(["GET"])
 
+      def getJobserver(self, image):
+        # choose a jobserver with the lowest one minute load avg.
+        js_set = list(image.jobservers.all().order_by('-one_minute_load'))
+        
+        if(len(js_set)==0):
+          # if there are no jobservers, return 404
+          raise NotFound(detail="Error 404, No Jobservers for Image", code=404)
+        return js_set
 
 class IPXEAPIView(MProvView):
     model = NetworkInterface
