@@ -102,7 +102,19 @@ cd /image
 
 echo; echo "Downloading and extracting image to image directory... "
 echo "Retrieving $MPROV_IMAGE_URL"
-wget $MPROV_IMAGE_URL -O - | gunzip -c | cpio -id --quiet
+while [ 1 ]
+do
+
+  wget $MPROV_IMAGE_URL -O - | gunzip -c | cpio -id --quiet
+  if [ "$?" == "0" ]
+  then 
+    break
+  else
+    echo "Unable to retreive image.  Retrying..."
+    sleep 5
+  fi
+done
+
 echo "Image Extracted."
 mount -t proc proc /image/proc
 mount -t sysfs sysfs /image/sys
