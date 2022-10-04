@@ -33,7 +33,6 @@ ln -s /bin/busybox /bin/env
 ln -s /bin/busybox /bin/awk
 ln -s /bin/busybox /bin/chmod
 
-sleep 2
 clear
 chvt 1
 
