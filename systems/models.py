@@ -158,10 +158,10 @@ class SystemImage(models.Model):
     return self.name
 
 # emits jobs to update dns, dhcp, and pxe config if a 
-# system, systemimage, or NIC is changed.
+# system or NIC is changed.
 # TODO: add the sender information to the
 # job params? Or should we just rebuild it all.
-@receiver(pre_save, sender=SystemImage)
+
 @receiver(pre_save, sender=System)
 @receiver(pre_save, sender=NetworkInterface)
 def UpdateSystemAttributes(sender, instance, **kwargs):
