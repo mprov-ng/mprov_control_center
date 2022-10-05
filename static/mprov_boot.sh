@@ -33,8 +33,6 @@ ln -s /bin/busybox /bin/env
 ln -s /bin/busybox /bin/awk
 ln -s /bin/busybox /bin/chmod
 
-clear
-chvt 1
 
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
@@ -53,7 +51,8 @@ get_kcmdline_opt(){
 
 }
 
-trap err_hanlder ERR
+trap err_hanlder EXIT
+#trap err_handler ERR
 
 # grab some of our variables from the kernel cmdline.
 export MPROV_TMPFS_SIZE=`get_kcmdline_opt mprov_tmpfs_size`
@@ -83,7 +82,6 @@ ip link set $MPROV_PROV_INTF up
 udhcpc -s /bin/default.script
 
 echo "Network up."
-
 echo; 
 echo;
 
@@ -103,7 +101,6 @@ echo; echo "Downloading and extracting image to image directory... "
 echo "Retrieving $MPROV_IMAGE_URL"
 while [ 1 ]
 do
-
   wget $MPROV_IMAGE_URL -O - | gunzip -c | cpio -id --quiet
   if [ "$?" == "0" ]
   then 
@@ -170,6 +167,8 @@ umount /sys
 #umount /dev
 umount /run
 
+# disable trap
+trap EXIT
 echo "Switching to new root.... LEEEEROY JENKINS!!!....."
 date >> /image/tmp/boot_timing
 exec /sbin/switch_root  -c /dev/console /image /sbin/init
