@@ -20,19 +20,25 @@ set kernel-cmdline ${kernel-cmdline} mprov_bootdisk={{ nic.system.bootdisk.diskn
 set kernel-cmdline ${kernel-cmdline} mprov_stateful=0
 {% endif %}
 
-kernel /kernels/{{ nic.system.systemimage.slug }} ${kernel-cmdline}
-initrd /images/{{ nic.system.systemimage.slug }}.initramfs
+:imgdownload
+kernel /kernels/{{ nic.system.systemimage.slug }} ${kernel-cmdline} || goto retrydownload
+initrd /images/{{ nic.system.systemimage.slug }}.initramfs || goto retrydownload
 # insert our mprov setup script here and mount it on /linuxrc
-initrd /static/mprov_boot.sh /linuxrc mode=755
-initrd /static/busybox /bin/busybox mode=755
+initrd /static/mprov_boot.sh /linuxrc mode=755 || goto retrydownload
+initrd /static/busybox /bin/busybox mode=755 || goto retrydownload
 {% if nic.system.stateful %}
-initrd /static/mprov_stateful.py /tmp/mprov_stateful.py mode=755
-initrd /static/mprov_stateful.sh /tmp/mprov_stateful.sh mode=755
+initrd /static/mprov_stateful.py /tmp/mprov_stateful.py mode=755 || goto retrydownload
+initrd /static/mprov_stateful.sh /tmp/mprov_stateful.sh mode=755 || goto retrydownload
 {% endif %}
-initrd /static/default.script /bin/default.script mode=755
+initrd /static/default.script /bin/default.script mode=755 || goto retrydownload
 # insert a few more files we are going to need.  wget, curl, 
 boot
 {% else %}
 exit
 {% endif %}
 {% endfor %}
+
+:retrydownload
+echo "There was an error, retrying."
+sleep 1
+goto imgdownload
