@@ -12,7 +12,8 @@ err_hanlder() {
 }
 
 echo "mProv boot setup..."
-
+set +e
+set -o pipefail
 cd /bin
 ln -s /bin/busybox ip
 ln -s /bin/busybox /sbin/ifconfig
@@ -52,7 +53,7 @@ get_kcmdline_opt(){
 }
 
 trap err_hanlder EXIT
-#trap err_handler ERR
+trap err_handler ERR
 
 # grab some of our variables from the kernel cmdline.
 export MPROV_TMPFS_SIZE=`get_kcmdline_opt mprov_tmpfs_size`
@@ -99,6 +100,7 @@ cd /image
 
 echo; echo "Downloading and extracting image to image directory... "
 echo "Retrieving $MPROV_IMAGE_URL"
+trap ERR
 while [ 1 ]
 do
   wget $MPROV_IMAGE_URL -O - | gunzip -c | cpio -id --quiet
@@ -110,6 +112,7 @@ do
     sleep 5
   fi
 done
+trap err_handler ERR
 
 echo "Image Extracted."
 mount -t proc proc /image/proc
