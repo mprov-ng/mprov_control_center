@@ -155,8 +155,7 @@ kernels to PXE.  This function may be merged into /images/ at some point.
           self.queryset = SystemImage.objects.all()
           return(generics.ListAPIView.get(self, request, format=None))
         # choose a jobserver with the lowest one minute load avg.
-        js_set = self.getJobserver(image)
-        js = None
+        js_set = self.getJobservers(image)
         js = js_set[0]
         imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
         
@@ -171,13 +170,12 @@ kernels to PXE.  This function may be merged into /images/ at some point.
           print("Removing Jobserver " + str(js) + ", URL: " + imageURL + " not accessible. Status: " + str(statCode))
           image.jobservers.set(js_set)
           image.save()
-          js_set = self.getJobserver(image)
-          js = None
+          js_set = self.getJobservers(image)
           js = js_set[0]
           imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
           print(imageURL)
           try: 
-            response = requests.head(imageURL,timeout=1)
+            response = requests.head(imageURL,timeout=5)
             statCode = response.status_code
           except: 
             statCode=0
@@ -194,10 +192,10 @@ kernels to PXE.  This function may be merged into /images/ at some point.
       def patch(self, request, *args, **kwargs):
           return HttpResponseNotAllowed(["GET"])
 
-      def getJobserver(self, image):
+      def getJobservers(self, image):
         # choose a jobserver with the lowest one minute load avg.
         js_set = list(image.jobservers.all().order_by('one_minute_load'))
-        
+        print("Jobserver: " + str(js_set[0]))
         if(len(js_set)==0):
           # if there are no jobservers, return 404
           raise NotFound(detail="Error 404, No Jobservers for Image", code=404)
