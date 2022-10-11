@@ -239,22 +239,22 @@ Format returned:
         
         return super().post(request, *args, **kwargs)
     def get(self, request, format=None, **kwargs):
-        super().get(request, format=None, **kwargs)
-        # result = self.checkContentType(request, format=format, kwargs=kwargs)
-        # if result is not None:
-        #     return result
-        # if self.model == None:
-        #     return Response(None)
-        # if 'pk' in kwargs:
-        #     # someone is looking for a specific item.
-        #     return self.retrieve(self, request, format=None, pk=kwargs['pk'])
-        # self.serializer_class = SystemSerializer
-        # self.queryset = self.model.objects.all()
-        # if 'hostname' in request.query_params:
-        #     # someone is looking for a specific item.
-        #     self.queryset = self.queryset.filter(hostname=request.query_params['hostname'])
-        #     if self.queryset.count() == 0:
-        #         return Response(None, status=404)
+        #super().get(request, format=None, **kwargs)
+        result = self.checkContentType(request, format=format, kwargs=kwargs)
+        if result is not None:
+            return result
+        if self.model == None:
+            return Response(None)
+        if 'pk' in kwargs:
+            # someone is looking for a specific item.
+            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+        self.serializer_class = SystemSerializer
+        self.queryset = self.model.objects.all()
+        if 'hostname' in request.query_params:
+            # someone is looking for a specific item.
+            self.queryset = self.queryset.filter(hostname=request.query_params['hostname'])
+            if self.queryset.count() == 0:
+                return Response(None, status=404)
         if 'self' in request.query_params:
             # someone would like us to tell them who they are.
             # grab the IP
