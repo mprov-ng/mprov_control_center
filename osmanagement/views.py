@@ -182,7 +182,7 @@ Format returned:
     def post(self, request, *args, **kwargs):
         if 'slug' in request.data:
             queryset = OSType.objects.all().filter(pk=request.data['slug'])
-            print(queryset)
+            #print(queryset)
             if queryset.count() > 0:
                 # update the entry
                 obj = queryset[0]

@@ -57,7 +57,7 @@ If no primary key is specified, 404 is returned.
             return result  
         # no pk in image, spit out a list then.
         self.queryset = SystemImage.objects.all()
-        print(self.queryset)
+        #print(self.queryset)
         return(generics.ListAPIView.get(self, request, format=None)) 
       # choose a jobserver with the lowest one minute load avg.
       js_set = self.getJobserver(image)
@@ -173,7 +173,7 @@ kernels to PXE.  This function may be merged into /images/ at some point.
           js_set = self.getJobservers(image)
           js = js_set[0]
           imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
-          print(imageURL)
+          #print(imageURL)
           try: 
             response = requests.head(imageURL,timeout=5)
             statCode = response.status_code
@@ -195,7 +195,7 @@ kernels to PXE.  This function may be merged into /images/ at some point.
       def getJobservers(self, image):
         # choose a jobserver with the lowest one minute load avg.
         js_set = list(image.jobservers.all().order_by('one_minute_load'))
-        print("Jobserver: " + str(js_set[0]))
+        
         if(len(js_set)==0):
           # if there are no jobservers, return 404
           raise NotFound(detail="Error 404, No Jobservers for Image", code=404)

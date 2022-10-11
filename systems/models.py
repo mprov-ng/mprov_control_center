@@ -187,7 +187,7 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
         JobType = JobModule.objects.get(slug=slug)
     except:
         JobType = None
-    print(JobType)
+    # print(JobType)
     # get or create the OSIMAGE_UPDATE job module in the DB
     # get the jobtype, do nothing if it's not defined.
     if JobType is not None:
@@ -204,7 +204,7 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
 def DeleteSystemImage(sender, instance, **kwargs):
   # grab a copy of the jobservers.
   jobservers = list(instance.jobservers.all())
-  print(jobservers)
+  # print(jobservers)
   # now clear this so everyone stops serving it.
   instance.jobservers.clear()
 
