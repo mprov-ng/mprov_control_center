@@ -1,8 +1,8 @@
-import ipaddress
+import ipaddress, time, datetime
 from tabnanny import verbose
 from django.db import models
 from django.apps import apps
-
+from django.utils.timezone import make_aware
 
 class Job(models.Model):
     endpoint="/jobs/"
@@ -50,12 +50,22 @@ class JobServer(models.Model):
     network=models.ForeignKey('networks.Network', blank=True, null=True, on_delete=models.SET_NULL)
     def __str__(self):
         return self.name
-    
     class Meta:
         verbose_name="Job Server"
 
     # XXX: With the correct related fields on the serializer, do we need this?
     def save(self, *args, **kwargs):
+        # check for stale servers
+        # only run if we are on a 5 minute boundry
+        # print(f"{int(time.time()) % 10}")
+        if int(time.time() % 60) == 0:
+            # delete any servers that are older than 1 minute heartbeat.
+            delTime = time.time() - 60
+            delDateTime = datetime.datetime.fromtimestamp(delTime)#.strftime("%Y-%m-%d %H:%M:%S")
+            delDateTime = make_aware(delDateTime)
+            print("Info: Removing stale jobservers.")
+            self.__class__.objects.filter(heartbeat_time__lte=delDateTime).delete()
+        
         # search for a network that our address is in.
         myaddr = ipaddress.ip_address(self.address)
         # get a ref to the networks class
