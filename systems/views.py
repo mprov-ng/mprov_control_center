@@ -76,23 +76,23 @@ NADS Packet:
         return HttpResponseNotAllowed(["POST"])
 
     def post(self, request, *args, **kwargs):
-        print(request.data)
+        #print(request.data)
         
         switch = Switch.objects.get(hostname=request.data['switch'])
-        print(switch)
+        #print(switch)
 
         model_slug = slugify(f"{request.data['vendor']} {request.data['model']}")
         
         port= SwitchPort.objects.get(name=request.data['port'], switch=switch)
-        print(port)
+        #print(port)
         nicQueryset = NetworkInterface.objects.all()
         nicQueryset = nicQueryset.filter(mac=None, switch_port=port)
-        print(nicQueryset)
+        #print(nicQueryset)
         if nicQueryset is not None and len(nicQueryset) > 0:
             system = System.objects.get(pk=nicQueryset[0].system.pk)
-            print(model_slug)
-            print(system)
-            print(system.systemmodel.slug)
+            # print(model_slug)
+            # print(system)
+            # print(system.systemmodel.slug)
             if system.systemmodel.slug != model_slug:
                 system=None
             if system is not None:
@@ -105,7 +105,7 @@ NADS Packet:
                     JobType = JobModule.objects.get(slug='pxe-update')
                 except:
                     JobType = None
-                print(JobType)
+                # print(JobType)
                 # get or create the job module in the DB
                 # get the jobtype, do nothing if it's not defined.
                 if JobType is not None:
@@ -221,7 +221,7 @@ Format returned:
             if nicQueryset.count() == 0:
                 return Response(None, status=404)
             system = nicQueryset[0].system
-            print(system)
+            # print(system)
             for arg in request.data:
                 if arg == "netboot":
                     # we should only be working on disabling netboot.
@@ -421,9 +421,9 @@ Format returned:
         if 'network' in self.request.query_params:
             network = self.request.query_params['network']
             # get the Network ID
-            print(network)
+            # print(network)
             net = Network.objects.filter(slug=network)
-            print(net)
+            # print(net)
             innerQ = SwitchPort.objects.filter(networks__in=net)
             self.queryset = self.queryset.filter(switch_port__in=innerQ)
         
@@ -543,7 +543,40 @@ Format returned:
     # def get(self, request, format=None, **kwargs):
     #     return self.retrieve(self, request, format=None, **kwargs)
 
+    def patch(self, request, *args, **kwargs):
+      print(f"Query params: {request.query_params}")
+      if 'addjs' in request.query_params:
+        # if 'addjs' is in the query string, we are appending a jobserver to the 
+        # jobserver array.
+        print("Updating, not removing, via internal merge.")
+        # first let's get the image in question
+        sysimage = None
+        print(f"data: {request.data}")
+        if 'pk' in kwargs:
 
+          sysimage = self.model.objects.get(pk=kwargs['pk'])
+        if sysimage == None:
+          return Response(None, status=404)
+        
+        # if the incoming 'jobservers' param is an array, let's merge it with 
+        # the existing one.
+        if 'jobservers' in request.data:
+          
+          jobservers = list(sysimage.jobservers.all().values_list('id', flat=True))  
+          if type(request.data['jobservers']) == list:
+            # merge without duplicates
+            print("Merging Array.")
+            jobservers = list(set(jobservers + request.data['jobservers']))
+            # remove the jobservers from the kwargs.
+            del request.data['jobservers']
+          else:
+            print("Adding Jobserver")
+            jobservers.append(request.data['jobservers'])
+            # jobservers isn't a list, let's try to append our new jobserver.
+          sysimage.jobservers.set(jobservers)
+          sysimage.save()
+        
+      return super().patch(request, *args, **kwargs)
 # class SytemImageUpdateAPIView(MProvView):
 #   model = SystemImage
 #   queryset = SystemImage.objects.all()
