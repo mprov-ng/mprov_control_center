@@ -4,7 +4,7 @@ from systems.models import NetworkInterface, SystemImage, System, SystemGroup, S
 from rest_framework import serializers
 from jobqueue.models import JobServer
 from disklayouts.serializers import DiskLayoutAPISerializer
-
+from networks.models import SwitchPort, Network
 class SystemSerializer(serializers.ModelSerializer): 
     class Meta:
         model = System
@@ -33,6 +33,8 @@ class SystemDetailSerializer(serializers.ModelSerializer):
         depth = 6
 class SystemBMCDetailSerializer(serializers.ModelSerializer): 
     system = serializers.PrimaryKeyRelatedField(queryset=System.objects.all())
+    switch_port = serializers.PrimaryKeyRelatedField(queryset=SwitchPort.objects.all())
+    network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
     class Meta:
         model = SystemBMC
         fields = '__all__'

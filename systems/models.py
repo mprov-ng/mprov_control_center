@@ -4,7 +4,7 @@ from django.conf import settings
 from django.dispatch import receiver
 from django.forms import CharField, PasswordInput, ModelForm
 from disklayouts.models import DiskLayout
-from networks.models import SwitchPort
+from networks.models import SwitchPort, Network
 from osmanagement.models import OSDistro, OSRepo
 from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, JobStatus, Job, JobServer
@@ -89,6 +89,7 @@ class SystemBMC(models.Model):
   username=models.CharField(max_length=255, verbose_name="BMC User", blank=True, null=True)
   password=models.CharField(max_length=100, verbose_name="BMC Password", blank=True, null=True)
   switch_port=models.ForeignKey(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
+  network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Network")
   class Meta:
     verbose_name = 'Power Management'
     verbose_name_plural = 'Power Management'
