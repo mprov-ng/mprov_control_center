@@ -12,3 +12,4 @@ django-session-timeout # https://pypi.org/project/django-session-timeout/ - MIT
 django-filter # https://pypi.org/project/django-filter/ - BSD
 markdown # https://pypi.org/project/Markdown/ - BSD
 bs4 # https://pypi.org/project/beautifulsoup4/ - MIT
+pymemcache
