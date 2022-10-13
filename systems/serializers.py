@@ -32,6 +32,7 @@ class SystemDetailSerializer(serializers.ModelSerializer):
         fields = '__all__'
         depth = 6
 class SystemBMCDetailSerializer(serializers.ModelSerializer): 
+    system = serializers.PrimaryKeyRelatedField(queryset=System.objects.all())
     class Meta:
         model = SystemBMC
         fields = '__all__'

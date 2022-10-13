@@ -164,6 +164,7 @@ class SystemImage(models.Model):
 
 @receiver(pre_save, sender=System)
 @receiver(pre_save, sender=NetworkInterface)
+@receiver(pre_save, sender=SystemBMC)
 def UpdateSystemAttributes(sender, instance, **kwargs):
   
   if sender == SystemImage or sender == System:
