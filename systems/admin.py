@@ -13,6 +13,7 @@ from django import forms
 from .models import (
   System,
   SystemBMC,
+  SystemBMCForm,
   SystemGroup,
   NetworkInterface,
   SystemImage,
@@ -79,10 +80,12 @@ class NetworkInterfaceInline(admin.TabularInline):
 class BMCInLine(admin.StackedInline):
   model = SystemBMC
   extra = 1
+  max_num=1 
   list_display = ['id', 'ipaddress']
   list_display_links = ['id', 'ipaddress']
   verbose_name="System BMC"
   verbose_name="System BMCs"
+  form = SystemBMCForm
 
 
 class SystemAdmin(admin.ModelAdmin):
