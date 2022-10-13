@@ -30,6 +30,8 @@ input[id^="id_networkinterface_set"]  {
 
 a.inline-deletelink {
   float: none;
+  margin-bottom: 10px;
+  display: inline-block;
 }
 
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
