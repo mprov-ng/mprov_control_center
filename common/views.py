@@ -137,6 +137,9 @@ and make sure to add documentation to the class so that it can be displayed if a
         error_body = {}
         for field in request.query_params:
             #print(field)
+            if field == 'detail':
+                # ignore the detail flag.
+                continue
             if any(x for x in self.model._meta.get_fields() if x.name == field):
                 # we found a field.
                 try:
