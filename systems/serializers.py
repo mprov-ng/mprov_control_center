@@ -10,6 +10,9 @@ class SystemSerializer(serializers.ModelSerializer):
         model = System
         fields = '__all__'
 class SystemBMCSerializer(serializers.ModelSerializer): 
+    system = serializers.PrimaryKeyRelatedField(queryset=System.objects.all())
+    switch_port = serializers.PrimaryKeyRelatedField(queryset=SwitchPort.objects.all())
+    network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
     class Meta:
         model = SystemBMC
         fields = '__all__'
@@ -32,12 +35,10 @@ class SystemDetailSerializer(serializers.ModelSerializer):
         fields = '__all__'
         depth = 6
 class SystemBMCDetailSerializer(serializers.ModelSerializer): 
-    system = serializers.PrimaryKeyRelatedField(queryset=System.objects.all())
-    switch_port = serializers.PrimaryKeyRelatedField(queryset=SwitchPort.objects.all())
-    network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
+    
     class Meta:
         model = SystemBMC
-        fields = '__all__'
+        fields = '__all__'# ['id','switch_port','system', 'system_detail', 'network', 'ipaddress', 'mac', 'username', 'password']
         depth = 3        
 
         
