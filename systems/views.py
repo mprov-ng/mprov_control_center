@@ -640,9 +640,14 @@ Format returned:
     '''
     model = SystemBMC
     template = "systems_docs.html"
-    serializer_class = SystemBMCDetailSerializer
+    serializer_class = SystemBMCSerializer
     queryset = None
-    # def get(self, request, format=None, **kwargs):
+    def get(self, request, format=None, **kwargs):
+        if 'pk' in kwargs:
+            self.serializer_class = SystemBMCDetailSerializer
+        if 'detail' in request.query_params:
+            self.serializer_class = SystemBMCDetailSerializer
+        return super().get(request, format, **kwargs)
        
     #     result = self.checkContentType(request, format=format, kwargs=kwargs)
     #     if result is not None:
