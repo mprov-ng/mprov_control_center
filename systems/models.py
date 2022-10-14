@@ -99,7 +99,7 @@ class SystemBMC(models.Model):
     return self.system.hostname + "-bmc"
 
 class SystemBMCForm(ModelForm):
-  password = CharField(widget=PasswordInput())
+  password = CharField(widget=PasswordInput(),required=False)
   class Meta:
       model = SystemBMC
       fields = '__all__'
