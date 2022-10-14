@@ -1,3 +1,4 @@
+import json
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import render
@@ -133,20 +134,21 @@ and make sure to add documentation to the class so that it can be displayed if a
         self.queryset = self.model.objects.all()
 
         # check our query and see if we can get filters based on the query
-        #print(self.model._meta.get_fields())
+        error_body = {}
         for field in request.query_params:
             #print(field)
             if any(x for x in self.model._meta.get_fields() if x.name == field):
                 # we found a field.
-                # print(f"Filter {field}")
-                # print(f"{field}, {request.query_params[field]}")
                 try:
                     self.queryset = self.queryset.filter((field,request.query_params[field]))
-                except:
-                    pass # should be safe.
-                if self.queryset.count() == 0:
-                    return Response(None, status=404)
-
+                except BaseException as e:
+                    error_body[field] = f"Error searching for {field}: {type(e)=}: {e=}"
+            else: 
+                error_body[field] = f"Error searching for {field}: Field doesn't exist."
+        if len(error_body) > 0:
+            return Response(error_body, status=400)
+        if self.queryset.count() == 0:
+            return Response(None, status=404)
 
         # return the super call for get.
         return generics.ListAPIView.get(self, request, format=None);
