@@ -648,7 +648,17 @@ Format returned:
         if 'detail' in request.query_params:
             self.serializer_class = SystemBMCDetailSerializer
         return super().get(request, format, **kwargs)
-       
+
+    def post(self, request, *args, **kwargs):
+        if request.POST['password'] == "":
+            del request.POST['password']
+        super().post(request, *args, **kwargs)
+
+    
+    def patch(self, request, *args, **kwargs):
+        if request.POST['password'] == "":
+            del request.POST['password']
+        super().patch(request, *args, **kwargs)   
     #     result = self.checkContentType(request, format=format, kwargs=kwargs)
     #     if result is not None:
     #         return result
