@@ -11,7 +11,7 @@ class SystemSerializer(serializers.ModelSerializer):
         fields = '__all__'
 class SystemBMCSerializer(serializers.ModelSerializer): 
     system = serializers.PrimaryKeyRelatedField(queryset=System.objects.all())
-    switch_port = serializers.PrimaryKeyRelatedField(queryset=SwitchPort.objects.all())
+    switch_port = serializers.PrimaryKeyRelatedField(queryset=SwitchPort.objects.all(),required=False)
     network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
     class Meta:
         model = SystemBMC
