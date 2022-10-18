@@ -112,6 +112,10 @@ class SystemAdmin(admin.ModelAdmin):
         'systemgroups',
         'scripts',
         'config_params',
+        'install_kernel_cmdline',
+        'tmpfs_root_size',
+        'initial_mods',
+        'prov_interface',
         ]
     }
     ),

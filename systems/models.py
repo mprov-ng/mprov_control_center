@@ -12,10 +12,17 @@ from django.utils.text import slugify
 from scripts.models import Script
 from disklayouts.models import *
 from django.contrib.auth.models import AnonymousUser, User
+import yaml
 
 class SystemGroup(models.Model):
   name=models.CharField(max_length=255)
   scripts = models.ManyToManyField(Script, blank=True, )
+  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
+  # install kernel parameters.
+  tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gibabytes, 0 inherits from parent Group/Distro")
+  initial_mods = models.CharField(default="", help_text="Comma separated list of modules to load.", max_length=255, blank=True)
+  prov_interface = models.CharField(default="", help_text="Interface name to provision over.", max_length=255, blank=True)
+
   endpoint="/systemgroups/"
   config_params=models.TextField(
     blank=True, 
@@ -67,19 +74,110 @@ class System(models.Model):
     blank=True,
     null=True,
   )
+  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
+  # install kernel parameters.
+  tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gibabytes, 0 inherits from parent Group/Distro")
+  initial_mods = models.CharField(default="", help_text="Comma separated list of modules to load.", max_length=255, blank=True)
+  prov_interface = models.CharField(default="", help_text="Interface name to provision over.", max_length=255, blank=True)
+
   systemimage = models.ForeignKey('SystemImage', blank=True, null=True, on_delete=models.SET_NULL, verbose_name="System Image")
   systemmodel = models.ForeignKey('SystemModel', blank=True, null=True, on_delete=models.SET_NULL, verbose_name="System Model")
   disks = models.ManyToManyField('disklayouts.Disklayout', blank=True, through=DiskLayout.systems.through)
   # bootdisk = models.ForeignKey(DiskLayout, blank=True, null=True, on_delete=models.SET_NULL, verbose_name="Boot Disk Layout", help_text="Boot disk layout for stateful installs")
   stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system use images to disk?")
+  config = {}
   class Meta:
     ordering = ['hostname']
     verbose_name = 'Systems'
     verbose_name_plural = 'Systems'
   
+  inheritableFields=['install_kernel_cmdline', 'tmpfs_root_size', 'initial_mods', 'prov_interface', 'config_params']
+
   def __str__(self):
     return self.hostname
 
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self.flatten_config()
+
+  
+  def flatten_config(self):
+    # Used to merge the OS Distro level params, and any System Group
+    # params to the system's stuff.
+
+    # loop through our fields and see if OS Distro has anything, assign it to
+    # the config dict.
+    if hasattr(self, "systemimage"):
+      if hasattr(self.systemimage, "osdistro"):
+        try:
+          for field in self.systemimage.osdistro._meta.get_fields():
+            field = field.name
+            if field in self.inheritableFields:
+              self.config[field] = getattr(self.systemimage.osdistro, field)
+        except Exception as e:
+          print(f"Error processing OS Distro config. {e}")
+        
+      
+    # Then loop through our system groups, and check each for this field
+    # adding it to the config dict
+    if hasattr(self, "systemgroups"):
+      if self.systemgroups.count() > 0:
+        for systemgroup in self.systemgroups.all():
+          for field in systemgroup._meta.get_fields():
+            field = field.name
+            if field in self.inheritableFields:
+              # system groups are higher inheritance than OS distro.
+              sysgrpfield = getattr(systemgroup, field)
+              if type(sysgrpfield) == str:
+                if sysgrpfield != "" :
+                  if field == 'install_kernel_cmdline' or field == 'initial_mods':
+                    if sysgrpfield[0] == "=":
+                      # user is asking us to overwrite the field here.
+                      self.config[field] = sysgrpfield[1:]
+                    else:
+                      # no specifier, let's append
+                      if field == 'install_kernel_cmdline':
+                        # kernel cmdline is space separated.
+                        self.config[field] += f" {sysgrpfield}"
+                      else:
+                        # mod list is comma separated.
+                        self.config[field] += f",{sysgrpfield}"
+                  else: 
+                    # everything else overwrites.
+                    self.config[field] = sysgrpfield
+              elif type(sysgrpfield) == int:
+                if sysgrpfield != 0:
+                  
+                  self.config[field] = sysgrpfield
+          
+    # finally see if the object has it set on it's top-level and overwrite it to the 
+    # config dict.
+    for field in self._meta.get_fields():
+      field = field.name
+      if field in self.inheritableFields:
+        # system attr are highest inheritance
+        sysfield = getattr(self, field)
+        if type(sysfield) == str:
+          if sysfield != "" :
+            if field == 'install_kernel_cmdline' or field == 'initial_mods':
+              if sysfield[0] == "=":
+                # user is asking us to overwrite the field here.
+                self.config[field] = sysfield[1:]
+              else:
+                # no specifier, let's append
+                if field == 'install_kernel_cmdline':
+                  # kernel cmdline is space separated.
+                  self.config[field] += f" {sysfield}"
+                else:
+                  # mod list is comma separated.
+                  self.config[field] += f",{sysfield}"
+            else: 
+              # everything else overwrites.
+              self.config[field] = sysfield
+        elif type(sysfield) == int:
+          if sysfield != 0:
+            
+            self.config[field] = sysfield
 
 class SystemBMC(models.Model):
   endpoint="/systembmcs/"

@@ -6,6 +6,7 @@ from jobqueue.models import JobServer
 from disklayouts.serializers import DiskLayoutAPISerializer
 from networks.models import SwitchPort, Network
 class SystemSerializer(serializers.ModelSerializer): 
+    
     class Meta:
         model = System
         fields = '__all__'
@@ -30,6 +31,7 @@ class SystemDetailSerializer(serializers.ModelSerializer):
     disks = DiskLayoutAPISerializer(many=True, read_only=True)
     systemimage = SystemImageDetailsSerializer(many=False)
     systemmodel =  serializers.PrimaryKeyRelatedField(queryset=SystemModel.objects.all())
+    config = serializers.DictField()
     class Meta:
         model = System
         fields = '__all__'
