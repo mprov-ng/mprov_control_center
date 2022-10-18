@@ -154,7 +154,7 @@ and make sure to add documentation to the class so that it can be displayed if a
             return Response(None, status=404)
 
         # return the super call for get.
-        return generics.ListAPIView.get(self, request, format=None);
+        return generics.ListAPIView.get(self, request, format=None)
 
     
     def post(self, request, *args, **kwargs):

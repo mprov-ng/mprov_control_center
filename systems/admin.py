@@ -93,6 +93,7 @@ class SystemAdmin(admin.ModelAdmin):
   list_display = ['id', 'hostname', 'getMacs', 'getSwitchPort']
   readonly_fields = ['timestamp', 'updated', 'created_by']
   list_display_links = ['id', 'hostname']
+  change_form_template ='admin/system_change_form.html'
   fieldsets = (
     (None, {
       'fields': (

@@ -14,3 +14,4 @@ markdown # https://pypi.org/project/Markdown/ - BSD
 bs4 # https://pypi.org/project/beautifulsoup4/ - MIT
 pymemcache
 django-auth-ldap
+python-ipmi

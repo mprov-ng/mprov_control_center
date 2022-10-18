@@ -198,9 +198,17 @@ class SystemBMC(models.Model):
 
 class SystemBMCForm(ModelForm):
   password = CharField(widget=PasswordInput(),required=False)
+
   class Meta:
       model = SystemBMC
       fields = '__all__'
+
+  def clean(self):
+    password = self.cleaned_data['password']
+    if not password or password == "":
+      del self.cleaned_data['password']
+    print(self.cleaned_data)
+    return self.cleaned_data
 
 class NetworkInterface(models.Model):
   endpoint="/networkinterfaces/"

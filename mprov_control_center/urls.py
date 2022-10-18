@@ -23,6 +23,7 @@ from systems.views import (
     SystemGroupAPIView,
     NetworkInterfaceAPIView,
     SystemRegAPIView,
+    SystemPowerAPIView,
 )
 from systems.views_noauth import IPXEAPIView
 
@@ -90,7 +91,7 @@ urlpatterns = [
     path('osrepos/', include('osmanagement.osrepos_urls')),
 
     path('datamodel/', DataTypeView.as_view()),
-    
+    path('power/<str:action>/', SystemPowerAPIView.as_view()),
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
     
 ] 

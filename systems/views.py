@@ -23,7 +23,8 @@ from rest_framework import generics
 from jobqueue.models import Job, JobModule, JobStatus
 from jobqueue.serializers import JobServerAPISerializer
 from django.utils.text import slugify
-
+import pyipmi
+import pyipmi.interfaces
 
 
 class SystemRegAPIView(MProvView):
@@ -650,28 +651,106 @@ Format returned:
         return super().get(request, format, **kwargs)
 
     def post(self, request, *args, **kwargs):
+        print(request.POST)
         if request.POST['password'] == "":
             del request.POST['password']
         super().post(request, *args, **kwargs)
 
     
     def patch(self, request, *args, **kwargs):
-        if request.POST['password'] == "":
-            del request.POST['password']
+        print(request.POST)
+        if request.PATCH['password'] == "":
+            del request.PATCH['password']
         super().patch(request, *args, **kwargs)   
-    #     result = self.checkContentType(request, format=format, kwargs=kwargs)
-    #     if result is not None:
-    #         return result
-    #     if self.model == None:
-    #         return Response(None)
-    #     if 'pk' in kwargs:
-    #         # someone is looking for a specific item.
-    #         return self.retrieve(self, request, format=None, pk=kwargs['pk'])
-    #     self.serializer_class = SystemBMCSerializer
-    #     self.queryset = self.model.objects.all()
-    #     if 'hostname' in request.query_params:
-    #         # someone is looking for a specific item.
-    #         queryset = self.queryset.filter(hostname=request.query_params['hostname'])
-    #         if queryset.count() == 0:
-    #             return Response(None, status=404)
-    #     return generics.ListAPIView.get(self, request, format=None)
+
+class SystemPowerAPIView(MProvView):
+    model = SystemBMC
+    serializer_class = SystemBMCSerializer
+    queryset = None
+    def get(self, request, format=None, **kwargs):
+        if 'action' not in kwargs:
+            # return 400 Bad Request
+            return Response("Bad Request", status=400)
+        # Attempt to get the bmc(s) in question.
+        # check our query and see if we can get filters based on the query
+        if 'hostname' in request.query_params:
+            # someone is searching by hostname
+            system_results= System.objects.filter(hostname__contains=request.query_params['hostname'])
+            if system_results.count() > 0:
+                if system_results.count() > 10: 
+                    print("WARN: Large node set returned, truncating.")
+                    system_results = system_results[:10]
+                self.queryset=self.model.objects.filter(system__in=system_results)
+                results = {}
+                for bmc in self.queryset:
+                    results[str(bmc)] = self._doPowerCmd(bmc, kwargs['action'])
+                
+                return Response(results, status=200) 
+            else :
+                return Response(None, status=404)
+        if 'id' in request.query_params:
+            system_results= System.objects.get(id=request.query_params['id'])
+            if system_results is None:
+                return Response(None, status=404)
+            self.queryset = self.model.objects.filter(system=system_results.id)
+            results = {}
+            for bmc in self.queryset:
+                results[str(bmc)] = self._doPowerCmd(bmc, kwargs['action'])
+            return Response(results, status=200)
+
+        error_body = {}
+        for field in request.query_params:
+            #print(field)
+            if field == 'detail':
+                # ignore the detail flag.
+                continue
+            if any(x for x in self.model._meta.get_fields() if x.name == field):
+                # we found a field.
+                try:
+                    self.queryset = self.queryset.filter((field,request.query_params[field]))
+                except BaseException as e:
+                    error_body[field] = f"Error searching for {field}: {type(e)=}: {e=}"
+            else: 
+                error_body[field] = f"Error searching for {field}: Field doesn't exist."
+        if len(error_body) > 0:
+            return Response(error_body, status=400)
+        if self.queryset.count() == 0:
+            return Response(None, status=404)
+        # TODO: Execute the IPMI command.
+        # TODO: Return 200 ok or 400 
+
+    def _doPowerCmd(self, bmc, action="on"):
+        print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, pass: {bmc.password}, action: {action}")
+        interface = pyipmi.interfaces.create_interface('rmcp', slave_address=0x81,
+                                               host_target_address=0x20,
+                                               keep_alive_interval=0)
+        interface = pyipmi.interfaces.create_interface('ipmitool', interface_type='lanplus')
+        #interface.set_timeout(2)
+        ipmi = pyipmi.create_connection(interface)
+        ipmi.session.set_session_type_rmcp(bmc.ipaddress, 623)
+        ipmi.session.set_auth_type_user(bmc.username, bmc.password)
+        
+        try:
+            ipmi.session.establish()
+            ipmi.target = pyipmi.Target(ipmb_address=0x20)
+            if action=="on":
+                ipmi.chassis_control_power_up()
+            elif action=="off":
+                ipmi.chassis_control_power_down()
+            elif action=="reset":
+                ipmi.chassis_control_hard_reset()
+            elif action=="cycle":
+                ipmi.chassis_control_power_cycle()
+        except Exception as e:
+            return({'details': f"Exception {e}", "status": "400"})
+        return({'details': '', 'status': 200})
+
+
+    def post(self, request, *args, **kwargs):
+        return Response("Bad Request", status=400)
+    def patch(self, request, *args, **kwargs):
+        return Response("Bad Request", status=400)
+    def delete(self, request, *args, **kwargs):
+        return Response("Bad Request", status=400)
+    def put(self, request, *args, **kwargs):
+        return Response("Bad Request", status=400)
