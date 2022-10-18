@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
 import os
+import ldap
+from django_auth_ldap.config import LDAPSearch, PosixGroupType
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -228,3 +230,68 @@ CACHES = {
         'LOCATION': '127.0.0.1:11211',
     }
 }
+
+# LDAP OPTIONS:
+if os.environ.get("LDAP_ENABLED", "0") == "1":
+
+    # Most of these should be configurable via the .enf file.  Please read carefully to see if you need to adjust anything.
+    # You can also see the docs for the LDAP python module for django here: https://django-auth-ldap.readthedocs.io
+    AUTH_LDAP_SERVER_URI = os.environ.get("LDAP_URI", '')
+
+    # The base to use for searches below.
+    AUTH_MPROV_LDAP_BASE = os.environ.get("LDAP_BASE", "dc=example,dc=com")
+
+    # If you are not using direct binds, this is a user and pass that can read authentication
+    # for you.
+    #AUTH_LDAP_BIND_DN = os.environ.get("LDAP_BINDDN", '')
+    #AUTH_LDAP_BIND_PASSWORD = os.environ.get("LDAP_BINDPASS", '')
+
+    # Used in non-direct binds to find users.
+    # This can be overridden with hard coded unions.  See https://django-auth-ldap.readthedocs.io/en/latest/authentication.html
+    #AUTH_LDAP_USER_SEARCH = LDAPSearch(os.environ.get("LDAP_USER_SEARCH", "ou=users,dc=example,dc=com"), ldap.SCOPE_SUBTREE, "(uid=%(user)s)")
+
+    # Here, we will be binding directly.  This is the template to use to look for users to authenticate.
+
+    AUTH_LDAP_USER_DN_TEMPLATE = os.environ.get("LDAP_USER_DN_TEMPLATE", f"uid=%(user)s,ou=users,{AUTH_MPROV_LDAP_BASE}")
+
+    # the group you MUST be a member of to get access to the system.
+    AUTH_LDAP_REQUIRE_GROUP = os.environ.get("LDAP_ADMIN_GROUP", "")
+
+    # if LDAP is enabled, set up LDAP as the first backend.    
+    AUTHENTICATION_BACKENDS = [
+        "django_auth_ldap.backend.LDAPBackend",
+        "django.contrib.auth.backends.ModelBackend",
+    ]
+
+    # place any other defaults here.
+    AUTH_LDAP_GLOBAL_OPTIONS={}
+    # set if LDAP_SELF_SIGNED_CERT is set in the env.
+
+    if os.environ.get("LDAP_SELF_SIGNED_CERT", "0") == "1":
+        AUTH_LDAP_GLOBAL_OPTIONS = AUTH_LDAP_GLOBAL_OPTIONS.update({ ldap.OPT_X_TLS_REQUIRE_CERT: ldap.OPT_X_TLS_NEVER })
+
+
+    # You may need to change this depending on your LDAP setup.  If you change this, make sure
+    # you import the right Type from the module at the top of this file.
+    AUTH_LDAP_GROUP_TYPE = PosixGroupType(name_attr="cn")
+    AUTH_LDAP_GROUP_SEARCH = LDAPSearch({AUTH_MPROV_LDAP_BASE},ldap.SCOPE_SUBTREE, "(objectClass=posixGroup)")
+
+
+    AUTH_LDAP_USER_FLAGS_BY_GROUP = {
+        "is_staff": os.environ.get("LDAP_STAFF_GROUP", "cn=staff,ou=Group,dc=example,dc=com"),
+        "is_superuser": os.environ.get("LDAP_SUPER_GROUP", "cn=wheel,ou=Group,dc=example,dc=com")
+    }
+
+    # modify this map to fit your LDAP
+    AUTH_LDAP_USER_ATTR_MAP = {
+        "first_name": "cn",
+        "last_name": "sn",
+        "email": "mail",
+    }
+
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {"console": {"class": "logging.StreamHandler"}},
+        "loggers": {"django_auth_ldap": {"level": "DEBUG", "handlers": ["console"]}},
+    }
