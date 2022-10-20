@@ -63,6 +63,8 @@ class OSRepo(models.Model):
   update = models.BooleanField(default=False, verbose_name="Update Repository?", help_text="Should we update a managed repository?")
   hosted_by = models.ManyToManyField('jobqueue.JobServer', blank=True, verbose_name="Hosted by")
   ostype = models.ForeignKey(OSType, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="OS Type")
+  version = models.BigIntegerField(default=1, verbose_name="Repository Local Version", help_text="Local version of the repository, if mProv Managed.")
+
   # osdistro=models.ManyToManyField(
   #   'OSDistro', 
   #   blank=True,
@@ -114,7 +116,7 @@ def OSDistroDeleteJob(sender, **kwargs):
         defaults={'status': JobStatus.objects.get(pk=1)}
       )
         
-@receiver(post_save, sender=OSRepo)
+@receiver(pre_save, sender=OSRepo)
 def RepoUpdateJob(sender, instance, **kwargs):
   RepoJobType = None
   # get or create the OSIMAGE_UPDATE job module in the DB
@@ -125,7 +127,7 @@ def RepoUpdateJob(sender, instance, **kwargs):
       RepoJobType = None
   print(RepoJobType)
   if RepoJobType is not None and instance.update:
-
+      instance.version = instance.version +1 
       # save a new job, if one doesn't already exist.
       params = { 'repo_id': instance.id}
 

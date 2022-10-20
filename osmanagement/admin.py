@@ -8,15 +8,9 @@ from .models import (
 )
 class OSRepoAdmin(admin.ModelAdmin):
   model=OSRepo
-  list_display=['id', 'name', 'repo_package_url']
+  list_display=['id', 'name', 'repo_package_url', 'managed', 'version']
   list_display_links=['id','name']
   readonly_fields=['hosted_by']
-
-# class RepoInline(admin.StackedInline):
-#   model = OSRepo
-#   extra=0
-#   list_display=['id', 'name']
-#   list_display_links=['id', 'name']
 
 class OSDistroAdmin(admin.ModelAdmin):
   model = OSDistro,
