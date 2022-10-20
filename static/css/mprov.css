@@ -14,12 +14,15 @@ a.btn-default {
   border-top: 3px solid #20c997;
 }
 .nav-sidebar .nav-item>.nav-link {
-  color: #20c997;
+  color: #20c997 ;
 }
-.nav-sidebar>.nav-header, .sidebar-form {
-  font-weight: bold;
+.nav-sidebar>.nav-item.menu-open>.nav-link {
+  background-color: #073d2d !important;
+  color: #FFF !important;
 }
-
+.nav-sidebar .nav-item>.nav-link.active {
+  background-color: #20c997 !important;
+}
 .timeline>div>.timeline-item>.time {
   width: 100%;
 }
@@ -52,10 +55,10 @@ td.delete input {
 
   width: 100%;
 }
-.nav-sidebar>.nav-header{
+/* .nav-sidebar>.nav-header{
  
   display: none !important;
-}
+} */
 .btn.btn-flat{
   margin-left: 5px;
   margin-right: 5px;
