@@ -106,3 +106,8 @@
   fields:
     name: Node Auto Detection System
     slug: nads
+- model: jobqueue.jobmodule
+  pk: repo-sync
+  fields:
+    name: Repo Sync Job
+    slug: repo-sync    
