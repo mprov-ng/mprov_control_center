@@ -47,8 +47,8 @@ class OSDistro(models.Model):
 
   class Meta:
     ordering=['name']
-    verbose_name='OS Distrubution'
-    verbose_name_plural='OS Distrubutions'
+    verbose_name='OS Distribution'
+    verbose_name_plural='OS Distributions'
 
   def __str__(self):
       return self.name
@@ -67,7 +67,7 @@ class OSRepo(models.Model):
   #   'OSDistro', 
   #   blank=True,
   #   through=OSDistro.osrepos.through,
-  #   verbose_name='OS Distrubution'
+  #   verbose_name='OS Distribution'
 
   # )
 

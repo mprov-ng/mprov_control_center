@@ -69,7 +69,7 @@ class System(models.Model):
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
   scripts = models.ManyToManyField(Script, blank=True, )
   config_params = models.TextField(
-    default="# Inherit from System Group or Distrubtion.",
+    default="# Inherit from System Group or Distribtion.",
     verbose_name="Configuration\nParameters",
     blank=True,
     null=True,
@@ -239,7 +239,7 @@ class SystemImage(models.Model):
   version = models.BigIntegerField(default=1, verbose_name="Image Version")
   jobservers = models.ManyToManyField(JobServer, verbose_name="Hosted By", blank=True)
   config_params = models.TextField(
-    default="# Inherit from System Group or Distrubtion.",
+    default="# Inherit from System Group or Distribtion.",
     verbose_name="Configuration\nParameters",
     blank=True,
     null=True,
@@ -249,7 +249,7 @@ class SystemImage(models.Model):
     blank=True, 
     null=True, 
     on_delete=models.SET_NULL,
-    verbose_name="OS Distrubution",
+    verbose_name="OS Distribution",
     related_name="distro"
   )
   osrepos=models.ManyToManyField(

@@ -174,7 +174,7 @@ Format returned:
         "hostname": "compute002",
         "timestamp": "2022-05-13T09:38:58.211597-05:00",
         "updated": "2022-05-23T16:00:11.526715-05:00",
-        "config_params": "-- #Inherit from System Group or Distrubtion.",
+        "config_params": "-- #Inherit from System Group or Distribtion.",
         "created_by": 1,
         "systemimage": "compute",
         "systemgroups": [
@@ -716,8 +716,7 @@ class SystemPowerAPIView(MProvView):
             return Response(error_body, status=400)
         if self.queryset.count() == 0:
             return Response(None, status=404)
-        # TODO: Execute the IPMI command.
-        # TODO: Return 200 ok or 400 
+
 
     def _doPowerCmd(self, bmc, action="on"):
         print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, pass: {bmc.password}, action: {action}")
