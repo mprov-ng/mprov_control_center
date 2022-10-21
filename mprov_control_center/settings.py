@@ -86,7 +86,7 @@ JAZZMIN_SETTINGS={
         'disklayouts': 'fas fa-save',
     },
     'copyright': ' 2022 The Johns Hopkins University ',
-    "related_modal_active": True,
+    "related_modal_active": False,
     "navigation_expanded": False,
 
 }
