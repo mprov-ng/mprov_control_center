@@ -126,7 +126,7 @@ def RepoUpdateJob(sender, instance, **kwargs):
   except:
       RepoJobType = None
   print(RepoJobType)
-  if RepoJobType is not None and instance.update:
+  if RepoJobType is not None and instance.update and instance.id is not None:
       instance.version = instance.version +1 
       # save a new job, if one doesn't already exist.
       params = { 'repo_id': instance.id}

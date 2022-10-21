@@ -102,6 +102,8 @@ class System(models.Model):
 
   
   def flatten_config(self):
+    if self.id is None:
+      return
     # Used to merge the OS Distro level params, and any System Group
     # params to the system's stuff.
 
@@ -342,6 +344,18 @@ def DeleteSystemImage(sender, instance, **kwargs):
 # emits an image-update job everytime an image is modified.
 @receiver(pre_save, sender=SystemImage)
 def UpdateSystemImages(sender, instance, **kwargs):
+  import inspect
+  for frame_record in inspect.stack():
+      if frame_record[3]=='get_response':
+          request = frame_record[0].f_locals['request']
+          break
+  else:
+      request = None
+  if request is not None:
+      if type(request.user) == AnonymousUser:
+          instance.created_by = User.objects.get(pk=1)
+      else:
+        instance.created_by = request.user
   if not instance.needs_rebuild: 
     return
   instance.slug = slugify(instance.name)
