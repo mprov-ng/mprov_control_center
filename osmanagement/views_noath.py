@@ -53,6 +53,8 @@ class OSRepoURLAPIView(MProvView, generics.ListAPIView):
           raise NotFound(detail="Error 404, No Jobservers for Repo", code=404) 
         print(js_set)
         js = random.choice(js_set)
+        if ":" in js.address:
+          js.address=f"[{js.address}]"
         if 'redirect_url' in kwargs:
           rurl = kwargs['redirect_url']
         else:

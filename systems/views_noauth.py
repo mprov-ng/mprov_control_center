@@ -157,6 +157,8 @@ kernels to PXE.  This function may be merged into /images/ at some point.
         # choose a jobserver with the lowest one minute load avg.
         js_set = self.getJobservers(image)
         js = js_set[0]
+        if ":" in js.address:
+          js.address=f"[{js.address}]"
         imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
         
         try: 
@@ -172,6 +174,8 @@ kernels to PXE.  This function may be merged into /images/ at some point.
           image.save()
           js_set = self.getJobservers(image)
           js = js_set[0]
+          if ":" in js.address:
+            js.address=f"[{js.address}]"
           imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
           #print(imageURL)
           try: 
