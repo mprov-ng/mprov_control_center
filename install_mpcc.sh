@@ -66,7 +66,7 @@ fi
 
 dnf -y install epel-release
 dnf -y groupinstall "Development Tools"
-dnf -y install python38-mod_wsgi.x86_64 jq git wget iproute openldap-devel $extra_pkgs
+dnf -y install python38-mod_wsgi.x86_64 jq git wget iproute openldap-devel python38-devel $extra_pkgs
 # why is this in a separate repo?!
 dnf -y --enablerepo=powertools install parted-devel
 RUNDIR=`pwd`
