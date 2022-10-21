@@ -1,0 +1,5 @@
+- model: osmanagement.ostype
+  pk: "rhel"
+  fields:
+    slug: "rhel"
+    name: "Yum/dnf based Linux OS"
