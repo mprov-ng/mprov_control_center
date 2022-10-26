@@ -63,6 +63,8 @@ If no primary key is specified, 404 is returned.
       js_set = self.getJobserver(image)
       js = None
       js = js_set[0]
+      if ":" in js.address:
+        js.address = f"[{js.address}]"
       imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
       if isInitRamFS:
         imageURL += ".initramfs"
@@ -82,6 +84,8 @@ If no primary key is specified, 404 is returned.
         js_set = self.getJobserver(image)
         js = None
         js = js_set[0]
+        if ":" in js.address:
+          js.address = f"[{js.address}]"
         imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
         if isInitRamFS:
           imageURL += ".initramfs"
