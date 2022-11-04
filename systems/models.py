@@ -132,24 +132,29 @@ class System(models.Model):
               sysgrpfield = getattr(systemgroup, field)
               if type(sysgrpfield) == str:
                 if sysgrpfield != "" :
-                  if field == 'install_kernel_cmdline' or field == 'initial_mods':
-                    if sysgrpfield[0] == "=":
-                      # user is asking us to overwrite the field here.
-                      self.config[field] = sysgrpfield[1:]
-                    else:
-                      # no specifier, let's append
-                      if field == 'install_kernel_cmdline':
-                        # kernel cmdline is space separated.
-                        self.config[field] += f" {sysgrpfield}"
+                  lines = sysgrpfield.split("\n")
+                  for line in lines:
+                    if line.startswith("#"):
+                      lines.remove(line)
+                  filteredfield = "\n".join(lines)
+                  if filteredfield != "":
+                    if field == 'install_kernel_cmdline' or field == 'initial_mods':
+                      if sysgrpfield[0] == "=":
+                        # user is asking us to overwrite the field here.
+                        self.config[field] = sysgrpfield[1:]
                       else:
-                        # mod list is comma separated.
-                        self.config[field] += f",{sysgrpfield}"
-                  else: 
-                    # everything else overwrites.
-                    self.config[field] = sysgrpfield
+                        # no specifier, let's append
+                        if field == 'install_kernel_cmdline':
+                          # kernel cmdline is space separated.
+                          self.config[field] += f" {sysgrpfield}"
+                        else:
+                          # mod list is comma separated.
+                          self.config[field] += f",{sysgrpfield}"
+                    else: 
+                      # everything else overwrites.
+                      self.config[field] = sysgrpfield
               elif type(sysgrpfield) == int:
                 if sysgrpfield != 0:
-                  
                   self.config[field] = sysgrpfield
           
     # finally see if the object has it set on it's top-level and overwrite it to the 
@@ -161,21 +166,27 @@ class System(models.Model):
         sysfield = getattr(self, field)
         if type(sysfield) == str:
           if sysfield != "" :
-            if field == 'install_kernel_cmdline' or field == 'initial_mods':
-              if sysfield[0] == "=":
-                # user is asking us to overwrite the field here.
-                self.config[field] = sysfield[1:]
-              else:
-                # no specifier, let's append
-                if field == 'install_kernel_cmdline':
-                  # kernel cmdline is space separated.
-                  self.config[field] += f" {sysfield}"
+            lines = sysfield.split("\n")
+            for line in lines:
+              if line.startswith("#"):
+                lines.remove(line)
+            filteredfield = "\n".join(lines)
+            if filteredfield != "":
+              if field == 'install_kernel_cmdline' or field == 'initial_mods':
+                if sysfield[0] == "=":
+                  # user is asking us to overwrite the field here.
+                  self.config[field] = sysfield[1:]
                 else:
-                  # mod list is comma separated.
-                  self.config[field] += f",{sysfield}"
-            else: 
-              # everything else overwrites.
-              self.config[field] = sysfield
+                  # no specifier, let's append
+                  if field == 'install_kernel_cmdline':
+                    # kernel cmdline is space separated.
+                    self.config[field] += f" {sysfield}"
+                  else:
+                    # mod list is comma separated.
+                    self.config[field] += f",{sysfield}"
+              else: 
+                # everything else overwrites.
+                self.config[field] = sysfield
         elif type(sysfield) == int:
           if sysfield != 0:
             
