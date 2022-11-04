@@ -78,7 +78,7 @@ class Switch(models.Model):
     verbose_name="Created By"
   )
   updated=models.DateTimeField(auto_now=True, verbose_name="Last Updated")
-  network=models.ForeignKey(Network, on_delete=models.DO_NOTHING, null=True, blank=True, verbose_name='Management\nNetwork')
+  network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Management\nNetwork')
   mgmt_ip=models.GenericIPAddressField(verbose_name="Management IP")
   mgmt_mac=models.CharField(max_length=100, verbose_name="Management MAC")
   class Meta:
