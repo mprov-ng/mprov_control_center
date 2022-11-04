@@ -6,7 +6,7 @@ from jobqueue.models import JobServer
 from disklayouts.serializers import DiskLayoutAPISerializer
 from networks.models import SwitchPort, Network
 class SystemSerializer(serializers.ModelSerializer): 
-    
+    config = serializers.DictField()
     class Meta:
         model = System
         fields = '__all__'
