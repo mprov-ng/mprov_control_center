@@ -87,8 +87,8 @@ ip link set $MPROV_PROV_INTF up
 # wait a couple of seconds for the link
 sleep 5
 
-udhcpc -s /bin/default.script
-udhcpc6 -s /bin/default6.script 
+udhcpc -s /bin/default.script -b
+udhcpc6 -s /bin/default6.script -b
 
 echo "Network up."
 echo; 
