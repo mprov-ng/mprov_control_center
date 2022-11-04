@@ -48,7 +48,7 @@ class NetworkInterfaceInlineFormset(BaseInlineFormSet):
         form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
     
 
-class NetworkInterfaceInline(admin.TabularInline):
+class NetworkInterfaceInline(admin.StackedInline):
   model = NetworkInterface
   extra=1
   formset = NetworkInterfaceInlineFormset
@@ -57,7 +57,18 @@ class NetworkInterfaceInline(admin.TabularInline):
   list_display_links = ['id', 'name']
   verbose_name="Network Interfaces"
   verbose_name_plural="Network Interfaces"
+  readonly_fields = ['ipv6ll']
   
+  def get_fields (self, request, obj=None, **kwargs):
+    fields = super().get_fields(request, obj, **kwargs)
+    fields.remove('ipv6ll')
+    try:
+      ipv4idx = fields.index('ipaddress')
+    except:
+      ipv4idx = 0
+
+    fields.insert(ipv4idx + 1, 'ipv6ll') #can also use insert
+    return fields
   
   #   print(SwitchPort.objects.filter(networkinterface=None))
 

@@ -218,10 +218,13 @@ class NetworkInterface(models.Model):
   name=models.CharField(max_length=50, verbose_name="Iface. Name",)
   hostname=models.CharField(max_length=255, )
   ipaddress=models.GenericIPAddressField(verbose_name="IP Address ")
+  ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address", blank=True, null=True)
   mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)
   switch_port=models.OneToOneField(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
   bootable=models.BooleanField(default=False,null=True, blank=True)
 
+  def __str__(self):
+    return self.name
 
 class SystemImage(models.Model):
   endpoint="/systemimages/"

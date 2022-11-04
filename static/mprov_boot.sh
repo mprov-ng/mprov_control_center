@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # if this works, it would be great...
-err_hanlder() {
+err_handler() {
   echo "Error: SOMETHING HAS GONE TERRIBLY WRONG! DROPPING TO SERIAL SHELL!"
   # redirect stdio to tty1 and start a new process group, enables bash
   # job control... hopefully
@@ -10,7 +10,7 @@ err_hanlder() {
 
   /bin/setsid /bin/bash -m  <> /dev/tty0 >&0 2>&1
 }
-
+export -f err_handler
 echo "mProv boot setup..."
 set +e
 set -o pipefail
@@ -18,6 +18,7 @@ cd /bin
 ln -s /bin/busybox ip
 ln -s /bin/busybox /sbin/ifconfig
 ln -s /bin/busybox udhcpc
+ln -s /bin/busybox udhcpc6
 ln -s /bin/busybox df
 ln -s /bin/busybox wget
 ln -s /bin/busybox tar
@@ -52,7 +53,7 @@ get_kcmdline_opt(){
 
 }
 
-trap err_hanlder EXIT
+trap err_handler EXIT
 trap err_handler ERR
 
 # grab some of our variables from the kernel cmdline.
@@ -79,8 +80,15 @@ IFS=$oldIFS
 
 export PATH=$PATH:/sbin:/usr/sbin
 echo "Bringing up $MPROV_PROV_INTF if it's available..."
+# reset the network stack
+ip addr flush dev $MPROV_PROV_INTF
+ip link set $MPROV_PROV_INTF down
 ip link set $MPROV_PROV_INTF up
+# wait a couple of seconds for the link
+sleep 5
+
 udhcpc -s /bin/default.script
+udhcpc6 -s /bin/default6.script 
 
 echo "Network up."
 echo; 
@@ -121,7 +129,7 @@ mount -t devtmpfs devtmpfs /image/dev/
 mount -t tmpfs tmpfs /image/run
 
 
-echo -n "Staring mProv for: "
+echo -n "Starting mProv for: "
 if [ "$MPROV_STATEFUL" == "1" ]
 then
   echo "Stateful Installation"
