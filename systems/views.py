@@ -240,6 +240,9 @@ Format returned:
         
         return super().post(request, *args, **kwargs)
     def get(self, request, format=None, **kwargs):
+        # XXX: Fix this to work with the base class
+        # get() function
+
         #super().get(request, format=None, **kwargs)
         result = self.checkContentType(request, format=format, kwargs=kwargs)
         if result is not None:
@@ -251,6 +254,9 @@ Format returned:
             return self.retrieve(self, request, format=None, pk=kwargs['pk'])
         self.serializer_class = SystemSerializer
         self.queryset = self.model.objects.all()
+        if 'detail' in request.query_params:
+            self.serializer_class = SystemDetailSerializer
+
         if 'hostname' in request.query_params:
             # someone is looking for a specific item.
             self.queryset = self.queryset.filter(hostname=request.query_params['hostname'])
