@@ -34,6 +34,7 @@ ln -s /bin/busybox /bin/chvt
 ln -s /bin/busybox /bin/env
 ln -s /bin/busybox /bin/awk
 ln -s /bin/busybox /bin/chmod
+ln -s /bin/busybox /bin/seq
 
 
 mount -t proc proc /proc
@@ -86,15 +87,13 @@ ip link set $MPROV_PROV_INTF down
 ip link set $MPROV_PROV_INTF up
 # wait a couple of seconds for the link
 sleep 5
-
 udhcpc -s /bin/default.script -b
-udhcpc6 -s /bin/default6.script -b
 
 echo "Network up."
 echo; 
 echo;
 
-/sbin/ifconfig $MPROV_PROV_INTF
+ip addr show dev $MPROV_PROV_INTF
 
 echo
 echo -n "Creating image directory at /image... "
@@ -121,6 +120,9 @@ do
   fi
 done
 trap err_handler ERR
+
+# set the address generation mode to not privacy and generate from MAC address, applies to GUA and LL IPv6 addresses.
+echo -e "[connection]\nipv6.addr-gen-mode=0\nipv6.ip6-privacy=0" > /image/etc/NetworkManager/conf.d/99.mprov-ipv6.conf
 
 echo "Image Extracted."
 mount -t proc proc /image/proc
