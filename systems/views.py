@@ -51,7 +51,7 @@ NADS Packet:
             "model": The model associated with the system you which to register, must match what mPCC knows.
             "switch": "some-switch-host-name", must match what mPCC knows.
             "port": "someport-number", must match what mPCC knows.
-            "mac": "mac of the machine being registered"
+            "mac": mac of the machine being registered
         }
 
     '''
@@ -76,8 +76,18 @@ NADS Packet:
     def patch(self, request, *args, **kwargs):
         return HttpResponseNotAllowed(["POST"])
 
+    def mac2LL(self, mac=None):
+        if mac == None:
+            return None
+        mac_octets = mac.split(":")
+        # take the first octet and invert the 2nd to last bit.
+        mac_octets[0] = "%X" % (bytearray.fromhex(mac_octets[0])[0] ^ 0x2)
+        return f"fe80::{mac_octets[0]}{mac_octets[1]}:{mac_octets[2]}ff:fe{mac_octets[3]}:{mac_octets[4]}{mac_octets[5]}"
+
+
+
     def post(self, request, *args, **kwargs):
-        #print(request.data)
+        print(request.data)
         
         switch = Switch.objects.get(hostname=request.data['switch'])
         #print(switch)
@@ -99,6 +109,26 @@ NADS Packet:
             if system is not None:
                 nicObj = nicQueryset.first()
                 nicObj.mac = request.data['mac']
+
+                # generate a Link-Local Address
+                nicObj.ipv6ll = self.mac2LL(nicObj.mac)
+
+                # attempt to set a GUA if a subnet is set on the port.
+                subnet = None
+                print(f"Port: {port}")
+                if port.networks is not None:
+                    print(f"Net: {port.networks}")
+                    if ":" in port.networks.subnet:
+                        print(f"Subnet: {port.networks.subnet}")
+                        subnet = port.networks.subnet
+                if subnet is not None:
+                    # assign a GUA based off the LL
+                    nicObj.ipv6gua = nicObj.ipv6ll.replace("fe80::", subnet)
+
+                    # if we are on an IPv6 subnet, assign the IP to the GUA
+                    if nicObj.ipaddress is None or nicObj.ipaddress == '':
+                        nicObj.ipaddress = nicObj.ipv6gua
+                
                 nicObj.save()
                 # send in a pxe update job
                 JobType = None

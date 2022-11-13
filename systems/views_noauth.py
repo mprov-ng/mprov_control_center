@@ -163,12 +163,13 @@ kernels to PXE.  This function may be merged into /images/ at some point.
         js = js_set[0]
         if ":" in js.address:
           js.address=f"[{js.address}]"
-        imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
+        imageURL = f"http://{js.address}:{str(js.port)}/images/{image.slug}/{image.slug}.vmlinuz"
         
         try: 
           response = requests.head(imageURL,timeout=1)
           statCode = response.status_code
-        except:
+        except Exception as e:
+          print(f"Error: {e}")
           statCode = 0
         while ( statCode <= 199 or statCode >=400):
           # jobsever gave a bad response, remove it and retry.
@@ -187,6 +188,7 @@ kernels to PXE.  This function may be merged into /images/ at some point.
             statCode = response.status_code
           except: 
             statCode=0
+        print(f"Redirecting: {imageURL}")
         return redirect(imageURL)        
       def post(self, request, *args, **kwargs):
         return HttpResponseNotAllowed(["GET"])

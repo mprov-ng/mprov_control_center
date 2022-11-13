@@ -228,11 +228,12 @@ class NetworkInterface(models.Model):
   system = models.ForeignKey(System, on_delete=models.CASCADE)
   name=models.CharField(max_length=50, verbose_name="Iface. Name",)
   hostname=models.CharField(max_length=255, )
-  ipaddress=models.GenericIPAddressField(verbose_name="IP Address ")
+  ipaddress=models.GenericIPAddressField(verbose_name="IP Address ", blank=True, null=True)
   ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address", blank=True, null=True)
   mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)
   switch_port=models.OneToOneField(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
   bootable=models.BooleanField(default=False,null=True, blank=True)
+  ipv6gua=models.GenericIPAddressField(verbose_name="IPv6 SLACC GUA", blank=True, null=True)
 
   def __str__(self):
     return self.name
