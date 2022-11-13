@@ -92,7 +92,7 @@ class SwitchPort(models.Model):
   switch=models.ForeignKey(Switch, on_delete=models.CASCADE)
   def __str__(self):
     return "%s/%s" % (self.switch.hostname, self.name)
-  networks=models.ForeignKey(Network, on_delete=models.DO_NOTHING, null=True, blank=True, verbose_name='Network')
+  networks=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Network')
   class Meta:
     verbose_name = 'Switch Port'  
    
