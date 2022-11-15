@@ -6,7 +6,7 @@
 set kernel-cmdline console=tty0 rdinit=/linuxrc
 
 # mProv dynamic stuff
-set kernel-cmdline ${kernel-cmdline} mprov_image_url=http://${next-server}/images/{{ nic.system.systemimage.slug }}
+set kernel-cmdline ${kernel-cmdline} mprov_image_url=http://{{nic.bootserver}}/images/{{ nic.system.systemimage.slug }}
 set kernel-cmdline ${kernel-cmdline} mprov_initial_mods={{ nic.system.systemimage.osdistro.initial_mods }}
 set kernel-cmdline ${kernel-cmdline} mprov_prov_intf={{ nic.system.systemimage.osdistro.prov_interface }}
 set kernel-cmdline ${kernel-cmdline} mprov_tmpfs_size={{ nic.system.systemimage.osdistro.tmpfs_root_size }}G
@@ -21,7 +21,7 @@ set kernel-cmdline ${kernel-cmdline} mprov_stateful=0
 {% endif %}
 
 :imgdownload
-kernel /kernels/{{ nic.system.systemimage.slug }} initrd=initrd.magic ${kernel-cmdline} || goto retrydownload
+kernel /images/{{ nic.system.systemimage.slug }}.vmlinuz initrd=initrd.magic ${kernel-cmdline} || goto retrydownload
 initrd /images/{{ nic.system.systemimage.slug }}.initramfs || goto retrydownload
 # insert our mprov setup script here and mount it on /linuxrc
 initrd /static/mprov_boot.sh /linuxrc mode=755 || goto retrydownload

@@ -86,7 +86,7 @@ urlpatterns = [
     path('jobservers/', include('jobqueue.jobservers_urls')),
     path('jobs/', include('jobqueue.jobs_urls')),
     path('scripts/', include('scripts.scripts_urls')),
-    path('kernels/', include('systems.kernels_urls')),
+    # path('kernels/', include('systems.kernels_urls')),
 
     path('osrepos/', include('osmanagement.osrepos_urls')),
 

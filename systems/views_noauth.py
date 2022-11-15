@@ -13,7 +13,8 @@ from rest_framework.response import Response
 from django.template import Template, Context
 from django.shortcuts import render
 import requests
-
+import dns.resolver
+import platform
 
 class ImagesAPIView(MProvView, generics.ListAPIView):
     '''
@@ -37,9 +38,18 @@ If no primary key is specified, 404 is returned.
     authentication_classes = [] #disables authentication
     permission_classes = [] #disables permission
     serializer_class = SystemImageSerializer
+    
     def get(self, request, format=None, *args, **kwargs):
 
-      isInitRamFS=False
+      isInitRamFS = False
+      isKernel = False
+      # grab the IP
+      ip=None
+      x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+      if x_forwarded_for:
+          ip = x_forwarded_for.split(',')[0]
+      else:
+          ip = request.META.get('REMOTE_ADDR')
       if 'pk' in kwargs:
         req = kwargs['pk'].split('.', 1)
         imgName = req[0]
@@ -48,6 +58,10 @@ If no primary key is specified, 404 is returned.
           if(req[1] == "initramfs"):
             # this is an initramfs query.
             isInitRamFS=True
+            isKernel=False
+          if(req[1] == "vmlinuz"):
+            isKernel=True
+            isInitRamFS=False
 
         image = SystemImage.objects.get(pk=imgName)
       else: 
@@ -60,16 +74,19 @@ If no primary key is specified, 404 is returned.
         #print(self.queryset)
         return(generics.ListAPIView.get(self, request, format=None)) 
       # choose a jobserver with the lowest one minute load avg.
-      js_set = self.getJobserver(image)
+      js_set = self.getJobserver(image, ip)
       js = None
       js = js_set[0]
-      if ":" in js.address:
-        js.address = f"[{js.address}]"
-      imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
+      # if ":" in js.address:
+      #   js.address = f"[{js.address}]"
+      imageURL = "http://" + js.name + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
       if isInitRamFS:
         imageURL += ".initramfs"
       else:
-        imageURL += ".img"  
+        if isKernel:
+          imageURL += ".vmlinuz"
+        else:
+          imageURL += ".img"  
       try: 
         response = requests.head(imageURL,timeout=1)
         statCode = response.status_code
@@ -81,30 +98,52 @@ If no primary key is specified, 404 is returned.
         print("Removing Jobserver " + str(js) + ", URL: " + imageURL + " not accessible. Status: " + str(statCode))
         image.jobservers.set(js_set)
         image.save()
-        js_set = self.getJobserver(image)
+        js_set = self.getJobserver(image, ip)
         js = None
         js = js_set[0]
-        if ":" in js.address:
-          js.address = f"[{js.address}]"
-        imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
+        # if ":" in js.name:
+        #   js.address = f"[{js.address}]"
+        imageURL = "http://" + js.name + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
         if isInitRamFS:
           imageURL += ".initramfs"
         else:
-          imageURL += ".img"  
+          if isKernel:
+            imageURL += ".vmlinuz"
+          else:
+            imageURL += ".img"  
         try: 
           response = requests.head(imageURL,timeout=1)
           statCode = response.status_code
         except: 
           statCode=0
+      print(f"Redirecting client to: {imageURL}")
       return redirect(imageURL)        
 
-    def getJobserver(self, image):
+    def getJobserver(self, image, clientIP=None):
       # choose a jobserver with the lowest one minute load avg.
+      print(clientIP)
+      
       js_set = list(image.jobservers.all().order_by('one_minute_load'))
         
       if(len(js_set)==0):
         # if there are no jobservers, return 404
-        raise NotFound(detail="Error 404, No Jobservers for Image", code=404)
+        raise NotFound(detail="Error 404, No Jobservers in mPCC for Image", code=404)
+      answer = None
+      if clientIP is not None:
+        if ":" in clientIP:
+          try:
+            answer = dns.resolver.resolve(str(js_set[0]), "AAAA")
+          except:
+            raise NotFound(detail="Error 404, No resolvable IPv6 Jobservers for Image", code=404)
+        else:
+          try:
+            answer = dns.resolver.resolve(str(js_set[0]))
+          except Exception as e:
+            raise NotFound(detail=f"Error 404, No Resolvable Jobservers for Image: {e}", code=404)
+        if answer is not None:
+          print("Addresses:")
+          for rr in answer.rrset:
+            print(f"    {rr}")
       print("Jobserver: " + str(js_set[0]))
       return js_set
 
@@ -260,6 +299,10 @@ class IPXEAPIView(MProvView):
         for nic in queryset:
             template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
             # print(nic)
+            nic.bootserver=platform.node()
+            if "." in nic.bootserver:
+              # remove the domain if one exists
+              nic.bootserver, _ = nic.bootserver.split(".", 1)
             context = Context(dict(nic=nic))
             rendered: str = template.render(context)
             nic.system.systemimage.osdistro.install_kernel_cmdline = rendered
