@@ -96,6 +96,7 @@ class BMCInLine(admin.StackedInline):
   max_num=1 
   list_display = ['id', 'ipaddress']
   list_display_links = ['id', 'ipaddress']
+  readonly_fields = ['ipv6ll']
   verbose_name="System BMC"
   verbose_name="System BMCs"
   form = SystemBMCForm

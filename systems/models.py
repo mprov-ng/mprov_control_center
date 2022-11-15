@@ -201,6 +201,7 @@ class SystemBMC(models.Model):
   password=models.CharField(max_length=100, verbose_name="BMC Password", blank=True, null=True)
   switch_port=models.ForeignKey(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
   network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Network")
+  ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address ", blank=True, null=True)
   class Meta:
     verbose_name = 'Power Management'
     verbose_name_plural = 'Power Management'
