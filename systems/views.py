@@ -694,10 +694,10 @@ Format returned:
 
     
     def patch(self, request, *args, **kwargs):
-        print(request.POST)
-        if request.PATCH['password'] == "":
-            del request.PATCH['password']
-        super().patch(request, *args, **kwargs)   
+        print(request.data)
+        if 'password' in request.data and request.data['password'] == "":
+            del request.data['password']
+        return super().patch(request, *args, **kwargs)   
 
 class SystemPowerAPIView(MProvView):
     model = SystemBMC
