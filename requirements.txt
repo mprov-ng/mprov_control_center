@@ -16,3 +16,4 @@ pymemcache
 django-auth-ldap
 python-ipmi
 dnspython
+django-dbbackup
