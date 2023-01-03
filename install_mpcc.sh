@@ -154,12 +154,13 @@ chmod u+sw media/ -R
 # set up the apache stuff
 cd /etc/httpd/conf.d/
 cat << EOF > mprov_control_center.conf
-WSGIScriptAlias / /var/www/mprov_control_center/mprov_control_center/wsgi.py
+WSGIDaemonProcess mprov.arch.jhu.edu processes=2 threads=15 lang='en_US.UTF-8' locale='en_US.UTF-8' python-home=/var/www/mprov_control_center/ python-path=/var/www/mprov_control_center/
+WSGIScriptAlias / /var/www/mprov_control_center/mprov_control_center/wsgi.py  process-group=mprov.arch.jhu.edu application-group=%{GLOBAL}
 WSGIPythonHome /var/www/mprov_control_center/
 WSGIPythonPath /var/www/mprov_control_center/
-WSGIDaemonProcess mprov.arch.jhu.edu processes=2 threads=15 lang='en_US.UTF-8' locale='en_US.UTF-8' python-home=/var/www/mprov_control_center/ python-path=/var/www/mprov_control_center/
 WSGIProcessGroup mprov.arch.jhu.edu
 WSGIPassAuthorization On
+WSGIRestrictEmbedded On
 
 <Directory /var/www/mprov_control_center/mprov_control_center/>
         <Files wsgi.py>
