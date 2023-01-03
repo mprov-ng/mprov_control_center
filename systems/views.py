@@ -453,7 +453,6 @@ Format returned:
     template = "networkinterface_docs.html"
     serializer_class = NetworkInterfaceSerializer
     def get(self, request, format=None, **kwargs):
-        super().get(request, format=None, **kwargs)
         
         if 'network' in self.request.query_params:
             network = self.request.query_params['network']
@@ -465,7 +464,8 @@ Format returned:
             self.queryset = self.queryset.filter(switch_port__in=innerQ)
         
         # return the super call for get.
-        return generics.ListAPIView.get(self, request, format=None)
+        return super().get(request, format=None, **kwargs)
+        
 
 
 class NetworkInterfaceDetailAPIView(MProvView):
