@@ -43,7 +43,7 @@ class mProvStatefulInstaller():
     print("mProv Stateful Installer Starting.")
 
     # use the jobserver config
-    self.configfile = "/etc/mprov/jobserver.yaml"
+    self.configfile = "/etc/mprov/script-runner.yaml"
     
     # load our config
     self.load_config()
