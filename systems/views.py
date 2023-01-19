@@ -462,6 +462,7 @@ Format returned:
             # print(net)
             innerQ = SwitchPort.objects.filter(networks__in=net)
             self.queryset = self.queryset.filter(switch_port__in=innerQ)
+            return generics.ListAPIView.get(self, request, format=None)
         
         # return the super call for get.
         return super().get(request, format=None, **kwargs)
