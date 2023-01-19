@@ -123,6 +123,7 @@ class mProvStatefulInstaller():
   def buildDisks(self):
     self._getDiskLayout()
     disks = "" 
+    hasRAID=False
 
     # disks with boot partitions.
     # This is an array because more than
@@ -224,6 +225,7 @@ class mProvStatefulInstaller():
       if pdisk['dtype'] != 'mdrd':
         continue
       #  mdadm --create /dev/md0 --level=1 --raid-devices=2 /dev/hd[ac]1
+      self.hasRAID=True
       mdadm_cmd = f"--create {pdisk['diskname']} -R --force --level={pdisk['raidlevel']} --raid-devices={len(pdisk['members'])} "
       for member in pdisk['members']:
         # find our dev from the disklayouts.
@@ -249,7 +251,7 @@ class mProvStatefulInstaller():
       partuuid = self._makeFS(part, pdisk)
       # update /tmp/fstab
       with open("/tmp/fstab", "a") as fstab:
-        fstab.write(f"UUID={partuuid}\t{pdisk['mount']}\t\t{pdisk['filesystem']}\tdefaults\t0 0\n")
+        fstab.write(f"UUID={partuuid}\t{pdisk['mount']}\t\t{part['filesystem']}\tdefaults\t0 0\n")
     
 
   def mountDisks(self):
@@ -313,6 +315,11 @@ class mProvStatefulInstaller():
           continue
       newcmdline.append(arg)
 
+    # if we have RAID stuffs, append the following stuff to the commandline and tell grub to do the right thing.
+    newcmdline.append("rd.md=1")
+    newcmdline.append("rd.md.conf=1")
+    newcmdline.append("rd.auto=1")
+
     # read in the current /etc/default/grub 
     if not os.path.exists("/newroot/etc/default/grub"):
       grubfileLines = []
@@ -329,6 +336,9 @@ class mProvStatefulInstaller():
     # write out the new file
     with open("/newroot/etc/default/grub", "w") as grubfileout:
       grubfileout.writelines(grubfileNew)
+
+    print(f"Regenerating initial ramdisk... ")
+    sh.chroot([f"/newroot", f"dracut", "--regenerate-all", "-f", "--mdadmconf", "--force-add", "mdraid"])
 
     print(f"Running `grub2-install {bootdisk}`...")
     # now let's try to run the grub installer in the new root.
