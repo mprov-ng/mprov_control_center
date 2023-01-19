@@ -146,3 +146,4 @@ id_rsa.pub
 lib64
 bin/
 pyvenv.cfg
+static/undionly.kpxe.vmw-hardwired
