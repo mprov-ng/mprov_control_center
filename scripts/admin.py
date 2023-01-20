@@ -6,6 +6,8 @@ class ScriptAdmin(admin.ModelAdmin):
   model = Script
   readonly_fields = ['slug']
   list_display = ['name', 'filename', 'scriptType']
+  exclude = ('slug',)
+
 
 class ScriptTypeAdmin(admin.ModelAdmin):
   model = ScriptType
