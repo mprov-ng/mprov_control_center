@@ -273,7 +273,7 @@ class SystemImage(models.Model):
   osrepos=models.ManyToManyField(
     OSRepo, 
     blank=True,
-    verbose_name="OS Repositories"
+    verbose_name="Extra OS Repositories"
   )
   class Meta:
     ordering = ['name']
