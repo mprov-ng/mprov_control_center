@@ -163,7 +163,8 @@ class SystemModelAdmin(admin.ModelAdmin):
   list_display = ['slug', 'vendor', 'name']
   verbose_name = "System Models"
   verbose_name_plural = "System Models"
-  readonly_fields = ['slug']
+  exclude = ['slug']
+
 
 @admin.action(description="Mark images as needing rebuild.")
 def mark_rebuild(modeladmin, request, queryset):
@@ -200,6 +201,7 @@ class SystemImageAdmin(admin.ModelAdmin):
   readonly_fields = ['timestamp', 'updated', 'created_by',  'jobservers']
   list_display_links = ['slug', 'name']
   actions= [mark_rebuild]
+  exclude = ('slug', )
   fieldsets = (
     (None, {
       'fields': (

@@ -11,6 +11,7 @@ class JobModuleAdmin(admin.ModelAdmin):
     readonly_fields = ('active',  )
     list_display=['name', 'slug']
     list_display_links=['name']    
+    exclude = ('slug', )
 
 class JobServerAdmin(admin.ModelAdmin):
     model = JobServer

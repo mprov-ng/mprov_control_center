@@ -8,7 +8,7 @@ class NetworkAdmin(admin.ModelAdmin):
   list_display = ['slug', 'name', 'net_type', 'subnet', 'netmask']
   readonly_fields = ['slug']
   list_display_links = ['slug', 'name',]
-
+  exclude = ('slug',)
 
 class NetworkTypeAdmin(admin.ModelAdmin):
   model = NetworkType
