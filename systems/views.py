@@ -687,10 +687,10 @@ Format returned:
         return super().get(request, format, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        print(request.POST)
-        if request.POST['password'] == "":
-            del request.POST['password']
-        super().post(request, *args, **kwargs)
+        print(request.data)
+        if request.data['password'] == "":
+            del request.data['password']
+        return super().post(request, *args, **kwargs)
 
     
     def patch(self, request, *args, **kwargs):
