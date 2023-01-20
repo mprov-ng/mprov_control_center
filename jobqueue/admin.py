@@ -5,13 +5,18 @@ class JobAdmin(admin.ModelAdmin):
     model = Job
     readonly_fields = ('return_code', 'params', 'module','jobserver',)#'status', ) 
     list_display = ['name', 'status','create_time', 'start_time', 'end_time', 'last_update','jobserver']
-    
+
+    def has_add_permission(self, request):
+        return ("add" in request.path or "change" in request.path)
 class JobModuleAdmin(admin.ModelAdmin):
     model = JobModule
     readonly_fields = ('active',  )
     list_display=['name', 'slug']
     list_display_links=['name']    
     exclude = ('slug', )
+
+    def has_add_permission(self, request):
+        return ("add" in request.path or "change" in request.path)
 
 class JobServerAdmin(admin.ModelAdmin):
     model = JobServer
@@ -24,6 +29,9 @@ class JobServerAdmin(admin.ModelAdmin):
     def registered_jobmodules(self, obj):
         return ", ".join([jm.slug for jm in obj.jobmodules.all()])
     registered_jobmodules.short_description = 'Registered Job Modules'
+
+    def has_add_permission(self, request):
+        return ("add" in request.path or "change" in request.path)
 
 admin.site.register(Job, JobAdmin)
 admin.site.register(JobModule, JobModuleAdmin)
