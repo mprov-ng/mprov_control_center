@@ -22,6 +22,7 @@ class SystemGroup(models.Model):
   tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gibabytes, 0 inherits from parent Group/Distro")
   initial_mods = models.CharField(default="", help_text="Comma separated list of modules to load.", max_length=255, blank=True)
   prov_interface = models.CharField(default="", help_text="Interface name to provision over.", max_length=255, blank=True)
+  systems = models.ManyToManyField("System", blank=True)
 
   endpoint="/systemgroups/"
   config_params=models.TextField(
@@ -66,7 +67,7 @@ class System(models.Model):
     verbose_name="Created By"
   )
   updated=models.DateTimeField(auto_now=True, verbose_name="Lasted Updated")
-  systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
+  systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True, through=SystemGroup.systems.through)
   scripts = models.ManyToManyField(Script, blank=True, )
   config_params = models.TextField(
     default="# Inherit from System Group or Distribtion.",
