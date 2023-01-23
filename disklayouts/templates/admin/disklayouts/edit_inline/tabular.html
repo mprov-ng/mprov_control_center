@@ -1,0 +1,36 @@
+{% include 'admin/edit_inline/tabular.html' %}
+{% load i18n admin_urls static admin_modify %}
+<script type="text/javascript">
+'use strict';
+{
+  const $ = django.jQuery;
+  $(document).ready(function() {
+    // register a handler for when a new formset is added
+    $(document).on('formset:added',function() {
+      $(".js-inline-admin-formset").each(function(){
+        // extract the options data for the formset.
+        const data = $(this).data(),
+          inlineOptions = data.inlineFormset;
+        
+        // if we are a tabular then this is probably the part form
+        if(data.inlineType == "tabular"){
+
+          // get the totalForms input and grab the value as well as the last index.
+          let totalForms = $("#id_" + inlineOptions.options.prefix + "-TOTAL_FORMS");
+          let frmCount = parseInt(totalForms.val(), 10)
+          let lastIdx = (frmCount - 1).toString();
+          
+          // set the last added partition number to the current form count.
+          let selector = "#id_" + inlineOptions.options.prefix + "-" + lastIdx + "-partnum";
+          let lastFormPartNum = $(selector);
+          lastFormPartNum.val(frmCount)
+          
+        }
+      });  
+    });
+  });
+
+}
+
+
+</script>
