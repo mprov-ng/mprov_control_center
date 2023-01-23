@@ -74,3 +74,26 @@ td.delete input {
   flex: 0 0 20%;
   max-width: 20%;
 }
+
+.alert {
+  color: #856b36;
+  font-weight: bold;
+} 
+
+.alert-success, .alert-success>td, .alert-success>th {
+  background-color: #56cc9d;
+  color: #000;
+  font-weight: bold;
+}
+
+.alert-success a{
+  color: #fff !important;
+  font-weight: bold;
+}
+.breadcrumb-item.active {
+  color: #6c757d;
+  font-weight: bold;
+}
+.font-weight-light {
+ font-weight: 400 !important;
+}
