@@ -125,7 +125,7 @@ class System(models.Model):
     # adding it to the config dict
     if hasattr(self, "systemgroups"):
       if self.systemgroups.count() > 0:
-        for systemgroup in self.systemgroups.all():
+        for systemgroup in self.systemgroups:
           for field in systemgroup._meta.get_fields():
             field = field.name
             if field in self.inheritableFields:

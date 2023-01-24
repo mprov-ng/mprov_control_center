@@ -147,3 +147,10 @@ lib64
 bin/
 pyvenv.cfg
 static/undionly.kpxe.vmw-hardwired
+static/debug_toolbar/css/print.css
+static/debug_toolbar/css/toolbar.css
+static/debug_toolbar/js/history.js
+static/debug_toolbar/js/redirect.js
+static/debug_toolbar/js/timer.js
+static/debug_toolbar/js/toolbar.js
+static/debug_toolbar/js/utils.js

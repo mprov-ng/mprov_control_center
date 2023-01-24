@@ -38,15 +38,16 @@ class NetForm(forms.ModelForm):
         }
 
 class NetworkInterfaceInlineFormset(BaseInlineFormSet):
+  
   def __init__(self, *args, **kwargs):
     super(NetworkInterfaceInlineFormset, self).__init__(*args, **kwargs)
-    
     for form in self.forms:
+      
       if 'switch_port' in form.initial:
-        form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None) | SwitchPort.objects.filter(id=form.initial['switch_port'])
+        form.fields['switch_port'].queryset = form.fields['switch_port'].queryset.filter(networkinterface=None) | form.fields['switch_port'].queryset.filter(id=form.initial['switch_port'])
       else:
-        form.fields['switch_port'].queryset = SwitchPort.objects.filter(networkinterface=None)
-    
+        form.fields['switch_port'].queryset = form.fields['switch_port'].queryset.filter(networkinterface=None)
+  
 
 class NetworkInterfaceInline(admin.StackedInline):
   model = NetworkInterface
@@ -58,6 +59,14 @@ class NetworkInterfaceInline(admin.StackedInline):
   verbose_name="Network Interfaces"
   verbose_name_plural="Network Interfaces"
   readonly_fields = ['ipv6ll', 'ipv6gua']
+
+  def get_formset(self, request, obj, **kwargs):
+    formset =  super().get_formset(request, obj, **kwargs)
+    queryset = formset.form.base_fields['switch_port'].queryset
+    queryset = queryset.select_related('switch', 'networks')
+    formset.form.base_fields['switch_port'].queryset = queryset
+    return formset
+
   
   def get_fields (self, request, obj=None, **kwargs):
     fields = super().get_fields(request, obj, **kwargs)
@@ -72,23 +81,6 @@ class NetworkInterfaceInline(admin.StackedInline):
     fields.insert(ipv4idx + 2, 'ipv6gua')
     return fields
   
-  #   print(SwitchPort.objects.filter(networkinterface=None))
-
-  # def render_change_form(self, request, context, *args, **kwargs):
-  # def get_form(self, request, obj=None, **kwargs):
-  #   form = super(NetworkInterfaceInline, self).get_form(request, obj, **kwargs)
-  #   obj = kwargs['obj']
-  #   print(obj)
-  #   portId=obj.switch_port
-  #   print(portId)
-  #   queryset = SwitchPort.objects.filter(networkinterface=None) & SwitchPort.objects.filter(id=portId)
-  #   form.base_fields['switch_port'].queryset = SwitchPort.objects.order_by(('name',))
-  #   return form
-
-    #context['adminform'].form.fields['switch_port'].queryset = queryset
-
-    #return super(NetworkInterfaceInline, self).render_change_form(*args, **kwargs)
-    #self.fields['switch_port'] = 
 
 class BMCInLine(admin.StackedInline):
   model = SystemBMC
@@ -100,10 +92,16 @@ class BMCInLine(admin.StackedInline):
   verbose_name="System BMC"
   verbose_name="System BMCs"
   form = SystemBMCForm
+  def get_formset(self, request, obj, **kwargs):
+    formset =  super().get_formset(request, obj, **kwargs)
+    queryset = formset.form.base_fields['switch_port'].queryset
+    queryset = queryset.select_related('switch', 'networks')
+    formset.form.base_fields['switch_port'].queryset = queryset
+    return formset
 
 
 class SystemAdmin(admin.ModelAdmin):
-  inlines = [NetworkInterfaceInline, BMCInLine]
+  inlines = [ NetworkInterfaceInline, BMCInLine]
   list_display = ['id', 'hostname', 'getMacs', 'getSwitchPort']
   readonly_fields = ['timestamp', 'updated', 'created_by']
   list_display_links = ['id', 'hostname']
@@ -137,19 +135,17 @@ class SystemAdmin(admin.ModelAdmin):
   )
   def getMacs(self, obj):
 
-    query = NetworkInterface.objects.all()
-    query = query.filter(system=obj)
+    query = NetworkInterface.objects.filter(system=obj).select_related('switch_port')
     netstr = ""
-    for netinf in query.all():
+    for netinf in query:
       # print(netinf)
       netstr += netinf.name + ": [" + str(netinf.mac) + "]<br />"
     return mark_safe(netstr)
 
   def getSwitchPort(self, obj):
-    query = NetworkInterface.objects.all()
-    query = query.filter(system=obj)
+    query = NetworkInterface.objects.filter(system=obj).select_related('switch_port')
     portstr = ""
-    for netinf in query.all():
+    for netinf in query:
       portstr += netinf.name + ": " + str(netinf.switch_port) + "<br />"
     return mark_safe(portstr)
   getSwitchPort.short_description = "Switch Ports"
