@@ -8,3 +8,10 @@
         <li class="breadcrumb-item active">{{ cl.opts.verbose_name_plural|capfirst }}</li>
     </ol>
 {% endblock %}
+
+{% block result_list %}
+<div class="row">
+    {% block pagination %}{% pagination cl %}{% endblock %}
+</div><!-- pagination -->
+      {{ block.super }}  <!-- rest of results list -->
+{% endblock %}
