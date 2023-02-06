@@ -3,3 +3,25 @@
   fields:
     slug: "rhel"
     name: "Yum/dnf based Linux OS"
+
+- model: osmanagement.osrepo
+  pk: 1
+  fields:
+    id: 1
+    name: "Rocky Linux 8 OS Repository"
+    repo_package_url: "https://download.rockylinux.org/pub/rocky/8/BaseOS/x86_64/os/"
+    managed: True
+    update: True
+    ostype: "rhel"
+
+- model: osmanagement.osdistro
+  pk: 1
+  fields:
+    id: 1
+    name: "Rocky Linux 8"
+    vendor: "Rocky Linux"
+    version: "8.7"
+    baserepo: 1
+    tmpfs_root_size: 8
+    initial_mods: "e1000,tg3,ixgbe,bnx2x,megaraid_sas,sd_mod"
+    prov_interface: "eth0"
