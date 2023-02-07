@@ -10,6 +10,8 @@ python ./manage.py createsuperuser --noinput
 
 if [ -f ./load_default_scripts.sh ]
 then
+  # load the scripts fixture before loading the default scripts.
+  python ./manage.py loaddata scripts/fixtures/*
   ./load_default_scripts.sh
 fi
 
