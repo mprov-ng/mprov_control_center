@@ -30,7 +30,15 @@ class Script(models.Model):
   def save(self, *args, **kwargs):
     if not self.slug:
       self.slug = slugify(self.filename.name)
-    self.filename.name = self.slug + "-v" + str(self.version)
+    if not os.path.exists(settings.MEDIA_ROOT + '/' + self.scriptType.slug): 
+      # make the dir
+      try:
+        os.makedirs(settings.MEDIA_ROOT + '/' + self.scriptType.slug, exist_ok=True)
+      except: 
+        print(f"Error: Unalbe to make script type dir: {settings.MEDIA_ROOT + '/' + self.scriptType.slug}")
+        return
+
+    self.filename.name = self.scriptType.slug + '/' + self.slug + "-v" + str(self.version)
     super(Script, self).save(*args, **kwargs)
     print(os.path.join(settings.MEDIA_ROOT, self.filename.name))
     if os.path.exists(os.path.join(settings.MEDIA_ROOT, self.filename.name)):
