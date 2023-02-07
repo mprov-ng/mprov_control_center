@@ -5,6 +5,14 @@ cd /var/www/mprov_control_center
 python ./manage.py migrate
 python ./manage.py createsuperuser --noinput
 
+# load the scripts before the fixtures.  Some fixtures
+# may rely on the scripts being present
+
+if [ -f ./load_default_scripts.sh ]
+then
+  ./load_default_scripts.sh
+fi
+
 python ./manage.py loaddata */fixtures/*
 
 # fix the db perms... again...
