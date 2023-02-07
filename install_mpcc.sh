@@ -20,6 +20,7 @@ BUILD_DOCKER=0
 MYSQL_BUILD=0
 PGSQL_BUILD=0
 SQLIT_BUILD=0
+DEVEL=0
 while [[ $# -gt 0 ]]
 do
         case $1 in
@@ -33,6 +34,10 @@ do
                         ;;
                 -p)
                         PGSQL_BUILD=1
+                        shift
+                        ;;
+                -x) 
+                        DEVEL=1
                         shift
                         ;;
 
@@ -89,6 +94,16 @@ else
 	cd mprov_control_center
 fi
 
+if [ "$DEVEL" == "0" ]
+then
+        # we want a release
+        latest=`git for-each-ref --sort=taggerdate | grep tags | tail -n1 | awk '{print $3}'`
+        git checkout $latest > /dev/null
+        if [ "$?" != "0" ]
+        then
+                echo "Error: Unable to check out latest release.  Proceeding with main branch.  This could be bad."
+        fi
+fi
 
 chmod 755 init_mpcc.sh
 python3.8 -m venv .
