@@ -21,7 +21,7 @@ do
   type=`dirname $i`
   mkdir -p /var/www/mprov_control_center/media/$type
   /bin/cp -f $i /var/www/mprov_control_center/media/$type
-  chown apache /var/www/mprov_control_center/media/${type}/$i
+  chown apache /var/www/mprov_control_center/media/$i
   
 done
 cd /var/www/mprov_control_center
