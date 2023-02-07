@@ -220,6 +220,7 @@ then
         /var/www/mprov_control_center/init_mpcc.sh
         systemctl enable httpd
         systemctl restart httpd
+	echo
 	echo "Please remember!  You should open up port 80 or whatever port you want to run your webserver on to your firewall if you are running one."
 	echo 
 	echo -e "\tExample Commands:"
@@ -228,4 +229,9 @@ then
 	echo
 	echo
 	echo "mProv also has issues running with selinux enabled.  You can run 'setenforce 0' for now to disable selinux, but still get auditing."
+	echo
+	echo "You should open /var/www/mprov_control_center/.env and add your hostname(s), IP(s) and FQDNs that you plan to use to access the mPCC"
+	echo "If you don't, you may get a '400' error in the browser."
+	echo
+	
 fi
