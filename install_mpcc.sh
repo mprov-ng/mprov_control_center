@@ -6,7 +6,7 @@ selinuxStat=`getenforce`
 if [ "$selinuxStat" == "Enforcing" ]
 then
     echo "ERROR: Selinux enabled and enforcing.  This is likely to cause issues.  Not continuing."
-    exit 1
+    exit 1 
 fi
 if [ "$selinuxStat" != "Disabled" ]
 then
@@ -231,7 +231,8 @@ then
 	echo "mProv also has issues running with selinux enabled.  You can run 'setenforce 0' for now to disable selinux, but still get auditing."
 	echo
 	echo "You should open /var/www/mprov_control_center/.env and add your hostname(s), IP(s) and FQDNs that you plan to use to access the mPCC"
-	echo "If you don't, you may get a '400' error in the browser."
+	echo "If you don't, you may get a '400' error in the browser.  Make sure you 'touch /var/www/mprov_control_center/mprov_control_center/wsgi.py' 
+	echo "after you edit the .env file to "restart" python wsgi."
 	echo
 	
 fi
