@@ -18,12 +18,12 @@ then
         echo "No env.db file found in the current path.  "
         echo "I have created one for you, please edit it and re-run this installer."
         cat <<- EOFdb > env.db
-        #DB_ENGINE=django.db.backends.mysql
-        #DB_NAME=mprov
-        #DB_USER=mprov
-        #DB_PASS=mprov
-        #DB_HOST=127.0.0.1
-        #DB_PORT=3306
+#DB_ENGINE=django.db.backends.mysql
+#DB_NAME=mprov
+#DB_USER=mprov
+#DB_PASS=mprov
+#DB_HOST=127.0.0.1
+#DB_PORT=3306
 
 EOFdb
 
