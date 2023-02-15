@@ -13,6 +13,22 @@ then
     echo "WARN: Selinux enabled but is permissive.  This may still cause issues, but might still work.  You have been warned."
 fi
 
+if [ ! -e ./env.db ]
+then
+        echo "No env.db file found in the current path.  "
+        echo "I have created one for you, please edit it and re-run this installer."
+        cat <<- EOF > env.db
+        #DB_ENGINE=django.db.backends.mysql
+        #DB_NAME=mprov
+        #DB_USER=mprov
+        #DB_PASS=mprov
+        #DB_HOST=127.0.0.1
+        #DB_PORT=3306
+
+        EOF
+
+        exit 1
+fi
 
 
 # time for some arg parsing.
