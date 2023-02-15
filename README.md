@@ -14,13 +14,16 @@ The mPCC is based off of django 3.2.  You will need to run a python web app serv
 # Installation
 This installation proceedure assumes that you have a system with at least the "Minimal Install" packages installed.  You can have more than that, but the installer assumes it will have to handle most of the dependancy installaion.
 
-Before running the installation, you will want to make sure you populate the `env.db` file with the variables for your db configuration you are going to use.  An example is provided, with everything commented out.
+If you download the installer and run it, it will create an `env.db` file for you if one doesn't exist.  You should modify this file and re-run the installer to install the mPCC.
+
+
 
 Installation is best done by cloning the repository and running `./install_mpcc.sh` as root.  This script takes the following arguments:
 
 - -d: Run as if you were building a docker image, meaning don't run init_mpcc.sh
 - -m: Install the stuff necessary to use a MariaDB backend.
 - -p: Install the stuff necessary to use a PostgreSQL backend.
+- -x: Passing this flag will check out the `main` branch of this repository.  Without it, it will checkout the latest Release tag.  Use this flag for development only!
 
 Note: Passing neither `-m` or `-p` will default to an SQLite backend that will be stored in the `db/` directory.
 
