@@ -21,7 +21,12 @@ class Job(models.Model):
     class Meta:
         verbose_name="Job"
         verbose_name_plural="Jobs"
-
+    def save(self, *args, **kwargs):
+        # add some default dependancies
+        if self.module.slug == "image-update":
+            self.params.update({"deps": "repo-sync"})
+        super(Job, self).save(*args, **kwargs)
+        
 class JobModule(models.Model):
     endpoint="/jobmodules/"
     name = models.CharField(max_length=255)
