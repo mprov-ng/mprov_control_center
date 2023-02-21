@@ -1,5 +1,9 @@
 
 # mProv Control Center
+![Buidl Status](https://img.shields.io/github/actions/workflow/status/mprov-ng/mprov_jobserver/ci_build.yml?style=plastic)
+![Latest Version](https://img.shields.io/github/v/tag/mprov-ng/mprov_control_center?style=plastic)
+![License](https://img.shields.io/github/license/mprov-ng/mprov_control_center?style=plastic)
+
 The heart of the mProv management suite, the mProv Control Center (mPCC) is the brains behind everything that mProv manages.  It's what runs the web interface, for ease of use.  It runs a REST CRUD API for interfaces to the database and remotely doing stuff.  It manages authentication, jobs to the mprov_jobservers, and serves as a endpoint for serving up files needed for PXE booting and running scripts on nodes post boot.
 
 The mPCC is based off of django 3.2.  You will need to run a python web app server to run the django code.  The installation proceedure below will walk you through most of that, installing Apache with `python38-mod_wsgi`.  This version of the mPCC requires python-3.8 or greater, but hasn't been tested yet with versions greater than 3.9.
