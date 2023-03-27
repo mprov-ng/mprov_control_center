@@ -5,6 +5,9 @@ from rest_framework import serializers
 from jobqueue.models import JobServer
 from disklayouts.serializers import DiskLayoutAPISerializer
 from networks.models import SwitchPort, Network
+from scripts.models import Script
+from scripts.serializers import ScriptAPISerializer
+
 class SystemSerializer(serializers.ModelSerializer): 
     config = serializers.DictField(allow_empty=True, required=False)
     class Meta:
@@ -18,11 +21,13 @@ class SystemBMCSerializer(serializers.ModelSerializer):
         model = SystemBMC
         fields = '__all__'
 class SystemGroupSerializer(serializers.ModelSerializer): 
+    scripts = ScriptAPISerializer(many=True)
     class Meta:
         model = SystemGroup
         fields = '__all__'
 class SystemImageDetailsSerializer(serializers.ModelSerializer):
     jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all())
+    systemgroups=serializers.PrimaryKeyRelatedField(many=True, queryset=SystemGroup.objects.all())
     class Meta:
         model = SystemImage
         fields = '__all__'
@@ -32,10 +37,11 @@ class SystemDetailSerializer(serializers.ModelSerializer):
     systemimage = SystemImageDetailsSerializer(many=False)
     systemmodel =  serializers.PrimaryKeyRelatedField(queryset=SystemModel.objects.all())
     config = serializers.DictField()
+    systemgroups = SystemGroupSerializer(many=True)
     class Meta:
         model = System
         fields = '__all__'
-        depth = 6
+        depth = 3
 class SystemBMCDetailSerializer(serializers.ModelSerializer): 
     
     class Meta:

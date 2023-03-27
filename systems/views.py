@@ -245,7 +245,7 @@ Format returned:
             else:
                 ip = request.META.get('REMOTE_ADDR')
             # for testing
-            ip="172.16.12.1"
+#            #ip="172.16.12.1"
             nicQueryset = NetworkInterface.objects.all()
             nicQueryset = nicQueryset.filter(ipaddress=ip)
             if nicQueryset.count() == 0:
@@ -307,7 +307,7 @@ Format returned:
             nicQueryset = NetworkInterface.objects.all()
             nicQueryset = nicQueryset.filter(ipaddress=ip)
             if nicQueryset.count() == 0:
-                return Response(None, status=404)
+                return Response({'msg': "Unknown System", 'ip':ip}, status=404)
             # self.model = Network
             # self.serializer_class = NetworkInterfaceDetailsSerializer
             self.queryset = self.queryset.filter(pk=nicQueryset[0].system.id)
