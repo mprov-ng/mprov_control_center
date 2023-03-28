@@ -14,7 +14,7 @@
 {% if docstring_adm is not None %}
 <div class="card">
   <div class="card-header">
-    <h5 class="m-0-">{{ cl.opts.verbose_name_plural }}</h5>
+    <h5 class="m-0-">{{ cl.opts.verbose_name_plural|capfirst }}</h5>
   </div>
   <div class="card-body">
     {{ docstring_adm | linebreaks }}
