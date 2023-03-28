@@ -27,7 +27,7 @@ class SystemGroupSerializer(serializers.ModelSerializer):
         fields = '__all__'
 class SystemImageDetailsSerializer(serializers.ModelSerializer):
     jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all())
-    systemgroups=serializers.PrimaryKeyRelatedField(many=True, queryset=SystemGroup.objects.all())
+    systemgroups=SystemGroupSerializer(many=True)
     class Meta:
         model = SystemImage
         fields = '__all__'
