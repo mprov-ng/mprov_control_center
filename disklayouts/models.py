@@ -7,6 +7,9 @@ from django.core.validators import MinValueValidator
 
 
 class DiskPartition(models.Model):
+  """ 
+  Disk partitions are partitions that will show up in a disk layout.  They are the base unit for building a disk geometry. 
+  """
   partnum = models.PositiveIntegerField(verbose_name="Part. Number", validators=[MinValueValidator(1)],default=1)
   mount=models.CharField(verbose_name="Mount Point", max_length=4096, help_text="The directory this partition will mount to or 'raid' if it is a Software RAID member.")
   size=models.BigIntegerField(verbose_name="Size (in MB)")
@@ -24,6 +27,9 @@ class DiskPartition(models.Model):
 
 
 class DiskLayout(models.Model):
+  """  Disk Layouts are what a physical block device will look like with partitions.  This information is passed to the 
+  script that builds the disk to assemble the required disk geometry.  
+  """
   class Meta:
     verbose_name = "Physical Disk Layout"
   class DiskTypes(models.TextChoices):
@@ -52,6 +58,7 @@ class DiskLayout(models.Model):
     super(DiskLayout, self).save(*args, **kwargs)
 
 class RaidLayout(DiskLayout):
+  """ Raid Layouts are similar to a Physical Disk Layout, but pertain ONLY  to setting up software RAID devices."""
   class Meta:
     verbose_name = "Software RAID Layout"
   class DiskTypes(models.TextChoices):

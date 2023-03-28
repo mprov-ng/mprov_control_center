@@ -15,6 +15,9 @@ from django.contrib.auth.models import AnonymousUser, User
 import yaml
 
 class SystemGroup(models.Model):
+  """ System Groups are ways to group systems and system images together to manage configuration better.   You can specify configuration
+  options and parameters at the system group level that will override anything set at the OS Distro level and be overridden by anything at
+  the system or system image level.  """
   name=models.CharField(max_length=255)
   scripts = models.ManyToManyField(Script, blank=True, )
   install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
@@ -40,6 +43,9 @@ class SystemGroup(models.Model):
     return self.name
 
 class SystemModel(models.Model):
+  """ System Models are used as part of the NADS (Node Auto Detection System).  The Vendor and Model strings should match what comes out
+  of dmidecode so that the system can identify itself to the mPCC as a valid host.
+  """
   slug = models.SlugField(primary_key=True, blank=True )
   name = models.CharField(verbose_name="Model Name", max_length=255)
   vendor = models.CharField(verbose_name="Vendor Name", max_length=255)
@@ -58,6 +64,8 @@ class SystemModel(models.Model):
 
 
 class System(models.Model):
+  """ Systems are physical or virtual machines that will run an OS in RAM or have an OS installed on them.  This is the end-point for the mPCC's
+  provisioning system."""
   endpoint="/systems/"
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
   timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
@@ -241,6 +249,7 @@ class NetworkInterface(models.Model):
     return self.name
 
 class SystemImage(models.Model):
+  """ System Images are filesystems that are managed by the mPCC's configuration management, built into .img files, and synced out to Systems."""
   endpoint="/systemimages/"
   name=models.CharField(max_length=255, verbose_name="Image Name",unique=True,)
   slug=models.SlugField(max_length=255, unique=True, editable=False, verbose_name='Image ID', primary_key=True)
