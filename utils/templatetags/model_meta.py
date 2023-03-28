@@ -12,7 +12,7 @@ def get_docstring(cl):
 
   # remove docstrings that contain only the class definition.
   testString = str(cl.model.__name__) + "("
-  docString += testString 
+  
   if docString.startswith(testString):
     docString=None
   
