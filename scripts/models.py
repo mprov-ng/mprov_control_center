@@ -16,6 +16,12 @@ class ScriptType(models.Model):
     return self.name
 
 class Script(models.Model):
+  """
+  Scripts are small snippets of code that will be run by the mProv 
+  Jobserver on a system or system image.  They are usally run in the 
+  system image at generation time, or on the system after it has booted,
+  also known as 'post boot'
+  """
   endpoint="/scripts/"
   name=models.CharField(max_length=120, verbose_name=("Script Name"))
   slug=models.SlugField(unique=True, primary_key=True)
