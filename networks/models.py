@@ -8,6 +8,8 @@ from django.contrib.auth.models import AnonymousUser, User
 
 
 class NetworkType(models.Model):
+  """ This is where the mPCC will keep track of the physical network types.  Some are prepopulated at install, but you can always add more.
+  """
   endpoint="/networktypes/"
   name=models.CharField(max_length=120)
   slug=models.SlugField(unique=True,blank=True,verbose_name="Network Type ID",editable=False)
@@ -24,6 +26,7 @@ class NetworkType(models.Model):
 
 
 class Network(models.Model):
+  """ This is where you will create the logical IP networks that the mPCC should know about and possibly manage."""
   endpoint="/networks/"
   name=models.CharField(max_length=120)
   slug=models.SlugField(unique=True,blank=True,verbose_name="Network ID")
@@ -69,6 +72,7 @@ class Network(models.Model):
  
 
 class Switch(models.Model):
+  """ This is where you would define the switches that the mPCC should know about for handling Node Auto Detection."""
   endpoint="/switches/"
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
   timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")

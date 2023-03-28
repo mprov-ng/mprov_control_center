@@ -15,6 +15,7 @@ class OSType(models.Model):
 
  
 class OSDistro(models.Model):
+  """ This is where you would define what OS Distributions you would like the mPCC to manage."""
   endpoint="/distros/"
   name=models.CharField(max_length=100)
   vendor=models.CharField(max_length=100)
@@ -56,6 +57,7 @@ class OSDistro(models.Model):
   
 
 class OSRepo(models.Model):
+  """ This is where you would define the OS Repositories that you would like to use in OS Distribution management."""
   endpoint="/repos/"
   name=models.CharField(max_length=100)
   repo_package_url=models.CharField(max_length=2048, verbose_name='Repo Package URL')

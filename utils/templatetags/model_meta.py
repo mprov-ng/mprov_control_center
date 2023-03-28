@@ -6,4 +6,14 @@ def get_docstring(cl):
   """
   Returns the docstring for the instance.
   """
-  return cl.model.__doc__
+  docString = cl.model.__doc__
+  if docString.startswith("\n"):
+    docString = docString[1:]
+
+  # remove docstrings that contain only the class definition.
+  testString = str(cl.model.__name__) + "("
+  docString += testString 
+  if docString.startswith(testString):
+    docString=None
+  
+  return docString

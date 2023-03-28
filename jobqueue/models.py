@@ -5,6 +5,10 @@ from django.apps import apps
 from django.utils.timezone import make_aware
 
 class Job(models.Model):
+    """Jobs are internal mProv jobs that are run by the Jobservers. Jobs function to do tasks on behalf of the mPCC.  
+
+    Usually, you should not have to look at this stuff unless something fails.
+    """
     endpoint="/jobs/"
     name=models.CharField(max_length=255)
     create_time=models.DateTimeField(auto_now_add=True, verbose_name="Created Time")
@@ -28,6 +32,11 @@ class Job(models.Model):
         super(Job, self).save(*args, **kwargs)
         
 class JobModule(models.Model):
+    """ Job Modules are the types of jobs that a job server can execute.  These usually define what jobserver modules/plugins will
+    be run.  They also serve as a point to breakup job server tasks to multiple jobservers, if you desire.
+
+        Usually, you should not have to look at this stuff unless something fails.
+    """
     endpoint="/jobmodules/"
     name = models.CharField(max_length=255)
     active = models.IntegerField(default=0)
@@ -45,6 +54,11 @@ class JobStatus(models.Model):
         verbose_name="Job Status"
 
 class JobServer(models.Model):
+    """ This area shows you stauts on job servers that have registered themselves with the mPCC.  It will show you the IP address that the 
+    job server registered with, the port, any job modules it can run, it's load average, and when the mPCC last heard from it.
+
+        Usually, you should not have to look at this stuff unless something fails.
+    """
     endpoint="/jobservers/"
     name = models.CharField(max_length=255, unique=True)
     address = models.GenericIPAddressField()
