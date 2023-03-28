@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_api_key',
     'dbbackup',
+    'utils',
 ]
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE_OPTIONS = {'location': '/var/www/mprov_control_center/backups/'}
@@ -86,6 +87,8 @@ JAZZMIN_SETTINGS={
         'disklayouts.disklayout': 'fas fa-chart-pie',
         'disklayouts.raidlayout': 'fas fa-database',
         'disklayouts': 'fas fa-save',
+        'scripts.ansibleplaybook': 'fas fa-clipboard-list',
+        'scripts.ansiblerole': 'fas fa-tags',
     },
     'copyright': ' 2022 The Johns Hopkins University ',
     "related_modal_active": False,
