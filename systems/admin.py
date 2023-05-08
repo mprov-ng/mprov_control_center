@@ -124,6 +124,8 @@ class SystemAdmin(admin.ModelAdmin):
         'systemmodel',
         'systemgroups',
         'scripts',
+        'ansibleplaybooks',
+        'ansibleroles',
         'config_params',
         'install_kernel_cmdline',
         'tmpfs_root_size',
@@ -209,6 +211,8 @@ class SystemImageAdmin(admin.ModelAdmin):
         'jobservers',
         'systemgroups',
         'scripts',
+        'ansibleplaybooks',
+        'ansibleroles',
         'config_params',
         'needs_rebuild',
       )

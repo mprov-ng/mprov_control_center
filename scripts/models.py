@@ -53,7 +53,7 @@ class Script(models.Model):
 
 class AnsiblePlaybook(models.Model):
   """
-  Ansible playbooks are single file, ansible commands that will be run by the 'run_ansible.sh' script
+  Ansible playbooks are single file lists ansible tasks that will be run by the 'run_ansible.sh' script
   via the mProv Jobserver.
   """
   endpoint="/ansibleplaybook/"
@@ -89,13 +89,15 @@ class AnsiblePlaybook(models.Model):
 
 class AnsibleRole(models.Model):
   ''' 
-    The Ansible Roles section of config management is where you can add either git repositories, or ansible galaxy roles that 
-Ansible will attempt to run if they are associated with a system, system group, or OS Distribution.
+    Ansible Roles packed groups of playbooks with configuration data all wrapped up together. 
+    This section of config management is where you can add either git repositories that contain a single role,
+    or ansible galaxy roles that the 'run_ansible.sh' will attempt to download run if they are associated with a 
+    system, system image, system group, or OS Distribution.
   '''
   endpoint="/ansiblerole/"
-  name=models.CharField(max_length=120, verbose_name=("Role Name"))
+  name=models.CharField(max_length=120, verbose_name="Role Name")
   slug=models.SlugField(unique=True, primary_key=True)
-  filename = models.FileField(upload_to='')
+  roleurl = models.CharField(max_length=2048, verbose_name="Role URL", help_text="This can be a URL to a specific git repository housing a role or an Ansible Galaxy Role descriptor.  See the 'ansible-galaxy' command for help." )
   scriptType = models.ForeignKey(ScriptType, on_delete=models.SET_NULL, null=True, verbose_name="Role Type")
   version = models.BigIntegerField(default=1)
   dependsOn = models.ManyToManyField('self',blank=True,symmetrical=False)
@@ -107,21 +109,22 @@ Ansible will attempt to run if they are associated with a system, system group, 
 
   def save(self, *args, **kwargs):
     if not self.slug:
-      self.slug = slugify(self.filename.name)
-    if not os.path.exists(settings.MEDIA_ROOT + '/ansibleroles/' + self.scriptType.slug): 
-      # make the dir
-      try:
-        os.makedirs(settings.MEDIA_ROOT + '/ansibleroles/' + self.scriptType.slug, exist_ok=True)
-      except: 
-        print(f"Error: Unalbe to make script type dir: {settings.MEDIA_ROOT + '/ansibleplansibleroleaybooks/' + self.scriptType.slug}")
-        return
+      self.slug = slugify(os.path.basename(self.roleurl))
+    super(AnsibleRole, self).save(*args, **kwargs)
+    # if not os.path.exists(settings.MEDIA_ROOT + '/ansibleroles/' + self.scriptType.slug): 
+    #   # make the dir
+    #   try:
+    #     os.makedirs(settings.MEDIA_ROOT + '/ansibleroles/' + self.scriptType.slug, exist_ok=True)
+    #   except: 
+    #     print(f"Error: Unalbe to make script type dir: {settings.MEDIA_ROOT + '/ansibleplansibleroleaybooks/' + self.scriptType.slug}")
+    #     return
 
-    self.filename.name = self.scriptType.slug + '/ansibleroles/' + self.slug + "-v" + str(self.version)
-    super(AnsiblePlaybook, self).save(*args, **kwargs)
-    print(os.path.join(settings.MEDIA_ROOT, self.filename.name))
-    if os.path.exists(os.path.join(settings.MEDIA_ROOT, self.filename.name)):
-      print("Converting file")
-      os.system("dos2unix " + os.path.join(settings.MEDIA_ROOT, self.filename.name))
+    # self.filename.name = self.scriptType.slug + '/ansibleroles/' + self.slug + "-v" + str(self.version)
+    # super(AnsibleRole, self).save(*args, **kwargs)
+    # print(os.path.join(settings.MEDIA_ROOT, self.filename.name))
+    # if os.path.exists(os.path.join(settings.MEDIA_ROOT, self.filename.name)):
+    #   print("Converting file")
+    #   os.system("dos2unix " + os.path.join(settings.MEDIA_ROOT, self.filename.name))
 
 
 @receiver(post_delete, sender=Script)

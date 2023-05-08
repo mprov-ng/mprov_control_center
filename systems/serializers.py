@@ -22,9 +22,11 @@ class SystemBMCSerializer(serializers.ModelSerializer):
         fields = '__all__'
 class SystemGroupSerializer(serializers.ModelSerializer): 
     scripts = ScriptAPISerializer(many=True)
+    
     class Meta:
         model = SystemGroup
-        fields = '__all__'
+        fields = '__all__' 
+        depth = 2
 class SystemImageDetailsSerializer(serializers.ModelSerializer):
     jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all())
     systemgroups=SystemGroupSerializer(many=True)

@@ -19,7 +19,7 @@ class AnsiblePlaybookAdmin(admin.ModelAdmin):
 class AnsibleRoleAdmin(admin.ModelAdmin):
   model = AnsibleRole
   readonly_fields = ['slug']
-  list_display = ['name', 'filename', 'scriptType']
+  list_display = ['name', 'roleurl', 'scriptType']
   exclude = ('slug',)
 
 
