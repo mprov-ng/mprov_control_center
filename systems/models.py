@@ -81,7 +81,7 @@ class System(models.Model):
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True, through=SystemGroup.systems.through)
   scripts = models.ManyToManyField(Script, blank=True, )
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
-  ansibleroless = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles")
+  ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles")
   config_params = models.TextField(
     default="# Inherit from System Group or Distribtion.",
     verbose_name="Configuration\nParameters",
