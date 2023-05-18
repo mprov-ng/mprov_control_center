@@ -89,6 +89,7 @@ JAZZMIN_SETTINGS={
         'disklayouts': 'fas fa-save',
         'scripts.ansibleplaybook': 'fas fa-clipboard-list',
         'scripts.ansiblerole': 'fas fa-tags',
+        'scripts.ansiblecollection': 'far fa-object-group',
     },
     'copyright': ' 2022 The Johns Hopkins University ',
     "related_modal_active": False,
