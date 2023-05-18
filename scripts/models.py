@@ -141,7 +141,7 @@ class AnsibleCollection(models.Model):
 
   def save(self, *args, **kwargs):
     if not self.slug:
-      self.slug = slugify(os.path.basename(self.roleurl))
+      self.slug = slugify(os.path.basename(self.collectionurl))
     super(AnsibleCollection, self).save(*args, **kwargs)
 
 
