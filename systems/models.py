@@ -9,7 +9,7 @@ from osmanagement.models import OSDistro, OSRepo
 from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, JobStatus, Job, JobServer
 from django.utils.text import slugify
-from scripts.models import Script, AnsiblePlaybook, AnsibleRole
+from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 from disklayouts.models import *
 from django.contrib.auth.models import AnonymousUser, User
 import yaml
@@ -22,6 +22,7 @@ class SystemGroup(models.Model):
   scripts = models.ManyToManyField(Script, blank=True, )
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
   ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles")
+  ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
   install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
   # install kernel parameters.
   tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gibabytes, 0 inherits from parent Group/Distro")
@@ -82,6 +83,8 @@ class System(models.Model):
   scripts = models.ManyToManyField(Script, blank=True, )
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
   ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles")
+  ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
+    
   config_params = models.TextField(
     default="# Inherit from System Group or Distribtion.",
     verbose_name="Configuration\nParameters",
@@ -269,7 +272,8 @@ class SystemImage(models.Model):
   scripts = models.ManyToManyField(Script, blank=True, )
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
   ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles")
-
+  ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
+  
   needs_rebuild = models.BooleanField(default=True, verbose_name="Rebuild Image?")
   version = models.BigIntegerField(default=1, verbose_name="Image Version")
   jobservers = models.ManyToManyField(JobServer, verbose_name="Hosted By", blank=True)
