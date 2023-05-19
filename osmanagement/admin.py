@@ -32,6 +32,9 @@ class OSDistroAdmin(admin.ModelAdmin):
       'fields':(
         'config_params',
         'scripts',
+        'ansiblecollections',
+        'ansibleplaybooks',
+        'ansibleroles',
         'install_kernel_cmdline',
         'tmpfs_root_size',
         'initial_mods',

@@ -2,7 +2,7 @@ from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, Job, JobStatus
-from scripts.models import Script
+from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 
 # This will be an object managed by the jobserver image-update and repo-update modules.
 class OSType(models.Model):
@@ -40,6 +40,10 @@ class OSDistro(models.Model):
     verbose_name="Configuration\nParameters",
   )
   scripts = models.ManyToManyField(Script, blank=True, )
+  ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks" )
+  ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles" )
+  ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
+  
   install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
   # install kernel parameters.
   tmpfs_root_size = models.IntegerField(default=8, help_text="Size of the root tmpfs filesystem in Gibabytes")
