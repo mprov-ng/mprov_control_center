@@ -38,6 +38,7 @@ class mProvStatefulInstaller():
   ip_address = None
   bootdisk = None
   bootpart = None
+  modules = ""
 
   def __init__(self, **kwargs):
     print("mProv Stateful Installer Starting.")
@@ -312,6 +313,8 @@ class mProvStatefulInstaller():
          argKey == 'rdinit' or \
          argKey.startswith('mprov') or \
          argKey == 'autorelabel' :
+          if argKey == "mprov_initial_mods":
+            self.modules = argvalue.replace(",", " ")
           continue
       newcmdline.append(arg)
 
@@ -338,7 +341,7 @@ class mProvStatefulInstaller():
       grubfileout.writelines(grubfileNew)
 
     print(f"Regenerating initial ramdisk... ")
-    sh.chroot([f"/newroot", f"dracut", "--regenerate-all", "-f", "--mdadmconf", "--force-add", "mdraid"])
+    sh.chroot([f"/newroot", f"dracut", "--regenerate-all", "-f", "--mdadmconf", "--force-add", "mdraid", "--add-drivers", f"{self.modules}"])
 
     print(f"Running `grub2-install {bootdisk}`...")
     # now let's try to run the grub installer in the new root.
