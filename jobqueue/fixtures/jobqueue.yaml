@@ -6,7 +6,7 @@
 - model: jobqueue.jobstatus
   pk: 2
   fields: 
-    name: RUNNNING
+    name: RUNNING
 
 - model: jobqueue.jobstatus
   pk: 3
