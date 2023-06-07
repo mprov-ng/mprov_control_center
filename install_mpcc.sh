@@ -13,24 +13,6 @@ then
     echo "WARN: Selinux enabled but is permissive.  This may still cause issues, but might still work.  You have been warned."
 fi
 
-if [ ! -e ./env.db ]
-then
-        echo "No env.db file found in the current path.  "
-        echo "I have created one for you, please edit it and re-run this installer."
-        cat <<- EOFdb > env.db
-#DB_ENGINE=django.db.backends.mysql
-#DB_NAME=mprov
-#DB_USER=mprov
-#DB_PASS=mprov
-#DB_HOST=127.0.0.1
-#DB_PORT=3306
-
-EOFdb
-
-        exit 1
-fi
-
-
 # time for some arg parsing.
 BUILD_DOCKER=0
 MYSQL_BUILD=0
@@ -63,7 +45,24 @@ do
                         ;;
         esac
 done
-  
+
+if [[ ! -e ./env.db  && (  $MYSQL_BUILD  or $PGSQL_BUILD ) ]]
+then
+        echo "No env.db file found in the current path, and you are not using SQLITE.  "
+        echo "I have created one for you, please edit it and re-run this installer."
+        cat <<- EOFdb > env.db
+#DB_ENGINE=django.db.backends.mysql
+#DB_NAME=mprov
+#DB_USER=mprov
+#DB_PASS=mprov
+#DB_HOST=127.0.0.1
+#DB_PORT=3306
+
+EOFdb
+
+        exit 1
+fi
+
 if [ "$PGSQL_BUILD" == "1" ] && [ "$MYSQL_BUILD" == "1" ]
 then
     echo "Error: Please specify one or none of the database options (-m or -p or neither)"
