@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# NOTE: This script MAY NOT yet be idempotent!!!
+
+# TODO: test this script's idempotence.
+
 # Detect if selinux is enabled, and die if it is.
 selinuxStat=`getenforce`
 
@@ -120,7 +124,7 @@ then
         fi
 fi
 
-chmod 755 init_mpcc.sh
+chmod 755 install_scripts/init_mpcc.sh
 python3.8 -m venv .
 . bin/activate
 pip install -r requirements.txt
@@ -140,7 +144,7 @@ then
         pip install $extra_pip
 fi
 
-
+# TODO: All these entries should be checking if they exist first.
 # generates a secret from django's utils
 export SECRET_KEY=`python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'`
 echo "SECRET_KEY='$SECRET_KEY'" > .env
@@ -154,6 +158,8 @@ for i in `ip addr | grep "inet " | awk '{print $2}' | awk -F/ '{print $1}'`
 do
         ALLOWED_HOSTS="${i},${ALLOWED_HOSTS}"
 done
+MYHOST=`hotname`
+ALLOWED_HOSTS=${MYHOST},${ALLOWED_HOSTS}
 echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
 
 # append the db stuff if a file exists.
@@ -164,11 +170,15 @@ else
         echo "No env.db, continuing with Sqlite"
 fi
 
-# display the ENV file
-cat .env 
-
 # other variables can be set directly in the ENV (for containers)
 # or via the .env file.   See the .env.example for possible varialbes.
+ 
+# pull in a .env.custom if it exists.
+if [ -e .env.custom ]
+then 
+        cat .env.custom >> .env
+fi
+
 python manage.py collectstatic --noinput
 
 # grab a copy of busybox
@@ -230,9 +240,16 @@ Require all granted
       MaxConnectionsPerChild    10000
 </IfModule>
 EOF
+
+# Run the scripts from install_scripts/install.d/ in order
+for i in `ls /var/www/mprov_control_center/install_scripts/install.d | sort -n`
+do
+       /var/www/mprov_control_center/install_scripts/install.d/$i
+done
+
 if [ "$BUILD_DOCKER" != "1" ]
 then
-        /var/www/mprov_control_center/init_mpcc.sh
+        /var/www/mprov_control_center/install_scripts/init_mpcc.sh
         systemctl enable httpd
         systemctl restart httpd
 	echo
