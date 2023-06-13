@@ -27,9 +27,14 @@ cd $slurmdl
 latest_file=$(curl --silent ${dlurl}/SHA1 | awk '{print $2}' | grep -v latest | grep -v "rc[0-9]\.t" | sort -t. -k1,1 -k2,2n -k3,3n | tail -n1)
 latest_ver=$(echo $latest_file | sed 's/.tar.bz2//')
 short_ver=$(echo $latest_ver | sed 's/slurm-//')
+installed_ver=""
 
+if [ -e $install_path/sbin/slurmd ]
+then
+  installed_ver=`$install_path/sbin/slurmd --version | tr ' ' '-'`
+fi
 
-if [[ -e $slurmdl/$latest_file ]]; then
+if [[ "$installed_ver" == "$latest_ver" ]]; then
     printf "Already at latest slurm version (${latest_ver}).\n"
 else
     echo "Installing Dependencies..."
