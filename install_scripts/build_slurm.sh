@@ -108,4 +108,14 @@ else
     then
       echo "$latest_ver" > /export/mprov/etc/slurm.version
     fi
+        
+    # enable munge
+    systemctl enable munge
+    systemctl start munge
+    systemctl stop munge
+    mkdir -p /opt/mprov/etc/munge/
+    cp /etc/munge/munge.key /opt/mprov/etc/munge/munge.key
+    rm -rf /etc/munge/munge.key 
+    ln -s /opt/mprov/etc/munge/munge.key /etc/munge/munge.key
+    systemctl start munge
 fi
