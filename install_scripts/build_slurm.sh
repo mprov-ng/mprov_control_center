@@ -111,11 +111,79 @@ else
         
     # enable munge
     systemctl enable munge
-    systemctl start munge
-    systemctl stop munge
+     
+    # generate a munge key
     mkdir -p /opt/mprov/etc/munge/
-    cp /etc/munge/munge.key /opt/mprov/etc/munge/munge.key
-    rm -rf /etc/munge/munge.key 
-    ln -s /opt/mprov/etc/munge/munge.key /etc/munge/munge.key
+    dd if=/dev/urandom bs=1 count=1024 > /opt/mprov/etc/munge/munge.key
+    chown munge:munge /opt/mprov/etc/munge/munge.key 
+    chmod 600  /opt/mprov/etc/munge/munge.key
+    rm -f /etc/munge/
+    ln -s /opt/mprov/etc/munge /etc/munge
+  
+    # start munge
     systemctl start munge
+
+    # create the slurmctld service file.
+    cat << EOF > /usr/lib/systemd/system/slurmctld.service
+    [Unit]
+RequiresMountsFor=/opt/mprov
+Description=Slurm controller daemon
+After=network.target munge.service
+ConditionPathExists=/opt/mprov/etc/slurm/slurm.conf
+
+[Service]
+Type=forking
+EnvironmentFile=-/etc/sysconfig/slurmctld
+ExecStart=/opt/mprov/sbin/slurmctld $SLURMCTLD_OPTIONS
+ExecReload=/bin/kill -HUP $MAINPID
+PIDFile=/var/run/slurmctld.pid
+LimitNOFILE=65536
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target
+
+EOF
+
+  myHostname=`hostname`
+  echo "SlurmctldHost=$myHostname" > /opt/mprov/etc/slurm.conf
+
+  cat << EOF >> /opt/mprov/etc/slurm.conf
+# mProv default slurm config, see /var/www/mprov_control_center/static/slurm.conf for a commented example.
+ClusterName=cluster
+MpiDefault=none
+ProctrackType=proctrack/cgroup
+ReturnToService=1
+SlurmctldPidFile=/var/run/slurmctld.pid
+SlurmctldPort=6817
+SlurmdPidFile=/var/run/slurmd.pid
+SlurmdPort=6818
+SlurmdSpoolDir=/var/spool/slurmd
+SlurmUser=slurm
+StateSaveLocation=/var/spool/slurmctld
+SwitchType=switch/none
+TaskPlugin=task/cgroup
+InactiveLimit=0
+KillWait=30
+MinJobAge=300
+SlurmctldTimeout=120
+SlurmdTimeout=300
+Waittime=0
+SchedulerType=sched/backfill
+SelectType=select/cons_tres
+AccountingStorageType=accounting_storage/none
+JobCompType=jobcomp/none
+JobAcctGatherFrequency=30
+JobAcctGatherType=jobacct_gather/cgroup
+SlurmctldDebug=info
+SlurmctldLogFile=/var/log/slurmctld.log
+SlurmdDebug=info
+SlurmdLogFile=/var/log/slurmd.log
+PartitionName=defq Nodes=ALL Default=YES MaxTime=INFINITE State=UP
+NodeName=c0[01-08] CPUs=1 State=UNKNOWN
+EOF
+    chown slurm /opt/mprov/etc/slurm.conf
+    systemctl enable slurmctld
+    mkdir -p /var/spool/slurmctld
+    chown slurm /var/spool/slurmctld
 fi
