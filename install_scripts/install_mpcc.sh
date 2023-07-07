@@ -50,7 +50,7 @@ do
         esac
 done
 
-if [[ ! -e ./env.db  && (  $MYSQL_BUILD  or $PGSQL_BUILD ) ]]
+if [[ ! -e ./env.db  && (  $MYSQL_BUILD  || $PGSQL_BUILD ) ]]
 then
         echo "No env.db file found in the current path, and you are not using SQLITE.  "
         echo "I have created one for you, please edit it and re-run this installer."
