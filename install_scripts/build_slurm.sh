@@ -117,8 +117,8 @@ else
     dd if=/dev/urandom bs=1 count=1024 > /opt/mprov/etc/munge/munge.key
     chown munge:munge /opt/mprov/etc/munge/munge.key 
     chmod 600  /opt/mprov/etc/munge/munge.key
-    rm -f /etc/munge/
-    ln -s /opt/mprov/etc/munge /etc/munge
+    rm -rf /etc/munge/
+    ln -s /opt/mprov/etc/munge/ /etc/munge
   
     # start munge
     systemctl start munge
@@ -148,7 +148,7 @@ EOF
   myHostname=`hostname`
   echo "SlurmctldHost=$myHostname" > /opt/mprov/etc/slurm.conf
 
-  cat << EOF >> /opt/mprov/etc/slurm.conf
+  cat << EOF >> /opt/mprov/etc/slurm/slurm.conf
 # mProv default slurm config, see /var/www/mprov_control_center/static/slurm.conf for a commented example.
 ClusterName=cluster
 MpiDefault=none
