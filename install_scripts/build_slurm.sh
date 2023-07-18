@@ -180,7 +180,9 @@ SlurmctldLogFile=/var/log/slurmctld.log
 SlurmdDebug=info
 SlurmdLogFile=/var/log/slurmd.log
 PartitionName=defq Nodes=ALL Default=YES MaxTime=INFINITE State=UP
-NodeName=c0[01-08] CPUs=1 State=UNKNOWN
+NodeSet=ns1 Feature=compute
+MaxNodeCount=20
+
 EOF
     chown slurm /opt/mprov/etc/slurm.conf
     systemctl enable slurmctld
