@@ -1,0 +1,26 @@
+name: Update website Informtion
+on:
+  push:
+    paths:
+    - 'README.md'
+jobs:
+  copy-file:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Copy README.md to mpcc.md
+      run: cp README.md mpcc.md
+
+    - name: Pushes mpcc.md file
+      uses: dmnemec/copy_file_to_another_repo_action@main
+      env:
+        API_TOKEN_GITHUB: ${{ secrets.UPDATE_TOKEN }}
+      with:
+        source_file: 'mpcc.md'
+        destination_repo: 'mprov-ng/mprov-ng.github.io'
+        #destination_folder: 'test-dir'
+        user_email: 'jasonw@jhu.edu'
+        user_name: 'jhujasonw'
+        commit_message: 'Auto-push of README.md'
