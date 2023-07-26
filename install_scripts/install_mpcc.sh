@@ -63,7 +63,7 @@ then
 #DB_PORT=3306
 
 EOFdb
-
+	echo "Debug: Args='$@' MYSQL_BUILD=$MYSQL_BUILD PGSQL_BUILD=$PGSQLBUILD"
         exit 1
 fi
 
