@@ -50,7 +50,7 @@ do
         esac
 done
 
-if [[ ! -e ./env.db  && (  $MYSQL_BUILD  || $PGSQL_BUILD ) ]]
+if [[ ! -e ./env.db  && (  "$MYSQL_BUILD" == "1"  || "$PGSQL_BUILD" == "1" ) ]]
 then
         echo "No env.db file found in the current path, and you are not using SQLITE.  "
         echo "I have created one for you, please edit it and re-run this installer."
@@ -63,8 +63,10 @@ then
 #DB_PORT=3306
 
 EOFdb
-	echo "Debug: Args='$@' MYSQL_BUILD=$MYSQL_BUILD PGSQL_BUILD=$PGSQL_BUILD"
-        exit 1
+	if [ "$BUILD_DOCKER" != "1" ]
+ 	then
+        	exit 1
+	fi
 fi
 
 if [ "$PGSQL_BUILD" == "1" ] && [ "$MYSQL_BUILD" == "1" ]
