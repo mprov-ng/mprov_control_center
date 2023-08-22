@@ -303,6 +303,23 @@ class SystemImage(models.Model):
   def __str__(self):
     return self.name
 
+@receiver(post_save, sender=System)
+@receiver(post_save, sender=SystemImage)
+@receiver(post_save, sender=SystemGroup)
+def UpdateGenders (sender, instance, **kwarg):
+  JobType = None
+  try:
+      JobType = JobModule.objects.get(slug="libgenders")
+  except:
+      JobType = None
+  if JobType is not None:
+    # save a new job, if one doesn't already exist.
+
+    Job.objects.update_or_create(
+      name=JobType.name , module=JobType,
+      defaults={'status': JobStatus.objects.get(pk=1)}
+    )
+
 # emits jobs to update dns, dhcp, and pxe config if a 
 # system or NIC is changed.
 # TODO: add the sender information to the
