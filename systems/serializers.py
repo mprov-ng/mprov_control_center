@@ -22,17 +22,23 @@ class SystemBMCSerializer(serializers.ModelSerializer):
         fields = '__all__'
 class SystemGroupSerializer(serializers.ModelSerializer): 
     scripts = ScriptAPISerializer(many=True)
-    
     class Meta:
         model = SystemGroup
         fields = '__all__' 
+class SystemGroupDetailSerializer(serializers.ModelSerializer): 
+    scripts = ScriptAPISerializer(many=True)
+    class Meta:
+        model = SystemGroup
+        fields = '__all__'
         depth = 2
-class SystemImageDetailsSerializer(serializers.ModelSerializer):
+class SystemImageSerializer(serializers.ModelSerializer):
     jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all())
     systemgroups=SystemGroupSerializer(many=True)
     class Meta:
         model = SystemImage
         fields = '__all__'
+class SystemImageDetailsSerializer(SystemImageSerializer):
+    class Meta:
         depth = 3
 class SystemDetailSerializer(serializers.ModelSerializer): 
     disks = DiskLayoutAPISerializer(many=True, read_only=True)
@@ -52,7 +58,7 @@ class SystemBMCDetailSerializer(serializers.ModelSerializer):
         depth = 3        
 
         
-class SystemImageSerializer(serializers.ModelSerializer):
+class a(serializers.ModelSerializer):
     jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all(),)
     class Meta:
         model = SystemImage

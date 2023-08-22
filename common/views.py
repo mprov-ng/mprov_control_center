@@ -146,8 +146,8 @@ and make sure to add documentation to the class so that it can be displayed if a
                     self.queryset = self.queryset.filter((field,request.query_params[field]))
                 except BaseException as e:
                     error_body[field] = f"Error searching for {field}: {type(e)=}: {e=}"
-            else: 
-                error_body[field] = f"Error searching for {field}: Field doesn't exist."
+            # else: 
+            #     error_body[field] = f"Error searching for {field}: Field doesn't exist."
         if len(error_body) > 0:
             return Response(error_body, status=400)
         if self.queryset.count() == 0:

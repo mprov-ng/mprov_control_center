@@ -12,6 +12,7 @@ from .serializers import (
     SystemBMCSerializer,
     SystemBMCDetailSerializer,
     SystemImageDetailsSerializer,
+    SystemImageSerializer,
 )
 from rest_framework.response import Response
 
@@ -231,7 +232,7 @@ Format returned:
     '''
     model = System
     template = "systems_docs.html"
-    serializer_class = SystemDetailSerializer
+    serializer_class = SystemSerializer
     queryset = None
 
     def post(self, request, *args, **kwargs):
@@ -272,17 +273,28 @@ Format returned:
         # XXX: Fix this to work with the base class
         # get() function
 
-        #super().get(request, format=None, **kwargs)
-        result = self.checkContentType(request, format=format, kwargs=kwargs)
-        if result is not None:
-            return result
-        if self.model == None:
-            return Response(None)
         if 'pk' in kwargs:
+            self.serializer_class = SystemSerializer
+
             # someone is looking for a specific item.
             return self.retrieve(self, request, format=None, pk=kwargs['pk'])
-        self.serializer_class = SystemSerializer
-        self.queryset = self.model.objects.all()
+         
+        # call the base class get()
+        # this does do some initial filtering.
+        super().get(request, format=None, **kwargs)
+
+        # result = self.checkContentType(request, format=format, kwargs=kwargs)
+        # if result is not None:
+        #     return result
+        # if self.model == None:
+        #     return Response(None)
+        # if 'pk' in kwargs:
+        #     # someone is looking for a specific item.
+        #     return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+        # self.serializer_class = SystemSerializer
+        # self.queryset = self.model.objects.all()
+
+        # post-query filters and such.
         if 'detail' in request.query_params:
             self.serializer_class = SystemDetailSerializer
 
@@ -574,11 +586,14 @@ Format returned:
     '''
     model = SystemImage
     queryset = SystemImage.objects.all()
-    serializer_class = SystemImageDetailsSerializer
+    serializer_class = SystemImageSerializer
     jobservers=JobServerAPISerializer(many=True)
     
-    # def get(self, request, format=None, **kwargs):
-    #     return self.retrieve(self, request, format=None, **kwargs)
+    def get(self, request, format=None, **kwargs):
+        result = super().get(request, format, **kwargs)
+        if 'pk' in kwargs:
+            self.serializer_class = SystemImageDetailsSerializer
+        return result
 
     def patch(self, request, *args, **kwargs):
       print(f"Query params: {request.query_params}")
