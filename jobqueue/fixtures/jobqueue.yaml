@@ -111,3 +111,8 @@
   fields:
     name: Repo Sync Job
     slug: repo-sync    
+- model: jobqueue.jobmodule
+  pk: libgenders
+  fields:
+    name: Genders File Generation
+    slug: libgenders
