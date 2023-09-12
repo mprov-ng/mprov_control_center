@@ -280,6 +280,8 @@ Format returned:
             'one_minute_load': request.data['one_minute_load']
         }
         data = {}
+        if defaults['port'] == None:
+            defaults['port'] = 8080
         if request.data['name']:
             obj, created = JobServer.objects.update_or_create(
                 name=request.data['name'],
