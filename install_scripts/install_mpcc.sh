@@ -99,6 +99,7 @@ RUNDIR=`pwd`
 cd /var/www/
 if cd mprov_control_center
 then 
+        git checkout main
         git pull
         if [ "$?" != "0" ]
         then
