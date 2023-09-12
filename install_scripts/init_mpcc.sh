@@ -8,12 +8,11 @@ python ./manage.py createsuperuser --noinput
 # load the scripts before the fixtures.  Some fixtures
 # may rely on the scripts being present
 
-if [ -f ./load_default_scripts.sh ]
-then
-  # load the scripts fixture before loading the default scripts.
-  python ./manage.py loaddata scripts/fixtures/*
-  ./load_default_scripts.sh
-fi
+# Run the scripts from install_scripts/install.d/ in order
+for i in `ls /var/www/mprov_control_center/install_scripts/init.d | sort -n`
+do
+       /var/www/mprov_control_center/install_scripts/init.d/$i
+done
 
 python ./manage.py loaddata */fixtures/*
 
