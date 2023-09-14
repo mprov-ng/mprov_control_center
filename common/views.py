@@ -137,13 +137,17 @@ and make sure to add documentation to the class so that it can be displayed if a
         error_body = {}
         for field in request.query_params:
             #print(field)
+            filter_value = request.query_params[field]
+            if field in kwargs:
+                filter_value = kwargs[field]
             if field == 'detail':
                 # ignore the detail flag.
                 continue
             if any(x for x in self.model._meta.get_fields() if x.name == field):
                 # we found a field.
                 try:
-                    self.queryset = self.queryset.filter((field,request.query_params[field]))
+                    # print(f"{field}: {filter_value}")
+                    self.queryset = self.queryset.filter((field,filter_value))
                 except BaseException as e:
                     error_body[field] = f"Error searching for {field}: {type(e)=}: {e=}"
             # else: 
