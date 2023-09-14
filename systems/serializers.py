@@ -55,7 +55,7 @@ class SystemBMCDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemBMC
         fields = '__all__'# ['id','switch_port','system', 'system_detail', 'network', 'ipaddress', 'mac', 'username', 'password']
-        depth = 3        
+        depth = 1        
 
         
 class a(serializers.ModelSerializer):
