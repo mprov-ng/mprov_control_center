@@ -469,11 +469,11 @@ Format returned:
             network = self.request.query_params['network']
             # get the Network ID
             # print(network)
-            net = Network.objects.filter(slug=network)
-            # print(net)
-            innerQ = SwitchPort.objects.filter(networks__in=net)
-            self.queryset = self.queryset.filter(switch_port__in=innerQ)
-            return generics.ListAPIView.get(self, request, format=None)
+            kwargs['network'] = Network.objects.filter(slug=network)[0]
+        #     # print(net)
+        #     innerQ = SwitchPort.objects.filter(networks__in=net)
+        #     self.queryset = self.queryset.filter(switch_port__in=innerQ)
+        #     return generics.ListAPIView.get(self, request, format=None)
         
         # return the super call for get.
         return super().get(request, format=None, **kwargs)
