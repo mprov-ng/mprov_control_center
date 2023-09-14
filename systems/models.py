@@ -250,6 +250,7 @@ class NetworkInterface(models.Model):
   ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address", blank=True, null=True)
   mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)
   switch_port=models.OneToOneField(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
+  network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Network")
   bootable=models.BooleanField(default=False,null=True, blank=True)
   ipv6gua=models.GenericIPAddressField(verbose_name="IPv6 SLAAC GUA", blank=True, null=True)
 
