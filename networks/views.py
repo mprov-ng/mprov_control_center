@@ -103,6 +103,8 @@ Format returned:
         isdhcp = self.request.query_params.get('isdhcp')
         if isdhcp is not None:
             queryset = queryset.filter(isdhcp=isdhcp)
+        if self.request.query_params.get('managedns') is not None:
+            queryset = queryset.filter(managedns=self.request.query_params.get('managedns'))
 
         
         self.queryset=queryset
