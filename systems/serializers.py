@@ -39,7 +39,9 @@ class SystemImageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 class SystemImageDetailsSerializer(SystemImageSerializer):
     class Meta:
+        model = SystemImage
         depth = 3
+        fields = '__all__'
 class SystemDetailSerializer(serializers.ModelSerializer): 
     disks = DiskLayoutAPISerializer(many=True, read_only=True)
     systemimage = SystemImageDetailsSerializer(many=False)
