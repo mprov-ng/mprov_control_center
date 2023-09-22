@@ -276,6 +276,38 @@ class mProvStatefulInstaller():
               f"/newroot{fstab_entry[1]}"
             ]
           )
+  def updateFstab(self):
+    currFstabLines = []
+    with open("/newroot/etc/fstab") as currFstab:
+      currFstabLines = currFstab.readlines()
+    
+    # re-arrange the lines into array of lines.
+    # XXX: Does NOT handle spaces in the path 
+    # or any other spaces well.
+    for idx,line in enumerate(currFstabLines):
+      currFstabLines[idx] = line.split()
+      currFstabLines[idx].append("\n")
+
+    newFstabLines = []
+    with open("/tmp/fstab") as newFstab:
+      newFstabLines = newFstab.readlines()
+    
+    # re-arrange the lines into array of lines.
+    # XXX: Does NOT handle spaces in the path 
+    # or any other spaces well.
+    for idx,line in enumerate(newFstabLines):
+      newFstabLines[idx] = line.split()
+      newFstabLines[idx].append("\n")
+      for cidx, currLine in enumerate(currFstabLines):
+        if currLine[1] == newFstabLines[idx][1]:
+          currFstabLines[cidx] = newFstabLines[idx] 
+    
+    # now join the current array back with 4 spaces as the separator
+    # and write out the lines to the file
+    with open("/newroot/etc/fstab", "w") as currFstab:
+      for idx, line in enumerate(currFstabLines):
+        currFstabLines[idx] = "    ".join(line)
+      currFstab.writelines(currFstabLines)
 
   def copyRoot(self):
     # rsync everything and copy /tmp/fstab to /newroot/etc/fstab
@@ -285,7 +317,10 @@ class mProvStatefulInstaller():
       "/",
       "/newroot"
     ])
-    sh.cp(["/tmp/fstab", "/newroot/etc/fstab"])
+    if os.path.exists("/newroot/etc/fstab") :
+      self.updateFstab()
+    else:
+      sh.cp(["/tmp/fstab", "/newroot/etc/fstab"])
     print("Copy Complete.")
     print("Running restorecon to fix up security contexts...")
     sh.chroot(["/newroot", "restorecon", "-rFp", "/" ])
