@@ -35,6 +35,7 @@ ln -s /bin/busybox /bin/env
 ln -s /bin/busybox /bin/awk
 ln -s /bin/busybox /bin/chmod
 ln -s /bin/busybox /bin/seq
+ln -s /bin/busybox /bin/dirname
 
 
 mount -t proc proc /proc
@@ -130,6 +131,13 @@ mount -t sysfs sysfs /image/sys
 mount -t devtmpfs devtmpfs /image/dev/
 mount -t tmpfs tmpfs /image/run
 
+echo -n "Generating Network Interface files"
+# not a typo, strips 2 entries off the end of the IMAGE url.
+mprovURL=`dirname $MPROV_IMAGE_URL`
+mprovURL=`dirname $mprovURL`
+wget -q -O /image/tmp/mprov_genNetworkInterfaces.py ${mprovURL}/static/genNetworkInterfaces.py
+/bin/chmod 755 /image/tmp/mprov_genNetworkInterfaces.py
+chroot /image/ /usr/bin/python3.8 /tmp/mprov_genNetworkInterfaces.py
 
 echo -n "Starting mProv for: "
 if [ "$MPROV_STATEFUL" == "1" ]
