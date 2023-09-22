@@ -300,7 +300,7 @@ Format returned:
 
         if 'hostname' in request.query_params:
             # someone is looking for a specific item.
-            self.queryset = self.queryset.filter(hostname=request.query_params['hostname'])
+            self.queryset = self.queryset.filter(hostname__contains=request.query_params['hostname'])
             if self.queryset.count() == 0:
                 return Response(None, status=404)
         if 'self' in request.query_params:
