@@ -1,8 +1,10 @@
 name: Update website Informtion
 on:
   push:
+    branches:
+      - main
     paths:
-    - 'README.md'
+      - 'README.md'
 jobs:
   copy-file:
     runs-on: ubuntu-latest
