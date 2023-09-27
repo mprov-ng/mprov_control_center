@@ -18,7 +18,7 @@ The mPCC is based off of Django 3.2. You will need to run a Python web app serve
 ## Requirements
 - The mPCC requires python 3.8 and above.  
 - At this time, mPCC also requires to be run in a RHEL derivative (i.e. Rocky Linux 8)
-- A system running with at least the minimum hardware requirements (this can be found under #X)
+- A system running Rocky Linux 8 with at least the 'Minimal Install' package group installed.
 - If you are using a database server, you will need the database running with the user(s) and database already configured for access.
 - SELinux should also be disabled or permissive (Enforcing SELinux currently causes issues)
 
