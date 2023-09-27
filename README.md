@@ -4,16 +4,23 @@
 ![Latest Version](https://img.shields.io/github/v/tag/mprov-ng/mprov_control_center?style=plastic)
 ![License](https://img.shields.io/github/license/mprov-ng/mprov_control_center?style=plastic)
 
-The heart of the mProv management suite, the mProv Control Center (mPCC) is the brains behind everything that mProv manages.  It's what runs the web interface, for ease of use.  It runs a REST CRUD API for interfaces to the database and remotely doing stuff.  It manages authentication, jobs to the mprov_jobservers, and serves as a endpoint for serving up files needed for PXE booting and running scripts on nodes post boot.
+The mProv Control Center (mPCC) is the heart of everything that mProv manages. It is the brains that runs everything through a web interface, thusly allowing for ease of use. mProv runs a REST/CRUD API for interfacing to the database and allowing remote access. 
 
-The mPCC is based off of django 3.2.  You will need to run a python web app server to run the django code.  The installation proceedure below will walk you through most of that, installing Apache with `python38-mod_wsgi`.  This version of the mPCC requires python-3.8 or greater, but hasn't been tested yet with versions greater than 3.9.
+The mPCC performs a wide range of jobs, permissions, and maintenance:
+- Authentication
+- Networking
+- Issuing jobs to the mprov_jobservers
+- An endpoint for serving files to nodes that require PXE booting 
+- Running scripts to nodes post boot
+
+The mPCC is based off of Django 3.2. You will need to run a Python web app server to then run the Django code. The installation proceedure found below will walk you through most of the necessary steps, including installing Apache with `python38-mod_wsgi`. This version of mPCC requires Python-3.8 or higher, however we are still testing with versions 3.9 and higher.
 
 ## Requirements
 - The mPCC requires python 3.8 and above.  
 - At this time, mPCC also requires to be run in a RHEL derivative (i.e. Rocky Linux 8)
-- A system running with at least the Minimal Install
-- If you are using a database server, you will need the database running with the user and database already configured for access.
-- SELinux should also be disabled or permissive.  Enforcing SELinux currently causes issues.
+- A system running with at least the minimum hardware requirements (this can be found under #X)
+- If you are using a database server, you will need the database running with the user(s) and database already configured for access.
+- SELinux should also be disabled or permissive (Enforcing SELinux currently causes issues)
 
 # Installation
 This installation proceedure assumes that you have a system with at least the "Minimal Install" packages installed.  You can have more than that, but the installer assumes it will have to handle most of the dependancy installaion.
