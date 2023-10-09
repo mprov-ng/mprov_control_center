@@ -161,7 +161,7 @@ for i in `ip addr | grep "inet " | awk '{print $2}' | awk -F/ '{print $1}'`
 do
         ALLOWED_HOSTS="${i},${ALLOWED_HOSTS}"
 done
-MYHOST=`hotname`
+MYHOST=`hostname`
 ALLOWED_HOSTS=${MYHOST},${ALLOWED_HOSTS}
 echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
 
