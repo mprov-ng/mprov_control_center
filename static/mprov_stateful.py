@@ -192,6 +192,12 @@ class mProvStatefulInstaller():
         bootpart={'filesystem': 'efi', 'size': 100, 'fill': False, 'partnum': 2}
         start = start + self._createPartition(device, disk, bootpart, sectorsize, start, parttype=parted.PARTITION_NORMAL)
         self._makeFS(bootpart, pdisk)
+        if device.path.startswith("/dev/nvme"):
+          part_prefix="p"
+        else:
+          part_prefix=""
+        with open("/tmp/fstab", "a") as fstab:
+            fstab.write(f"{device.path}{part_prefix}{partnum}\t{part['mount']}\t\tvfat\tdefaults\t0 0\n")
         partnum += 1
 
       pdisk['partitions'] = sorted(pdisk['partitions'], key=lambda d: d['partnum'])
@@ -385,12 +391,22 @@ class mProvStatefulInstaller():
     print(f"Regenerating initial ramdisk... ")
     sh.chroot([f"/newroot", f"dracut", "--regenerate-all", "-f", "--mdadmconf", "--force-add", "mdraid", "--add-drivers", f"{self.modules}"])
 
-    print(f"Running `grub2-install {bootdisk}`...")
-    # now let's try to run the grub installer in the new root.
-    sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/grub2/grub.cfg"])
+    print(f"Running installing boot loader...")
 
-    #sh.chroot([f"/newroot", "grub2-install", bootdisk ])
-    sh.dnf("-y", f"reinstall", "shim-*", "grub2-efi-*", "grub2-common")
+    sh.chroot(["/newroot", "dnf", "-y", f"reinstall", "shim-*", "grub2-efi-*", "grub2-common"])
+    sh.mkdir(["-p", "/newroot/boot/efi/EFI/Linux/"])
+    sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/efi/EFI/Linux/grub.cfg"])
+    sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/grub2/grub.cfg"])
+    #raise Exception()
+    # sh.chroot([
+    #   f"/newroot", 
+    #   "grub2-install", 
+    #   "--target=x86_64-efi",
+    #   "--boot-directory=/boot",
+    #   "--efi-directory=/boot/efi",
+    #   "--recheck",
+    #   "--verbose",
+    #   bootdisk ])
 
     # print("Configuring GRUB2 EFI setup...")
     # create the efi file
@@ -409,22 +425,25 @@ class mProvStatefulInstaller():
     
   def cleanupAndSwitchroot(self):
     # disable netboot
+    
+    # XXX: Removed for the moment, needs more testing.
+    # mprovUrl = self.mprovURL
+    # apiKey = self.apikey
 
-    mprovUrl = self.mprovURL
-    apiKey = self.apikey
+    # reqHeaders = {
+    #   'Content-Type': 'application/json',
+    #   'Authorization': f'Api-Key {apiKey}'
+    # }
+    # try: 
+    #   req = requests.post(f"{mprovUrl}/systems/?self", headers=reqHeaders, data='{"netboot": false}')
+    # except:
+    #   print("Error: There was an issue trying to disable netboot.  You should look into this.")
 
-    reqHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': f'Api-Key {apiKey}'
-    }
-    try: 
-      req = requests.post(f"{mprovUrl}/systems/?self", headers=reqHeaders, data='{"netboot": false}')
-    except:
-      print("Error: There was an issue trying to disable netboot.  You should look into this.")
-
-    if req.status_code != 200:
-      print("Error: There was an issue trying to disable netboot.  You should look into this.")
-      print(f"Error: {req.text}")
+    # if req.status_code != 200:
+    #   print("Error: There was an issue trying to disable netboot.  You should look into this.")
+    #   print(f"Error: {req.text}")
+    
+    
       # print(f"Error: {req.status}")
 
     # # Unmount all mounts in /newroot
@@ -516,6 +535,7 @@ class mProvStatefulInstaller():
       fs=fs,
       geometry=geometry
     )
+    partition.setFlag(18)
     disk.addPartition(partition=partition, constraint=device.optimalAlignedConstraint)
     if part['filesystem'] == 'biosboot':
       if device.path.startswith("/dev/nvme"):

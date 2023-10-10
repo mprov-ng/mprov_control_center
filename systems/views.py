@@ -300,6 +300,8 @@ Format returned:
 
         if 'hostname' in request.query_params:
             # someone is looking for a specific item.
+            print('Hostname query: ?hostname=' + request.query_params['hostname'])
+            self.queryset = self.model.objects.all()
             self.queryset = self.queryset.filter(hostname__contains=request.query_params['hostname'])
             if self.queryset.count() == 0:
                 return Response(None, status=404)

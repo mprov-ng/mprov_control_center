@@ -147,7 +147,7 @@ and make sure to add documentation to the class so that it can be displayed if a
                 # we found a field.
                 try:
                     # print(f"{field}: {filter_value}")
-                    self.queryset = self.queryset.filter((field + "__contains",filter_value))
+                    self.queryset = self.queryset.filter((field,filter_value))
                 except BaseException as e:
                     error_body[field] = f"Error searching for {field}: {type(e)=}: {e=}"
             # else: 
