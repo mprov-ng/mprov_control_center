@@ -31,7 +31,7 @@ class Script(models.Model):
   dependsOn = models.ManyToManyField('self',blank=True,symmetrical=False)
   
   def __str__(self):
-    return self.name
+    return f"({self.scriptType.name[0]}) {self.name}"
 
   def save(self, *args, **kwargs):
     if not self.slug:
