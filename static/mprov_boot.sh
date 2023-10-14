@@ -131,13 +131,18 @@ mount -t sysfs sysfs /image/sys
 mount -t devtmpfs devtmpfs /image/dev/
 mount -t tmpfs tmpfs /image/run
 
-echo -n "Generating Network Interface files"
-# not a typo, strips 2 entries off the end of the IMAGE url.
-mprovURL=`dirname $MPROV_IMAGE_URL`
-mprovURL=`dirname $mprovURL`
-wget -q -O /image/tmp/mprov_genNetworkInterfaces.py ${mprovURL}/static/genNetworkInterfaces.py
-/bin/chmod 755 /image/tmp/mprov_genNetworkInterfaces.py
-chroot /image/ /usr/bin/python3.8 /tmp/mprov_genNetworkInterfaces.py
+# only generate interface files on a validated system.
+if [ ! -e /image/etc/mprov/nads.yaml ]
+then
+    
+  echo -n "Generating Network Interface files"
+  # not a typo, strips 2 entries off the end of the IMAGE url.
+  mprovURL=`dirname $MPROV_IMAGE_URL`
+  mprovURL=`dirname $mprovURL`
+  wget -q -O /image/tmp/mprov_genNetworkInterfaces.py ${mprovURL}/static/genNetworkInterfaces.py
+  /bin/chmod 755 /image/tmp/mprov_genNetworkInterfaces.py
+  chroot /image/ /usr/bin/python3.8 /tmp/mprov_genNetworkInterfaces.py
+fi
 
 echo -n "Starting mProv for: "
 if [ "$MPROV_STATEFUL" == "1" ]
