@@ -14,3 +14,21 @@ class ScriptAPISerializer(serializers.ModelSerializer):
     class Meta:
         model = Script
         fields = '__all__'
+
+class AnsiblePlaybookAPISerializer(serializers.ModelSerializer):
+    scriptType = ScriptTypeAPISerializer()
+    class Meta:
+        model = AnsiblePlaybook
+        fields = '__all__'
+
+class AnsibleRoleAPISerializer(serializers.ModelSerializer):
+    scriptType = ScriptTypeAPISerializer()
+    class Meta:
+        model = AnsibleRole
+        fields = '__all__'
+
+class AnsibleCollectionAPISerializer(serializers.ModelSerializer):
+    scriptType = ScriptTypeAPISerializer()
+    class Meta:
+        model = AnsibleCollection
+        fields = '__all__'

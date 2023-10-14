@@ -8,10 +8,10 @@ from .serializers import (
     NetworkInterfaceSerializer,
     SystemSerializer,
     SystemGroupSerializer,
-    SystemDetailSerializer,
     SystemBMCSerializer,
     SystemBMCDetailSerializer,
     SystemImageDetailsSerializer,
+    SystemDetailSerializer,
     SystemImageSerializer,
 )
 from rest_framework.response import Response
@@ -326,7 +326,6 @@ Format returned:
             # self.serializer_class = NetworkInterfaceDetailsSerializer
             self.queryset = self.queryset.filter(pk=nicQueryset[0].system.id)
             self.serializer_class = SystemDetailSerializer
-
             # return self.retrieve(self, request, format=None,pk=nicQueryset[0].system.id)
 
         return generics.ListAPIView.get(self, request, format=None)

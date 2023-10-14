@@ -6,7 +6,7 @@ from jobqueue.models import JobServer
 from disklayouts.serializers import DiskLayoutAPISerializer
 from networks.models import SwitchPort, Network
 from scripts.models import Script
-from scripts.serializers import ScriptAPISerializer
+from scripts.serializers import ScriptAPISerializer, AnsibleCollectionAPISerializer, AnsiblePlaybookAPISerializer, AnsibleRoleAPISerializer
 
 class SystemSerializer(serializers.ModelSerializer): 
     config = serializers.DictField(allow_empty=True, required=False)
@@ -22,6 +22,9 @@ class SystemBMCSerializer(serializers.ModelSerializer):
         fields = '__all__'
 class SystemGroupSerializer(serializers.ModelSerializer): 
     scripts = ScriptAPISerializer(many=True)
+    ansibleplaybooks = AnsiblePlaybookAPISerializer(many=True)
+    ansibleroles = AnsibleRoleAPISerializer(many=True)
+    ansiblecollections = AnsibleCollectionAPISerializer(many=True)
     class Meta:
         model = SystemGroup
         fields = '__all__' 
@@ -48,6 +51,9 @@ class SystemDetailSerializer(serializers.ModelSerializer):
     systemmodel =  serializers.PrimaryKeyRelatedField(queryset=SystemModel.objects.all())
     config = serializers.DictField()
     systemgroups = SystemGroupSerializer(many=True)
+    ansibleplaybooks = AnsiblePlaybookAPISerializer(many=True)
+    ansibleroles = AnsibleRoleAPISerializer(many=True)
+    ansiblecollections = AnsibleCollectionAPISerializer(many=True)
     class Meta:
         model = System
         fields = '__all__'
