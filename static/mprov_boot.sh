@@ -135,7 +135,7 @@ mount -t tmpfs tmpfs /image/run
 if [ ! -e /image/etc/mprov/nads.yaml ]
 then
     
-  echo -n "Generating Network Interface files"
+  echo "Generating Network Interface files"
   # not a typo, strips 2 entries off the end of the IMAGE url.
   mprovURL=`dirname $MPROV_IMAGE_URL`
   mprovURL=`dirname $mprovURL`
