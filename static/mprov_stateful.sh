@@ -15,7 +15,10 @@ umount /run
 echo "Switching to new root.... LEEEEROY JENKINS!!!....."
 mkdir -p /newroot/old_root
 /sbin/pivot_root /newroot /newroot/old_root
-umount /old_root
+for i in `mount | awk '{print $3}'| grep old_root | sort -r`
+do
+  umount -l $i 
+done
 exec /sbin/init < /dev/console > /dev/console 2>&1
 
 mount -t devtmpfs devtmpfs /dev 
