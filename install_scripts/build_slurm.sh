@@ -108,16 +108,16 @@ else
     then
       echo "$latest_ver" > /export/mprov/etc/slurm.version
     fi
-        
+fi        
     # enable munge
     systemctl enable munge
      
     # generate a munge key
     mkdir -p /opt/mprov/etc/munge/
-    dd if=/dev/urandom bs=1 count=1024 > /opt/mprov/etc/munge/munge.key
+    dd if=/dev/urandom bs=1 count=1024 > /opt/mprov/etc/munge/munge.key 2>/dev/null
     chown munge:munge /opt/mprov/etc/munge/munge.key 
     chmod 600  /opt/mprov/etc/munge/munge.key
-    rm -rf /etc/munge/
+    rm -rf /etc/munge
     ln -s /opt/mprov/etc/munge/ /etc/munge
   
     # start munge
@@ -188,4 +188,4 @@ EOF
     systemctl enable slurmctld
     mkdir -p /var/spool/slurmctld
     chown slurm /var/spool/slurmctld
-fi
+
