@@ -8,7 +8,7 @@ fi
 role="git+https://github.com/stackhpc/ansible-role-ofed.git"
 
 
-extravars="ofed_target_release=rhel8.8"
+extravars="ofed_target_release=rhel8.7"
 
 mkdir -p /tmp/mprov/ansible/roles/
 ansible-galaxy role install -p /tmp/mprov/ansible/roles/ $role -f
@@ -22,6 +22,9 @@ cat <<- EOF > /tmp/role.yaml
 - hosts: localhost
   become: true
   gather_facts: true
+  vars:
+    ofed_target_release: rhel8.7
+    ofed_nobest: true
   tasks:
     - name: Import role $role
       ansible.builtin.include_role:
