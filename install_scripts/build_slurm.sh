@@ -146,8 +146,8 @@ WantedBy=multi-user.target
 EOF
 
   myHostname=`hostname`
-  echo "SlurmctldHost=$myHostname" > /opt/mprov/etc/slurm.conf
-
+  echo "SlurmctldHost=$myHostname" > /opt/mprov/etc/slurm/slurm.conf
+  ctldhost=`hostname`
   cat << EOF >> /opt/mprov/etc/slurm/slurm.conf
 # mProv default slurm config, see /var/www/mprov_control_center/static/slurm.conf for a commented example.
 ClusterName=cluster
@@ -184,7 +184,7 @@ NodeSet=ns1 Feature=compute
 MaxNodeCount=20
 
 EOF
-    chown slurm /opt/mprov/etc/slurm.conf
+    chown slurm /opt/mprov/etc/slurm/slurm.conf
     systemctl enable slurmctld
     mkdir -p /var/spool/slurmctld
     chown slurm /var/spool/slurmctld
