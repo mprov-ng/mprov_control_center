@@ -214,6 +214,7 @@ SlurmdLogFile=/var/log/slurmd.log
 PartitionName=defq Nodes=ALL Default=YES MaxTime=INFINITE State=UP
 NodeSet=ns1 Feature=compute
 MaxNodeCount=20
+GresTypes=gpu=
 
 EOF
   chown slurm /opt/mprov/etc/slurm/slurm.conf
