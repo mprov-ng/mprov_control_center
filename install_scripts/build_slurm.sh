@@ -4,12 +4,19 @@ if [ "$DISABLE_SLURM" ]
 then
   exit 0
 fi
+. .env
+if [ "$DB_ENGINE" != "django.db.backends.mysql"]
+then
+  echo "WARN: Django isn't using the mysql backend, automatic slurmdbd config may fail."
+
+fi
+
 
 install_path=/opt/mprov/
 
 # PRE_REQS: mlx-ofed, nvidia drivers, 
 
-# TODO: check if the slurm binary(ies) exist and check the version?
+# check if the slurm binary(ies) exist and check the version?
 
 slurmdl=/tmp/slurmdl
 dlurl="https://download.schedmd.com/slurm"
@@ -60,7 +67,6 @@ else
       readline-devel \
       libcurl-devel \
       lua-devel \
-      cuda-*-11-7 \
       kmod-iser \
       kmod-isert \
       kmod-kernel-mft-mlnx \
@@ -109,23 +115,23 @@ else
       echo "$latest_ver" > /export/mprov/etc/slurm.version
     fi
 fi        
-    # enable munge
-    systemctl enable munge
-     
-    # generate a munge key
-    mkdir -p /opt/mprov/etc/munge/
-    dd if=/dev/urandom bs=1 count=1024 > /opt/mprov/etc/munge/munge.key 2>/dev/null
-    chown munge:munge /opt/mprov/etc/munge/munge.key 
-    chmod 600  /opt/mprov/etc/munge/munge.key
-    rm -rf /etc/munge
-    ln -s /opt/mprov/etc/munge/ /etc/munge
-  
-    # start munge
-    systemctl start munge
+  # enable munge
+  systemctl enable munge
+    
+  # generate a munge key
+  mkdir -p /opt/mprov/etc/munge/
+  dd if=/dev/urandom bs=1 count=1024 > /opt/mprov/etc/munge/munge.key 2>/dev/null
+  chown munge:munge /opt/mprov/etc/munge/munge.key 
+  chmod 600  /opt/mprov/etc/munge/munge.key
+  rm -rf /etc/munge
+  ln -s /opt/mprov/etc/munge/ /etc/munge
 
-    # create the slurmctld service file.
-    cat << EOF > /usr/lib/systemd/system/slurmctld.service
-    [Unit]
+  # start munge
+  systemctl start munge
+
+  # create the slurmctld service file.
+  cat << EOF > /usr/lib/systemd/system/slurmctld.service
+[Unit]
 RequiresMountsFor=/opt/mprov
 Description=Slurm controller daemon
 After=network.target munge.service
@@ -134,8 +140,8 @@ ConditionPathExists=/opt/mprov/etc/slurm/slurm.conf
 [Service]
 Type=forking
 EnvironmentFile=-/etc/sysconfig/slurmctld
-ExecStart=/opt/mprov/sbin/slurmctld $SLURMCTLD_OPTIONS
-ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=/opt/mprov/sbin/slurmctld \$SLURMCTLD_OPTIONS
+ExecReload=/bin/kill -HUP \$MAINPID
 PIDFile=/var/run/slurmctld.pid
 LimitNOFILE=65536
 TasksMax=infinity
@@ -145,9 +151,35 @@ WantedBy=multi-user.target
 
 EOF
 
+  cat << EOF > /usr/lib/systemd/system/slurmdbd.service
+[Unit]
+RequiresMountsFor=/opt/mprov
+Description=SlurmDB daemon
+After=network.target munge.service
+ConditionPathExists=/opt/mprov/etc/slurm/slurmdbd.conf
+
+[Service]
+Type=forking
+EnvironmentFile=-/etc/sysconfig/slurmdbd
+ExecStart=/opt/mprov/sbin/slurmdbd \$SLURMDBD_OPTIONS
+ExecReload=/bin/kill -HUP \$MAINPID
+PIDFile=/var/run/slurmdbd.pid
+LimitNOFILE=65536
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target
+
+EOF
+
+  systemctl enable slurmctld
+  mkdir -p /var/spool/slurmctld
+  chown slurm /var/spool/slurmctld
+
   myHostname=`hostname`
   echo "SlurmctldHost=$myHostname" > /opt/mprov/etc/slurm/slurm.conf
   ctldhost=`hostname`
+  echo "Creating slurm.conf"
   cat << EOF >> /opt/mprov/etc/slurm/slurm.conf
 # mProv default slurm config, see /var/www/mprov_control_center/static/slurm.conf for a commented example.
 ClusterName=cluster
@@ -184,8 +216,60 @@ NodeSet=ns1 Feature=compute
 MaxNodeCount=20
 
 EOF
-    chown slurm /opt/mprov/etc/slurm/slurm.conf
-    systemctl enable slurmctld
-    mkdir -p /var/spool/slurmctld
-    chown slurm /var/spool/slurmctld
+  chown slurm /opt/mprov/etc/slurm/slurm.conf
+  echo "Creating cgroup.conf"
+  cat << EOF > /opt/mprov/etc/slurm/cgroup.conf
+CgroupMountpoint="/sys/fs/cgroup"
+CgroupAutomount=no
+ConstrainCores=yes
+ConstrainRAMSpace=yes
+ConstrainSwapSpace=no
+ConstrainDevices=yes
+AllowedRamSpace=100.00
+AllowedSwapSpace=0.00
+MemorySwappiness=100
+MaxRAMPercent=100.00
+MaxSwapPercent=100.00
+MinRAMSpace=30
+EOF
+  chown slurm /opt/mprov/etc/slurm/cgroup.conf
+
+  echo "autodetect=nvml" > /etc/mprov/etc/slurm/gres.conf
+  SLURMDB_PASS=`tr -dc A-Za-z0-9 </dev/urandom | head -c 30 ; echo ''`
+  echo "Creating slurmdb and user"
+  cat << EOF | mysql -u root mysql
+  create database slurmdb;
+  CREATE USER 'slurm'@'localhost' IDENTIFIED BY '$SLURMDB_PASS';
+  grant all on slurmdb.* to 'slurm'@'localhost';
+  flush privileges;
+EOF
+
+  echo "Creating slurmdbd.conf"
+  cat << EOF > /opt/mprov/etc/slurm/slurmdbd.conf
+# slurmdbd.conf file.
+#
+# See the slurmdbd.conf man page for more information.
+#
+#
+# Authentication info
+AuthType=auth/munge
+#
+# slurmDBD info
+#DebugLevel=4
+LogFile=/var/log/slurmdbd
+PidFile=/var/run/slurmdbd.pid
+#
+# Database info
+SlurmUser=slurm
+StorageType=accounting_storage/mysql
+StoragePass=$SLURMDB_PASS
+StorageHost=localhost
+StorageLoc=slurmdb
+StorageUser=slurm
+DbdHost=localhost
+EOF
+  chown slurm /opt/mprov/etc/slurm/slurmdbd.conf
+  chmod 600 /opt/mprov/etc/slurm/slurmdbd.conf
+
+
 
