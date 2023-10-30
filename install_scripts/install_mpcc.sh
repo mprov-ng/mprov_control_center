@@ -52,7 +52,7 @@ done
 
 if [[ ! -e ./env.db  && (  "$MYSQL_BUILD" == "1"  || "$PGSQL_BUILD" == "1" ) ]]
 then
-        echo "No env.db file found in the current path, and you are not using SQLITE.  "
+        echo "You chose a DB backed instatllation but no env.db file found in the current directory.  "
         echo "I have created one for you, please edit it and re-run this installer."
         cat <<- EOFdb > env.db
 #DB_ENGINE=django.db.backends.mysql
@@ -79,6 +79,13 @@ if [ "$PGSQL_BUILD" == "0" ] && [ "$MYSQL_BUILD" == "0" ]
 then
         SQLIT_BUILD=1
 fi
+if [ "$PGSQL_BUILD" == 1 ] || [ "$MYSQL_BUILD" == "1" ]
+then    
+        echo "You have selected one of the authenticated database options.  If you have not yet"
+        echo "set up the client for passwordless access via it's config file, you may be "
+        echo "prompted for the user and password to log into the database as a root user."
+        sleep 5
+fi
 
 extra_pkgs=""
 if [ "$PGSQL_BUILD" == "1" ]
@@ -87,8 +94,23 @@ then
 fi
 if [ "$MYSQL_BUILD" == "1" ]
 then
-        extra_pkgs="mariadb mariadb-common mariadb-devel gcc python38-devel"
+        extra_pkgs="mariadb mariadb-common mariadb-devel gcc python38-devel mariadb"
 fi
+. env.db
+if [ "$MYSQL_BUILD" == "1" ]
+then
+        systemctl enable --now mysqld
+        cat << EOF | mysql -u root mysql
+        create database $DB_NAME;
+        CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
+        grant all on $DB_NAME.* to '$DB_USER'@'localhost';
+        flush privileges;
+EOF
+
+fi
+
+
+
 
 dnf -y install epel-release
 dnf -y groupinstall "Development Tools"
