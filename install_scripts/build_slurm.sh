@@ -151,6 +151,12 @@ WantedBy=multi-user.target
 
 EOF
 
+  cat << EOF > /etc/sysconfig/slurmctld
+# This will let you add extra options to the slurm commandline
+#export SLURMCTLD_OPTIONS=""
+
+EOF
+
   cat << EOF > /usr/lib/systemd/system/slurmdbd.service
 [Unit]
 RequiresMountsFor=/opt/mprov
