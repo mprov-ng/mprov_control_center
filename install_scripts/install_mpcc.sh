@@ -97,17 +97,6 @@ then
         extra_pkgs="mariadb mariadb-common mariadb-devel gcc python38-devel mariadb-server"
 fi
 . env.db
-if [ "$MYSQL_BUILD" == "1" ]
-then
-        systemctl enable --now mysqld
-        cat << EOF | mysql -u root mysql
-        create database $DB_NAME;
-        CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
-        grant all on $DB_NAME.* to '$DB_USER'@'localhost';
-        flush privileges;
-EOF
-
-fi
 
 
 
@@ -117,6 +106,18 @@ dnf -y groupinstall "Development Tools"
 dnf -y install python38-mod_wsgi.x86_64 jq git wget iproute openldap-devel python38-devel dos2unix $extra_pkgs
 # why is this in a separate repo?!
 dnf -y --enablerepo=powertools install parted-devel
+if [ "$MYSQL_BUILD" == "1" ]
+then
+        systemctl enable --now mysqld
+        cat << EOF | mysql -u root mariadb
+        create database $DB_NAME;
+        CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
+        grant all on $DB_NAME.* to '$DB_USER'@'localhost';
+        flush privileges;
+EOF
+
+fi
+
 RUNDIR=`pwd`
 cd /var/www/
 if cd mprov_control_center
