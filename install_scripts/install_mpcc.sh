@@ -94,7 +94,7 @@ then
 fi
 if [ "$MYSQL_BUILD" == "1" ]
 then
-        extra_pkgs="mariadb mariadb-common mariadb-devel gcc python38-devel mariadb"
+        extra_pkgs="mariadb mariadb-common mariadb-devel gcc python38-devel mariadb-server"
 fi
 . env.db
 if [ "$MYSQL_BUILD" == "1" ]
