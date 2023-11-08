@@ -1,6 +1,6 @@
 #!/bin/bash
 cd /var/www/mprov_control_center
-. bin/activate
+. ../bin/activate
 
 python ./manage.py migrate
 python ./manage.py createsuperuser --noinput
