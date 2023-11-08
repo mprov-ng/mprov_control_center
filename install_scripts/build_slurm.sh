@@ -4,8 +4,8 @@ if [ "$DISABLE_SLURM" ]
 then
   exit 0
 fi
-. ../.env
-if [ "$DB_ENGINE" != "django.db.backends.mysql"]
+. .env
+if [ "$DB_ENGINE" != "django.db.backends.mysql" ]
 then
   echo "WARN: Django isn't using the mysql backend, automatic slurmdbd config may fail."
 
