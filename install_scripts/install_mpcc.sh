@@ -112,6 +112,8 @@ then
         cat << EOF | mysql -u root mysql
         create database $DB_NAME;
 EOF
+        echo "drop user $DB_USER;" | mysql -u root mysql
+        echo "flush privileges; " | mysql -u root mysql
         cat << EOF | mysql -u root mysql
         CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
         grant all on $DB_NAME.* to '$DB_USER'@'localhost';
