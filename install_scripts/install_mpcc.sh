@@ -109,7 +109,7 @@ dnf -y --enablerepo=powertools install parted-devel
 if [ "$MYSQL_BUILD" == "1" ]
 then
         systemctl enable --now mariadb
-        cat << EOF | mysql -u root mariadb
+        cat << EOF | mysql -u root mysql
         create database $DB_NAME;
         CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
         grant all on $DB_NAME.* to '$DB_USER'@'localhost';
