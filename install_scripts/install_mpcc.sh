@@ -108,7 +108,7 @@ dnf -y install python38-mod_wsgi.x86_64 jq git wget iproute openldap-devel pytho
 dnf -y --enablerepo=powertools install parted-devel
 if [ "$MYSQL_BUILD" == "1" ]
 then
-        systemctl enable --now mysqld
+        systemctl enable --now mariadb
         cat << EOF | mysql -u root mariadb
         create database $DB_NAME;
         CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
