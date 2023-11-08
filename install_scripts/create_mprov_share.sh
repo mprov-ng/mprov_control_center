@@ -18,11 +18,11 @@ grep -qF '/export/mprov' /etc/fstab || echo '/export/mprov    /opt/mprov    none
 
 # add it to path
 cat << EOF > /etc/profile.d/99-mprov.sh
-export PATH=/opt/mprov/bin:$PATH
+export PATH=/opt/mprov/bin:\$PATH
 
 if [ "\$USER" == "root" ]
 then
-  export PATH=/opt/mprov/sbin/:/opt/mprov/bin:$PATH
+  export PATH=/opt/mprov/sbin/:/opt/mprov/bin:\$PATH
 fi
 EOF
 
