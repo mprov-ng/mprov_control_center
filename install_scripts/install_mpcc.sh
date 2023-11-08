@@ -111,7 +111,7 @@ then
         systemctl enable --now mariadb
         cat << EOF | mysql -u root mariadb
         create database $DB_NAME;
-        CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
+        CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
         grant all on $DB_NAME.* to '$DB_USER'@'localhost';
         flush privileges;
 EOF
