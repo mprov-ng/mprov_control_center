@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 import os
 import ldap
 from django_auth_ldap.config import LDAPSearch, PosixGroupType
+import socket
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -94,6 +96,7 @@ JAZZMIN_SETTINGS={
     'copyright': ' 2022 The Johns Hopkins University ',
     "related_modal_active": False,
     "navigation_expanded": False,
+    "name": socket.gethostname(),
 
 }
 JAZZMIN_UI_TWEAKS = {
