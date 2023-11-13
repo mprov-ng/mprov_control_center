@@ -29,7 +29,7 @@ If you download the installer and run it, it will create an `env.db` file for yo
 
 
 
-Installation is best done by cloning the repository and running `./install_mpcc.sh` as root.  This script takes the following arguments:
+Installation is best done by downloading (install_mpcc.sh | https://raw.githubusercontent.com/mprov-ng/mprov_control_center/main/install_scripts/install_mpcc.sh) and running it as root.  This script takes the following arguments:
 
 - -d: Run as if you were building a docker image, meaning don't run init_mpcc.sh
 - -m: Install the stuff necessary to use a MariaDB backend.
