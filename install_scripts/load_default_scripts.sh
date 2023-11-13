@@ -30,6 +30,7 @@ cd /var/www/mprov_control_center
 . bin/activate
 
 # import the yaml as a fixture
+python manage.py loaddata scripts/fixtures/*
 python manage.py loaddata ${tempdir}/mprov_scripts/mpcc_scripts.yaml
 
 cd /tmp
