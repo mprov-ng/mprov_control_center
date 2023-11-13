@@ -154,3 +154,5 @@ static/debug_toolbar/js/redirect.js
 static/debug_toolbar/js/timer.js
 static/debug_toolbar/js/toolbar.js
 static/debug_toolbar/js/utils.js
+mprov_control_center.code-workspace
+install_scripts/env.db
