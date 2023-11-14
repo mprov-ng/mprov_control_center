@@ -14,3 +14,175 @@
       - install_mprov_script_runner_sh
       - extra_packages_sh
     
+- model: systems.systemimage
+  pk: "compute"
+  fields:
+    slug: "compute"
+    name: "compute"
+    created_by: 1
+    needs_rebuild: True
+    osdistro: 1
+    timestamp: "1970-01-01T00:00+00:00"
+    updated: "1970-01-01T00:00+00:00"
+    scripts:
+      - set_root_pw_sh
+      - setup_ssh_sh
+      - install_mprov_script_runner_sh
+      - extra_packages_sh
+
+- model: systems.systemgroup
+  pk: 1
+  fields:
+    name: compute
+
+- model: systems.system
+  pk: 1
+  fields:
+    hostname: c01
+    systemgroups: [1]
+    timestamp: "1970-01-01T00:00+00:00"
+    updated: "1970-01-01T00:00+00:00"
+    systemimage: compute
+    created_by: 1
+  
+- model: systems.networkinterface
+  pk: 1
+  fields:
+    system: 1
+    name: ens0
+    hostname: c01
+    ipaddress: 172.16.10.1
+    bootable: True
+
+- model: systems.system
+  pk: 2
+  fields:
+    hostname: c02
+    systemgroups: [1]
+    timestamp: "1970-01-01T00:00+00:00"
+    updated: "1970-01-01T00:00+00:00"
+    systemimage: compute
+    created_by: 1
+    
+- model: systems.networkinterface
+  pk: 2
+  fields:
+    system: 2
+    name: ens0
+    hostname: c02
+    ipaddress: 172.16.10.2
+    bootable: True
+
+- model: systems.system
+  pk: 3
+  fields:
+    hostname: c03
+    systemgroups: [1]
+    timestamp: "1970-01-01T00:00+00:00"
+    updated: "1970-01-01T00:00+00:00"
+    systemimage: compute
+    created_by: 1
+  
+- model: systems.networkinterface
+  pk: 3
+  fields:
+    system: 3
+    name: ens0
+    hostname: c03
+    ipaddress: 172.16.10.3
+    bootable: True
+
+- model: systems.system
+  pk: 4
+  fields:
+    hostname: c04
+    systemgroups: [1]
+    timestamp: "1970-01-01T00:00+00:00"
+    updated: "1970-01-01T00:00+00:00"
+    systemimage: compute
+    created_by: 1
+  
+- model: systems.networkinterface
+  pk: 4
+  fields:
+    system: 4
+    name: ens0
+    hostname: c04
+    ipaddress: 172.16.10.4
+    bootable: True
+
+- model: systems.system
+  pk: 5
+  fields:
+    hostname: c05
+    systemgroups: [1]
+    timestamp: "1970-01-01T00:00+00:00"
+    updated: "1970-01-01T00:00+00:00"
+    systemimage: compute
+    created_by: 1
+  
+- model: systems.networkinterface
+  pk: 5
+  fields:
+    system: 5
+    name: ens0
+    hostname: c05
+    ipaddress: 172.16.10.5
+    bootable: True
+
+- model: systems.system
+  pk: 6
+  fields:
+    hostname: c06
+    systemgroups: [1]
+    timestamp: "1970-01-01T00:00+00:00"
+    updated: "1970-01-01T00:00+00:00"
+    systemimage: compute
+    created_by: 1
+  
+- model: systems.networkinterface
+  pk: 6
+  fields:
+    system: 6
+    name: ens0
+    hostname: c06
+    ipaddress: 172.16.10.6
+    bootable: True
+
+- model: systems.system
+  pk: 7
+  fields:
+    hostname: c07
+    systemgroups: [1]
+    timestamp: "1970-01-01T00:00+00:00"
+    updated: "1970-01-01T00:00+00:00"
+    systemimage: compute
+    created_by: 1
+  
+- model: systems.networkinterface
+  pk: 7
+  fields:
+    system: 7
+    name: ens0
+    hostname: c07
+    ipaddress: 172.16.10.7
+    bootable: True
+
+- model: systems.system
+  pk: 8
+  fields:
+    hostname: c08
+    systemgroups: [1]
+    timestamp: "1970-01-01T00:00+00:00"
+    updated: "1970-01-01T00:00+00:00"
+    systemimage: compute
+    created_by: 1
+    
+- model: systems.networkinterface
+  pk: 8
+  fields:
+    system: 8
+    name: ens0
+    hostname: c08
+    ipaddress: 172.16.10.8
+    bootable: True

@@ -14,4 +14,32 @@
     name: Fiber Channel
     slug: fiber_channel
 
-  
+- model: networks.network
+  pk: 1
+  fields:
+    name: Management Net
+    net_type: 1
+    subnet: 172.16.0.0
+    netmask: 16
+    gateway: 172.16.1.1
+    nameserver1: 172.16.1.1
+    domain:  mgmt.cluster
+    dhcpstart: 172.16.254.1
+    dhcpend: 172.16.254.254
+    managedns: True
+    slug: management-net
+
+- model: networks.network
+  pk: 2
+  fields:
+    name: IPMI Net
+    net_type: 1
+    subnet: 172.17.0.0
+    netmask: 16
+    gateway: 172.17.1.1
+    nameserver1: 172.17.1.1
+    domain:  mgmt.cluster
+    dhcpstart: 172.17.254.1
+    dhcpend: 172.17.254.254
+    managedns: True  
+    slug: ipmi-net

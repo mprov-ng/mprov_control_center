@@ -20,7 +20,7 @@
     id: 1
     name: "Rocky Linux 8"
     vendor: "Rocky Linux"
-    version: "8.7"
+    version: "8"
     baserepo: 1
     tmpfs_root_size: 8
     initial_mods: "e1000,tg3,ixgbe,bnx2x,megaraid_sas,sd_mod"
