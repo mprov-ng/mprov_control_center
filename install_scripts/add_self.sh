@@ -1,4 +1,6 @@
-#!/var/www/mprov_control_center/manage.py shell
+#!/bin/bash
+
+cat << EOF | /var/www/mprov_control_center/manage.py shell
 from systems.models import System, NetworkInterface
 from django.contrib.auth.models import User
 
@@ -9,11 +11,9 @@ import netifaces as ni
 def get_ip_address(ifname):
   try:
     ip=str(ni.ifaddresses(ifname)[ni.AF_INET][0]['addr'])
-    print(ip)
     return ip
 
   except:
-    print("Nope")
     return None
 
 # get the admin user
@@ -32,3 +32,4 @@ for intf in if_list:
   netinf = NetworkInterface.objects.create(hostname=socket.gethostname(), name=intf[1], system=selfSys, ipaddress=intfip)
   netinf.save()
 
+EOF
