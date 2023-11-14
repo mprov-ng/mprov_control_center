@@ -1,5 +1,5 @@
 #!/bin/bash
-
+. /var/www/mprov_control_center/bin/activate
 cat << EOF | /var/www/mprov_control_center/manage.py shell
 from systems.models import System, NetworkInterface
 from django.contrib.auth.models import User
