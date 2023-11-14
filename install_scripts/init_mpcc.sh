@@ -5,8 +5,7 @@ cd /var/www/mprov_control_center
 python manage.py migrate
 python manage.py createsuperuser --noinput
 
-# load the scripts before the fixtures.  Some fixtures
-# may rely on the scripts being present
+python manage.py loaddata */fixtures/*
 
 # Run the scripts from install_scripts/install.d/ in order
 for i in `ls /var/www/mprov_control_center/install_scripts/init.d | sort -n`
@@ -14,7 +13,6 @@ do
        /var/www/mprov_control_center/install_scripts/init.d/$i
 done
 
-python manage.py loaddata */fixtures/*
 
 # fix the db perms... again...
 chown apache db/ -R
