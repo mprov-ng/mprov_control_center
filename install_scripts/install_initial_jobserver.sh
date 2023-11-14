@@ -3,7 +3,7 @@
 wget https://raw.githubusercontent.com/mprov-ng/mprov_jobserver/main/install_mprov_jobserver.sh -O - | sudo su - -c /bin/bash
 
 
-cat < EOF > /tmp/genAPIKey.py
+cat << EOF > /tmp/genAPIKey.py
 import rest_framework_api_key
 apikey = rest_framework_api_key.models.APIKey()
 key = rest_framework_api_key.models.APIKey.objects.assign_key(apikey)
@@ -14,7 +14,7 @@ EOF
 
 apikey=`cat /tmp/genAPIKey.py | python3 manage.py shell`
 hostname=`hostname`
-cat < EOF > /etc/mprov/jobserver.yaml
+cat << EOF > /etc/mprov/jobserver.yaml
 - global:
     # This points to your mprov control center instance.
     # This URL should point to the internal IP address or hostname and include a trailing slash
