@@ -20,7 +20,7 @@ cat << EOF > /etc/mprov/jobserver.yaml
     # This URL should point to the internal IP address or hostname and include a trailing slash
     # e.g. "http://<IP of internal interface>/"
     
-    mprovURL: "$hostname"
+    mprovURL: "http://$hostname"
     # this is the api key for your mprov control center so that the 
     # jobserver can login and do stuff.
     apikey: '$apikey'
@@ -41,3 +41,6 @@ cat << EOF > /etc/mprov/jobserver.yaml
 # include any plugin yamls.        
 - !include plugins/*.yaml
 EOF
+
+# start the job server.
+systemctl start mprov_jobserver
