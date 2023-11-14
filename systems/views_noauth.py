@@ -279,7 +279,7 @@ class IPXEAPIView(MProvView):
                 imgQs = SystemImage.objects.get(name='__nads__')
             except:
                 print(f"Error: You are missing a system image of the name '__nads__' so autodetection will fail.")
-                return Response(None, status=404)
+                raise NotFound(detail="No __nads__ image.", code=404)
             if type(imgQs) is SystemImage:  
                 # there is a __nads__ iamge, let's serve that.
                 # spoof a nics object
@@ -293,10 +293,14 @@ class IPXEAPIView(MProvView):
 
                 nics = [ nic ]
                 queryset = nics
+        # here we should have a system, so let's check it has a distro
 
         # print(queryset)
         # the following lines allow recurive templating to be done on the kernel cmdline.
         for nic in queryset:
+            if nic.system.systemimage == None:
+              print(f"Error: System has no image assigned, netbooting not possible.")
+              raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
             template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
             # print(nic)
             nic.bootserver=platform.node()
