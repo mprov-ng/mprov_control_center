@@ -301,6 +301,9 @@ class IPXEAPIView(MProvView):
             if nic.system.systemimage == None:
               print(f"Error: System has no image assigned, netbooting not possible.")
               raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
+            rescue_param = " mprov_rescue=0"
+            if "rescue" in request.query_params:
+               rescue_param = " mprov_rescue=1"
             template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
             # print(nic)
             nic.bootserver=platform.node()
@@ -309,7 +312,8 @@ class IPXEAPIView(MProvView):
               nic.bootserver, _ = nic.bootserver.split(".", 1)
             context = Context(dict(nic=nic))
             rendered: str = template.render(context)
-            nic.system.systemimage.osdistro.install_kernel_cmdline = rendered
+            nic.system.systemimage.osdistro.install_kernel_cmdline = rendered + rescue_param
+            print(nic.system.systemimage.osdistro.install_kernel_cmdline)
 
 
         context= {

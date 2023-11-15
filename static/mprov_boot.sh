@@ -64,8 +64,8 @@ export MPROV_IMAGE_URL=`get_kcmdline_opt mprov_image_url`
 export MPROV_INITIAL_MODS=`get_kcmdline_opt mprov_initial_mods`
 export MPROV_PROV_INTF=`get_kcmdline_opt mprov_prov_intf`
 export MPROV_STATEFUL=`get_kcmdline_opt mprov_stateful`
-export MPROV_BOOTDISK=`get_kcmdline_opt mporv_bootdisk`
-
+export MPROV_BOOTDISK=`get_kcmdline_opt mprov_bootdisk`
+export MPROV_RESCUE=`get_kcmdline_opt mprov_rescue`
 # load our initial modules
 oldIFS=$IFS
 IFS=,
@@ -159,9 +159,14 @@ then
   mount -t devpts devpts /image/dev/pts
   ln -s /proc/self/fd /image/dev/fd 
   
-  # note we are not expecting to return from this.
-  exec /sbin/switch_root -c /dev/console /image /tmp/mprov_stateful.sh
-  
+  if [ "$mprov_rescue" != "1" ]
+  then 
+    # note we are not expecting to return from this.
+    exec /sbin/switch_root -c /dev/console /image /tmp/mprov_stateful.sh
+  else  
+    echo "Give the root password for maintenance mode"
+    chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1  
+  fi
 
   # if we return, something bad has happened...mmmkay...
   export -f get_kcmdline_opt
@@ -195,9 +200,16 @@ umount /run
 
 # disable trap
 trap EXIT
-echo "Switching to new root.... LEEEEROY JENKINS!!!....."
-date >> /image/tmp/boot_timing
-exec /sbin/switch_root  -c /dev/console /image /sbin/init
+if [ "$mprov_rescue" != "1" ]
+then 
+  # note we are not expecting to return from this.
+  echo "Switching to new root.... LEEEEROY JENKINS!!!....."
+  date >> /image/tmp/boot_timing
+  exec /sbin/switch_root  -c /dev/console /image /sbin/init
+else  
+  echo "Give the root password for maintenance mode"
+  chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1
+fi
 echo "Something's WRONG!!!! Emergency Shell"
 
 mount -t proc proc /proc &
@@ -208,4 +220,5 @@ mount -t tmpfs tmpfs /run &
 # redirect stdio to tty1 and start a new process group, enables bash
 # job control... hopefully
 export -f get_kcmdline_opt
-/bin/setsid /bin/bash -m  <> /dev/tty1 >&0 2>&1
+echo "Give the root password for maintenance mode"
+chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1
