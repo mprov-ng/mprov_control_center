@@ -17,7 +17,7 @@ from .serializers import (
 from rest_framework.response import Response
 
 from common.views import MProvView
-from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, SystemModel
+from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, SystemModel, NADSSystem
 from rest_framework.response import Response
 from networks.models import SwitchPort, Network, Switch
 from rest_framework import generics
@@ -90,69 +90,80 @@ NADS Packet:
     def post(self, request, *args, **kwargs):
         print(request.data)
         
-        switch = Switch.objects.get(hostname=request.data['switch'])
+        if request.data['switch'] is not None:
+
+            switch = Switch.objects.get(hostname=request.data['switch'])
+        else:
+            switch = None
 
         model_slug = slugify(f"{request.data['vendor']} {request.data['model']}")
         
-        port= SwitchPort.objects.get(name=request.data['port'], switch=switch)
+        if request.data['port'] is not None:
+            port= SwitchPort.objects.get(name=request.data['port'], switch=switch)
+        else:
+            port = None
         #print(port)
-        nicQueryset = NetworkInterface.objects.all()
-        nicQueryset = nicQueryset.filter(mac=None, switch_port=port)
-        #print(nicQueryset)
-        if nicQueryset is not None and len(nicQueryset) > 0:
-            system = System.objects.get(pk=nicQueryset[0].system.pk)
-            # print(model_slug)
-            # print(system)
-            # print(system.systemmodel.slug)
-            if system.systemmodel.slug != model_slug:
-                system=None
-            if system is not None:
-                nicObj = nicQueryset.first()
-                nicObj.mac = request.data['mac']
+        if port is not None:
+            nicQueryset = NetworkInterface.objects.all()
+            nicQueryset = nicQueryset.filter(mac=None, switch_port=port)
+            #print(nicQueryset)
+            if nicQueryset is not None and len(nicQueryset) > 0:
+                system = System.objects.get(pk=nicQueryset[0].system.pk)
+                # print(model_slug)
+                # print(system)
+                # print(system.systemmodel.slug)
+                if system.systemmodel.slug != model_slug:
+                    system=None
+                if system is not None:
+                    nicObj = nicQueryset.first()
+                    nicObj.mac = request.data['mac']
 
-                # generate a Link-Local Address
-                nicObj.ipv6ll = self.mac2LL(nicObj.mac)
+                    # generate a Link-Local Address
+                    nicObj.ipv6ll = self.mac2LL(nicObj.mac)
 
-                # attempt to set a GUA if a subnet is set on the port.
-                subnet = None
-                print(f"Port: {port}")
-                if port.networks is not None:
-                    print(f"Net: {port.networks}")
-                    if ":" in port.networks.subnet:
-                        print(f"Subnet: {port.networks.subnet}")
-                        subnet = port.networks.subnet
-                if subnet is not None:
-                    # assign a GUA based off the LL
-                    nicObj.ipv6gua = nicObj.ipv6ll.replace("fe80::", subnet)
+                    # attempt to set a GUA if a subnet is set on the port.
+                    subnet = None
+                    print(f"Port: {port}")
+                    if port.networks is not None:
+                        print(f"Net: {port.networks}")
+                        if ":" in port.networks.subnet:
+                            print(f"Subnet: {port.networks.subnet}")
+                            subnet = port.networks.subnet
+                    if subnet is not None:
+                        # assign a GUA based off the LL
+                        nicObj.ipv6gua = nicObj.ipv6ll.replace("fe80::", subnet)
 
-                    # if we are on an IPv6 subnet, assign the IP to the GUA
-                    if nicObj.ipaddress is None or nicObj.ipaddress == '':
-                        nicObj.ipaddress = nicObj.ipv6gua
-                
-                nicObj.save()
-                # send in a pxe update job
-                JobType = None
-                try:
-                    JobType = JobModule.objects.get(slug='pxe-update')
-                except:
+                        # if we are on an IPv6 subnet, assign the IP to the GUA
+                        if nicObj.ipaddress is None or nicObj.ipaddress == '':
+                            nicObj.ipaddress = nicObj.ipv6gua
+                    
+                    nicObj.save()
+                    # send in a pxe update job
                     JobType = None
-                # print(JobType)
-                # get or create the job module in the DB
-                # get the jobtype, do nothing if it's not defined.
-                if JobType is not None:
-                    # save a new job, if one doesn't already exist.
+                    try:
+                        JobType = JobModule.objects.get(slug='pxe-update')
+                    except:
+                        JobType = None
+                    # print(JobType)
+                    # get or create the job module in the DB
+                    # get the jobtype, do nothing if it's not defined.
+                    if JobType is not None:
+                        # save a new job, if one doesn't already exist.
 
-                    Job.objects.update_or_create(
-                    name=JobType.name , module=JobType,
-                    defaults={'status': JobStatus.objects.get(pk=1)}
-                    ) 
-                # return the system object.    
-                self.queryset = [system]
-                return  generics.ListAPIView.get(self, request, format=None)
+                        Job.objects.update_or_create(
+                        name=JobType.name , module=JobType,
+                        defaults={'status': JobStatus.objects.get(pk=1)}
+                        ) 
+                    # return the system object.    
+                    self.queryset = [system]
+                    return  generics.ListAPIView.get(self, request, format=None)
         # return 404
         #self.queryset = []
+        # Save the node to a NADS System
+        nadssys = NADSSystem.objects.update_or_create(mac=request.data['mac'])
+
         # TODO insert MAC ban code here if needed.
-        return Response(None, status=404)
+        return Response(None, status=200)
         # pass
         # return  generics.ListAPIView.get(self, request, format=None)
 

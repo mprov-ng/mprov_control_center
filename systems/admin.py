@@ -18,6 +18,7 @@ from .models import (
   NetworkInterface,
   SystemImage,
   SystemModel,
+  NADSSystem,
 )
 
 class NetForm(forms.ModelForm):
@@ -164,6 +165,9 @@ class SystemModelAdmin(admin.ModelAdmin):
   verbose_name_plural = "System Models"
   exclude = ['slug']
 
+class NADSAdmin(admin.ModelAdmin):
+  verbose_name = "N.A.D.S Discovered"
+  verbose_name_plural = "N.A.D.S Discovered"
 
 @admin.action(description="Mark images as needing rebuild.")
 def mark_rebuild(modeladmin, request, queryset):
@@ -233,3 +237,4 @@ admin.site.register(SystemImage, SystemImageAdmin)
 admin.site.register(SystemGroup, SystemGroupAdmin)
 admin.site.register(System, SystemAdmin)
 admin.site.register(SystemModel, SystemModelAdmin)
+admin.site.register(NADSSystem, NADSAdmin)

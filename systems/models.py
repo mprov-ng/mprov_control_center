@@ -305,6 +305,33 @@ class SystemImage(models.Model):
   def __str__(self):
     return self.name
 
+class NADSSystem(models.Model):
+  mac=models.CharField(max_length=100, verbose_name="MAC Address", unique=True)
+  discovered=models.DateTimeField(auto_now_add=True, verbose_name="Discovered")
+  system=models.ForeignKey(System, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Assign System")
+
+  def __str__(self):
+    return self.mac
+
+  class Meta:
+    verbose_name="N.A.D.S Discovered"
+    verbose_name_plural="N.A.D.S Discovered"
+  
+@receiver(post_save, sender=NADSSystem)
+def AssignSystem(sender, instance, **kwarg):
+  if instance.system != None:
+    # Save the MAC to the interface marked as bootable on the system 
+    sysnic = NetworkInterface.objects.all()
+    sysnic = sysnic.filter(system=instance.system, bootable=True)
+    if sysnic.count() == 0:
+      print("Error: No bootable nic found.")
+      return
+    sysnic = sysnic[0]
+    sysnic.mac=instance.mac
+    sysnic.save()
+    print(sysnic)
+    instance.delete()
+    
 @receiver(post_save, sender=System)
 @receiver(post_save, sender=SystemImage)
 @receiver(post_save, sender=SystemGroup)

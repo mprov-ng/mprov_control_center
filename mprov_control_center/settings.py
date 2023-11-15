@@ -92,6 +92,7 @@ JAZZMIN_SETTINGS={
         'scripts.ansibleplaybook': 'fas fa-clipboard-list',
         'scripts.ansiblerole': 'fas fa-tags',
         'scripts.ansiblecollection': 'far fa-object-group',
+        'systems.nadssystem': 'fas fa-search-plus',
     },
     'copyright': ' 2022 The Johns Hopkins University ',
     "related_modal_active": False,
