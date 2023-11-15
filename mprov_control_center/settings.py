@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'rest_framework_api_key',
     'dbbackup',
     'utils',
+    'authcustom',
 ]
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE_OPTIONS = {'location': '/var/www/mprov_control_center/backups/'}
