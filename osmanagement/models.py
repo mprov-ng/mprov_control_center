@@ -1,7 +1,7 @@
 from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import pre_save, pre_delete, post_save
-from jobqueue.models import JobModule, Job, JobStatus
+from jobqueue.models import JobModule, Job, JobStatus, JobServer
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 
 # This will be an object managed by the jobserver image-update and repo-update modules.
@@ -160,3 +160,26 @@ def RepoDeleteJob(sender, **kwargs):
         name="Delete Repos", module=RepoJobType,
         defaults={'status': JobStatus.objects.get(pk=1)}
       )        
+
+
+@receiver(pre_delete, sender=JobServer)
+def DeleteJobserver(sender, instance, **kwargs):
+    RepoJobType = None
+    # get or create the OSIMAGE_UPDATE job module in the DB
+    # TODO get the jobtype, do nothing if it's not defined.
+    try:
+        RepoJobType = JobModule.objects.get(slug='repo-update')
+    except:
+        RepoJobType = None
+    
+    if RepoJobType is not None:
+        # save a new job, if one doesn't already exist.
+        repos = OSRepo.objects.all()
+        for repo in repos:
+          params = { 'repo_id': repo.id}
+          Job.objects.create( name=RepoJobType.name, 
+              module=RepoJobType, 
+              status=JobStatus.objects.get(pk=1), 
+              params=params,          
+          )
+    
