@@ -159,9 +159,15 @@ NADS Packet:
                     return  generics.ListAPIView.get(self, request, format=None)
         # return 404
         #self.queryset = []
-        # Save the node to a NADS System
-        nadssys = NADSSystem.objects.update_or_create(mac=request.data['mac'])
-
+        # Save the node to a NADS System if the mac isn't assigned
+        sysnic = NetworkInterface.objects.all()
+        sysnic = sysnic.filter(mac=request.data['mac'])
+        if sysnic.count() > 0:
+            return Response(None, status=200)
+        else: 
+            nadssys = NADSSystem.objects.update_or_create(mac=request.data['mac'])
+        print(sysnic)
+   
         # TODO insert MAC ban code here if needed.
         return Response(None, status=200)
         # pass
