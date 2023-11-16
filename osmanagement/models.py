@@ -49,7 +49,8 @@ class OSDistro(models.Model):
   tmpfs_root_size = models.IntegerField(default=8, help_text="Size of the root tmpfs filesystem in Gibabytes")
   initial_mods = models.CharField(default="e1000,tg3", help_text="Comma separated list of modules to load.", max_length=255)
   prov_interface = models.CharField(default="eth0", help_text="Interface name to provision over.", max_length=255)
-
+  rootpw = models.CharField(default="changeme", help_text="Root Password for the image", max_length=255, verbose_name="Root Password", blank=True)
+  rootsshkeys=models.TextField(verbose_name="Root SSH Keys", help_text="Keys to add to the authorized keys file.", blank=True)
   class Meta:
     ordering=['name']
     verbose_name='OS Distribution'

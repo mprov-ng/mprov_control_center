@@ -1,6 +1,6 @@
 from statistics import mode
 from django.contrib import admin
-
+from .forms import OSDistro_form
 from .models import (
   OSDistro,
   OSRepo,
@@ -14,6 +14,7 @@ class OSRepoAdmin(admin.ModelAdmin):
 
 class OSDistroAdmin(admin.ModelAdmin):
   model = OSDistro,
+  form = OSDistro_form
   #inlines = [RepoInline]
   list_display=['id', 'name', 'vendor', 'version']
   list_display_links=['id', 'name']
@@ -30,6 +31,8 @@ class OSDistroAdmin(admin.ModelAdmin):
     }),
     ('OS Configuration', {
       'fields':(
+        'rootpw',
+        'rootsshkeys',
         'config_params',
         'scripts',
         'ansiblecollections',
