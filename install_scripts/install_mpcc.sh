@@ -120,13 +120,15 @@ fi
 if [ -e /etc/redhat-release ]
 then
         ver=`cat /etc/redhat-release | awk '{print $4}'`
-        if [ $ver -gt 9 ]
+        echo -e "9\n${ver}" | sort -C -V
+        if [ "$?" != "0" ]
         then
                 extra_pkgs="$extra_pkgs python38-devel python38-mod_wsgi.x86_64"
-        else   
+        else
                 extra_pkgs="$extra_pkgs python3-devel python3-mod_wsgi.x86_64"
-	fi
+        fi
 fi
+
 
 
 . env.db
