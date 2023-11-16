@@ -15,6 +15,7 @@ from .serializers import (
     SystemImageSerializer,
 )
 from rest_framework.response import Response
+from rest_framework.serializers import ListSerializer
 
 from common.views import MProvView
 from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, SystemModel, NADSSystem
@@ -485,12 +486,42 @@ Format returned:
         
         if 'network' in self.request.query_params:
             network = self.request.query_params['network']
+            net = Network.objects.filter(slug=network)[0]
+        #   
             # get the Network ID
-            # print(network)
-            kwargs['network'] = Network.objects.filter(slug=network)[0]
-        #     # print(net)
-        #     innerQ = SwitchPort.objects.filter(networks__in=net)
-        #     self.queryset = self.queryset.filter(switch_port__in=innerQ)
+            # This should first query the switch for all ports on that network.
+            # It should also query all network interfaces for hard coded networks.
+            # Then reconcile ports <--> interfaces.  Switch port takes precidence, if set.
+            innerQ = SwitchPort.objects.filter(networks=net)
+            swportqueryset = NetworkInterface.objects.all().filter(switch_port__in=innerQ)
+            nicqueryset = NetworkInterface.objects.all().filter(network=net)
+            nics = list(nicqueryset)
+            if swportqueryset.count() > 0:
+                for portnic in swportqueryset:
+                    # find the nic in nics 
+                    # nics [ {nicobj} ]
+                    found=False
+                    for nic in nics:
+                        if nic.id == portnic.id:
+                            nic.network = portnic.network
+                            found=True
+                    if not found:
+                        nics.append(portnic)
+
+            # now we remove nics if they are not the set at the switchport
+            for nic in nics:
+                found=False
+                for portnic in swportqueryset:
+                    if nic.id == portnic.id:
+                        found=True
+                        break
+                if not found:
+                    nics.remove(nic)
+                        
+                    
+            # now we have a list of nics return that as json
+            return Response(NetworkInterfaceSerializer(nics, many=True).data)
+        
         #     return generics.ListAPIView.get(self, request, format=None)
         
         # return the super call for get.
