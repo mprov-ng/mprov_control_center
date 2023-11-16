@@ -442,7 +442,8 @@ def UpdateSystemImages(sender, instance, **kwargs):
   if not instance.needs_rebuild: 
     return
   instance.slug = slugify(instance.name)
-
+  if not instance.needs_rebuild:
+    return
   JobType = None
   try:
       JobType = JobModule.objects.get(slug='image-update')
@@ -461,6 +462,6 @@ def UpdateSystemImages(sender, instance, **kwargs):
           params = params,
       )
 
-      # TODO: Increment version number and clear out jobservers field.
+      # Increment version number and clear out jobservers field.
       instance.jobservers.clear()
       instance.version = instance.version + 1
