@@ -125,6 +125,8 @@ then
                 extra_pkgs="$extra_pkgs python38-devel python38-mod_wsgi.x86_64"
         else   
                 extra_pkgs="$extra_pkgs python3-devel python3-mod_wsgi.x86_64"
+	fi
+fi
 
 
 . env.db
