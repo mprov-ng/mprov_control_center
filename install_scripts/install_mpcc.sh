@@ -120,7 +120,7 @@ fi
 if [ -e /etc/redhat-release ]
 then
         ver=`cat /etc/redhat-release | awk '{print $4}'`
-        if [ $ver < 9 ]
+        if [ $ver -gt 9 ]
         then
                 extra_pkgs="$extra_pkgs python38-devel python38-mod_wsgi.x86_64"
         else   
