@@ -141,7 +141,7 @@ then
   mprovURL=`dirname $mprovURL`
   wget -q -O /image/tmp/mprov_genNetworkInterfaces.py ${mprovURL}/static/genNetworkInterfaces.py
   /bin/chmod 755 /image/tmp/mprov_genNetworkInterfaces.py
-  chroot /image/ /usr/bin/python3.8 /tmp/mprov_genNetworkInterfaces.py
+  chroot /image/ /usr/bin/python3 /tmp/mprov_genNetworkInterfaces.py
 fi
 
 echo -n "Starting mProv for: "

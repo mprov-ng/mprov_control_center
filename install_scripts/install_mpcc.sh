@@ -17,6 +17,26 @@ then
     echo "WARN: Selinux enabled but is permissive.  This may still cause issues, but might still work.  You have been warned."
 fi
 
+# check your python 3 version.
+which python3 > /dev/null
+if [ "$?" != "0" ]
+then    
+    echo "Error: Either python 3 is not installed or no alternatives setup for python3 binary." >&2
+    exit 1
+fi
+
+pyvers=`python3 --version| awk '{print $2}' `
+if [ "$pyvers" != "3.8" ]
+then
+        pyvershi=`echo -e "3.8\n$pyvers" |  sort -Vr | head -n1 `
+        if [ "$pyvershi" == "3.8" ]
+        then
+                # we don't have python 3.8
+                echo "Error: You don't seem to have at least python 3.8.  Check your etc-alternaives and set them accordingly!" >&2
+                exit 1
+        fi
+fi
+
 # time for some arg parsing.
 BUILD_DOCKER=0
 MYSQL_BUILD=0
@@ -90,12 +110,23 @@ fi
 extra_pkgs=""
 if [ "$PGSQL_BUILD" == "1" ]
 then
-        extra_pkgs="postgresql libpq-devel libpq gcc python38-devel"
+        extra_pkgs="postgresql libpq-devel libpq gcc"
 fi
 if [ "$MYSQL_BUILD" == "1" ]
 then
-        extra_pkgs="mariadb mariadb-common mariadb-devel gcc python38-devel mariadb-server"
+        extra_pkgs="mariadb mariadb-common mariadb-devel gcc mariadb-server"
 fi
+
+if [ -e /etc/redhat-release ]
+then
+        ver=`cat /etc/redhat-release | awk '{print $4}'`
+        if [ $ver < 9 ]
+        then
+                extra_pkgs="$extra_pkgs python38-devel python38-mod_wsgi.x86_64"
+        else   
+                extra_pkgs="$extra_pkgs python3-devel python3-mod_wsgi.x86_64"
+
+
 . env.db
 
 
@@ -103,7 +134,7 @@ fi
 
 dnf -y install epel-release
 dnf -y groupinstall "Development Tools"
-dnf -y install python38-mod_wsgi.x86_64 jq git wget iproute openldap-devel python38-devel dos2unix $extra_pkgs
+dnf -y install jq git wget iproute openldap-devel python3-devel dos2unix $extra_pkgs
 # why is this in a separate repo?!
 dnf -y --enablerepo=powertools install parted-devel
 if [ "$MYSQL_BUILD" == "1" ]
@@ -155,7 +186,7 @@ then
 fi
 
 chmod 755 install_scripts/init_mpcc.sh
-python3.8 -m venv .
+python3 -m venv .
 . bin/activate
 pip install -r requirements.txt
 

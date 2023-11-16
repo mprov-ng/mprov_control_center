@@ -1,5 +1,5 @@
 #!/bin/bash
-/usr/bin/python3.8 /tmp/mprov_stateful.py
+/usr/bin/python3 /tmp/mprov_stateful.py
 if [ "$?" != "0" ]
 then
   mount -t devtmpfs devtmpfs /dev 
