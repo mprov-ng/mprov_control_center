@@ -110,7 +110,7 @@ fi
 extra_pkgs=""
 if [ "$PGSQL_BUILD" == "1" ]
 then
-        extra_pkgs="postgresql libpq-devel libpq gcc"
+        extra_pkgs="postgresql libpq gcc"
 fi
 if [ "$MYSQL_BUILD" == "1" ]
 then
@@ -124,23 +124,18 @@ then
         if [ "$?" != "0" ]
         then
                 extra_pkgs="$extra_pkgs python38-devel python38-mod_wsgi.x86_64"
+		dnf config-manager --enable powertools
         else
                 extra_pkgs="$extra_pkgs python3-devel python3-mod_wsgi.x86_64"
+		dnf config-manager --enable crb
         fi
 fi
 
-
-
-. env.db
-
-
-
+. ./env.db
 
 dnf -y install epel-release
 dnf -y groupinstall "Development Tools"
-dnf -y install jq git wget iproute openldap-devel python3-devel dos2unix $extra_pkgs
-# why is this in a separate repo?!
-dnf -y --enablerepo=powertools install parted-devel
+dnf -y install jq git wget iproute openldap-devel python3-devel dos2unix $extra_pkgs parted-devel httpd
 if [ "$MYSQL_BUILD" == "1" ]
 then
         systemctl enable --now mariadb
