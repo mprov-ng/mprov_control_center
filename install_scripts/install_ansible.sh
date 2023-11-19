@@ -5,4 +5,4 @@ then
   exit 0
 fi
 
-dnf -y install ansible
+dnf -y install ansible-core
