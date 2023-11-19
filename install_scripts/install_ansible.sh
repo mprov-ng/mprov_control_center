@@ -6,3 +6,4 @@ then
 fi
 
 dnf -y install ansible-core
+ansible-galaxy collection install community.general
