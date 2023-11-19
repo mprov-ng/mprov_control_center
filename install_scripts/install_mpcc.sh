@@ -131,7 +131,10 @@ then
         fi
 fi
 
-. ./env.db
+if [ -e ./env.db ]
+then
+        . ./env.db
+fi
 
 dnf -y install epel-release
 dnf -y groupinstall "Development Tools"
