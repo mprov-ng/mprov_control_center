@@ -45,7 +45,7 @@ if [[ "$installed_ver" == "$latest_ver" ]]; then
     printf "Already at latest slurm version (${latest_ver}).\n"
 else
     echo "Installing Dependencies..."
-    dnf -y --enablerepo=powertools install \
+    dnf -y install \
       pam-devel \
       munge munge-devel \
       json-c-devel \
