@@ -9,6 +9,14 @@ from django.utils.text import slugify
 from jobqueue.models import JobModule, JobStatus, Job
 from django import forms
 
+from django.template.response import TemplateResponse
+from django.contrib.admin.utils import model_ngettext
+from django.contrib.admin import helpers
+from django.shortcuts import render
+from django.core.exceptions import ValidationError
+from django.http import HttpResponseRedirect
+from django.db.models import ManyToManyField
+
 
 from .models import (
   System,
@@ -102,6 +110,8 @@ class BMCInLine(admin.StackedInline):
 
 
 class SystemAdmin(admin.ModelAdmin):
+  actions = [ 'bulk_update' ]
+  
   inlines = [ NetworkInterfaceInline, BMCInLine]
   list_display = ['id', 'hostname', 'getMacs', 'getSwitchPort']
   readonly_fields = ['timestamp', 'updated', 'created_by']
@@ -154,6 +164,132 @@ class SystemAdmin(admin.ModelAdmin):
     return mark_safe(portstr)
   getSwitchPort.short_description = "Switch Ports"
   getMacs.short_description = 'Network\nInterfaces'
+
+  @admin.action(description="Update fields on multiple systems")
+  def bulk_update(self, request, queryset):
+    # fields to allow multiple updates to.
+    fields = ['systemimage','systemmodel','stateful','prov_interface','initial_mods', 'systemgroups']
+    def remove_fields(form):
+        for field in list(form.base_fields.keys()):
+            if field  not in fields:
+                del form.base_fields[field]
+        return form
+
+    form_class = remove_fields(self.get_form(request))
+
+    if request.method == 'POST':
+        form = form_class()
+
+        # the view is already called via POST from the django admin changelist
+        # here we have to distinguish between just showing the intermediary view via post
+        # and actually confirming the bulk edits
+        # for this there is a hidden field 'form-post' in the html template
+        if 'form-post' in request.POST:
+            form = form_class(request.POST)
+            has_batch_errors = False
+
+            form.full_clean()  # form.is_valid() will not work well because <WorkEntry: None>
+            fieldsUpdated = False
+            for field_name in fields:
+              
+              if f"update_{field_name}" not in request.POST:
+                 continue
+              cleaned_field_data = form.cleaned_data[field_name]
+              for item in queryset.all():
+                  fieldCheck = getattr(item, field_name)
+                  fieldCheck = fieldCheck
+                  print(fieldCheck.__class__.__name__)
+                  if fieldCheck.__class__.__name__ == "ManyRelatedManager": 
+                     item.clean()
+                  else: 
+                    try:
+                        setattr(item, field_name, cleaned_field_data)
+                        item.clean()
+                    except ValidationError as e:
+                        form.add_error(None, e)
+                        has_batch_errors = True
+
+              if has_batch_errors:
+                  return render(
+                      request,
+                      'admin/system_bulk_change_form.html',
+                      context={
+                          **self.admin_site.each_context(request),
+                          'adminform': form,
+                          'items': queryset,
+                          'media': self.media,
+                          'opts': self.model._meta,
+                      }
+                  )
+
+              for item in queryset.all():
+                  if fieldCheck.__class__.__name__ == "ManyRelatedManager": 
+                     m2mfield = getattr(item, field_name)
+                     m2mfield.set(cleaned_field_data)
+                     item.save()
+                  else: 
+                    try: 
+                      setattr(item, field_name, cleaned_field_data)
+                      item.save()
+                    except ValidationError as e:
+                      form.add_error(None, e)
+                      return render(
+                          request,
+                          'admin/system_bulk_change_form.html',
+                          context={
+                              **self.admin_site.each_context(request),
+                              'adminform': form,
+                              'items': queryset,
+                              'media': self.media,
+                              'opts': self.model._meta,
+                          }
+                      )
+                  fieldsUpdated=True
+            if fieldsUpdated is False:
+              self.message_user(request, "No fields selected to update.")
+              return render(
+                 request,
+                 'admin/system_bulk_change_form.html',
+                  context={
+                      **self.admin_site.each_context(request),
+                      'adminform': form,
+                      'items': queryset,
+                      'media': self.media,
+                      'opts': self.model._meta,
+                  }
+              )
+            self.message_user(
+                request,
+                "Changed fields on {} items".format(
+                    queryset.count(),
+                )
+            )
+            return HttpResponseRedirect(request.get_full_path())
+
+        return render(
+            request,
+            'admin/system_bulk_change_form.html',
+            context={
+                **self.admin_site.each_context(request),
+                'adminform': form,
+                'items': queryset,
+                'media': self.media,
+                'opts': self.model._meta,
+            }
+        )
+    # objects_name = model_ngettext(queryset)
+    # context = {
+    #   **self.admin_site.each_context(request),
+    #   'title': 'Update Multiple',
+    #   'objects_name': str(objects_name),
+    #   'queryset': queryset,
+    #   'opts': self.model._meta,
+    #   'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+    #   'media': self.media,
+    # }
+    # return TemplateResponse(request, "admin/system_bulk_change_form.html", context)
+    # pass
+
 
 class SystemGroupAdmin(admin.ModelAdmin):
   list_display = ['id', 'name']

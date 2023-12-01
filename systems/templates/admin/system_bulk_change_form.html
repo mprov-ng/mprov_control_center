@@ -1,0 +1,70 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}{{ block.super }}
+    <script type="text/javascript" src="{% url 'admin:jsi18n' %}"></script>
+    {{ media }}
+{% endblock %}
+
+{% block content %}
+<div class="col-12">
+    <form action="" method="post">
+        {% csrf_token %}
+        <div class="card card-outline">
+          <div class="card-header with-boarder">
+            <h4 class="card-title">Bulk System Update</h4>
+          </div>
+
+          <div class="card-body">
+            <div id="content-main">
+              <div class="row">
+                <div class="col-12 col-lg-8">
+                  <div class="row">
+                    <div class="col-12 col-sm-2 text-left"><strong>Update?</strong></div>
+                    <div class="col-12 col-sm-4 text-left">&nbsp;</div>
+                    <div class="col-12 col-sm-6">&nbsp;</div>
+                  </div>
+                  {% for field in adminform %}
+                  <div class="form-group">
+                    
+                    <div class="row">
+                      <div class="col-100 col-sm-2 text-left"><input type="checkbox" name="update_{{field.html_name }}"/></div>
+                      <label class="col-100 col-sm-4 text-left" for="{{field.id_for_label}}">{{field.label}}</label> 
+                      <div class="col-100 col-sm-6">{{ field }}
+                        <div class="help-block red">{{ field.errors }}</div>
+                        <div class="help-block">{{field.help_text}}</div>
+                      </div>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+                <div class="col-12 col-lg-4">
+                  <div class="card">
+                    <div class="card-header with-boarder">
+                      <h4 class="card-title">Change these values for hosts:</h4>
+                    </div>
+                    <div class="card-body">
+                      <ul>
+                        
+                        {% for item in items %}
+                            <li>
+                                {{ item.hostname }}
+                            </li>
+                            {# this is required by Django Admin custom action framework #}
+                            <input type="hidden" name="_selected_action" value="{{ item.pk }}"/>
+                        {% endfor %}
+                      </ul>
+                  </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+                {# this is required by Django Admin custom action framework #}
+        <input type="hidden" name="action" value="{{ request.POST.action }}"/>
+        <input type="hidden" name="form-post" value="True"/>
+        <input type="submit" name="apply" value="Save"/>
+    </form>
+</div>
+{% endblock %}
