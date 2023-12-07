@@ -1,5 +1,5 @@
 #!ipxe
-{% for nic in nics %}
+
 {% if nic.bootable or nic.system.systemimage.slug == "nads" %}
 
 # static commandline stuff
@@ -38,7 +38,6 @@ boot
 {% else %}
 exit
 {% endif %}
-{% endfor %}
 
 :retrydownload
 echo "There was an error, retrying."

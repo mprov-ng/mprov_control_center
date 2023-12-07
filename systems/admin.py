@@ -355,6 +355,7 @@ class SystemImageAdmin(admin.ModelAdmin):
         'ansiblecollections',
         'ansibleplaybooks',
         'ansibleroles',
+        'customIPXE',
         'config_params',
         'needs_rebuild',
       )

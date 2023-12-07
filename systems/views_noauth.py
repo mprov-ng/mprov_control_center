@@ -8,7 +8,7 @@ import random
 from common.views import MProvView
 from systems.serializers import SystemImageSerializer, NetworkInterfaceDetailsSerializer
 from rest_framework import generics
-from django.http import HttpResponseNotAllowed
+from django.http import HttpResponseNotAllowed, HttpResponse
 from rest_framework.response import Response
 from django.template import Template, Context
 from django.shortcuts import render
@@ -267,14 +267,14 @@ class IPXEAPIView(MProvView):
             ip = x_forwarded_for.split(',')[0]
         else:
             ip = request.META.get('REMOTE_ADDR')
-        # ip="172.16.30.1"
+        #ip="172.20.10.1"
         # print(ip)
         # now try to grab the nic for this IP
         queryset = self.model.objects.all()
         queryset = queryset.filter(ipaddress=ip)
-
+        qscnt = queryset.count()
         # our IP is not found, let's see if NADS is running on here.
-        if queryset.count() == 0:
+        if qscnt == 0:
             try:
                 imgQs = SystemImage.objects.get(name='__nads__')
             except:
@@ -297,27 +297,38 @@ class IPXEAPIView(MProvView):
 
         # print(queryset)
         # the following lines allow recurive templating to be done on the kernel cmdline.
-        for nic in queryset:
-            if nic.system.systemimage == None:
-              print(f"Error: System has no image assigned, netbooting not possible.")
-              raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
-            rescue_param = " mprov_rescue=0"
-            if "rescue" in request.query_params:
-               rescue_param = " mprov_rescue=1"
-            template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
-            # print(nic)
-            nic.bootserver=platform.node()
-            if "." in nic.bootserver:
-              # remove the domain if one exists
-              nic.bootserver, _ = nic.bootserver.split(".", 1)
-            context = Context(dict(nic=nic))
-            rendered: str = template.render(context)
-            nic.system.systemimage.osdistro.install_kernel_cmdline = rendered + rescue_param
-            print(nic.system.systemimage.osdistro.install_kernel_cmdline)
+        if qscnt > 1:
+           print(f"WARN: More than 1 NIC for IP {ip}.  Only using the first one!")
+        
+        nic = queryset[0]
+        
+        if nic.system.systemimage == None:
+          print(f"Error: System has no image assigned, netbooting not possible.")
+          raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
+        rescue_param = " mprov_rescue=0"
+        if "rescue" in request.query_params:
+            rescue_param = " mprov_rescue=1"
 
+        template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
+        # print(nic)
+        nic.bootserver=platform.node()
+        if "." in nic.bootserver:
+          # remove the domain if one exists
+          nic.bootserver, _ = nic.bootserver.split(".", 1)
+        context = Context(dict(nic=nic))
+        rendered: str = template.render(context)
+        nic.system.systemimage.osdistro.install_kernel_cmdline = rendered + rescue_param
+        print(nic.system.systemimage.osdistro.install_kernel_cmdline)
 
+        if not nic.system.systemimage.customIPXE == "" and not nic.system.systemimage.customIPXE == None:
+           # let's just serve up the custom IPXE script.
+           template = Template(nic.system.systemimage.customIPXE)
+           context = Context(dict(nic=nic))
+           rendered: str = template.render(context)
+           return HttpResponse(content=rendered)
+           
         context= {
-            'nics': queryset,
+            'nic': nic,
         }
         print("PXE Request from: " + ip)
         # print(context['nics'])

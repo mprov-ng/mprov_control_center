@@ -496,6 +496,7 @@ Format returned:
             swportqueryset = NetworkInterface.objects.all().filter(switch_port__in=innerQ)
             nicqueryset = NetworkInterface.objects.all().filter(network=net)
             nics = list(nicqueryset)
+            print(swportqueryset.count())
             if swportqueryset.count() > 0:
                 for portnic in swportqueryset:
                     # find the nic in nics 
@@ -511,13 +512,15 @@ Format returned:
             # now we remove nics if they are not the set at the switchport
             for nic in nics:
                 found=False
-                for portnic in swportqueryset:
-                    if nic.id == portnic.id:
-                        found=True
-                        break
-                if not found:
-                    nics.remove(nic)
-                        
+                if nic.switch_port is not None:
+                    for portnic in swportqueryset:
+                        if nic.id == portnic.id:
+                            found=True
+                            break
+                    if not found:
+                        nics.remove(nic)
+                
+                    
                     
             # now we have a list of nics return that as json
             return Response(NetworkInterfaceSerializer(nics, many=True).data)

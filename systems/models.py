@@ -285,6 +285,12 @@ class SystemImage(models.Model):
     blank=True,
     null=True,
   )
+  customIPXE = models.TextField(
+    verbose_name="Custom IPXE Script",
+    help_text="Leave blank to let mProv manage the image.  Entering text disables image building.",
+    blank=True,
+    null=True,
+  )
   osdistro = models.ForeignKey(
     OSDistro,
     blank=True, 
