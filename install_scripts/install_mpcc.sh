@@ -138,7 +138,7 @@ fi
 
 dnf -y install epel-release
 dnf -y groupinstall "Development Tools"
-dnf -y install jq git wget iproute openldap-devel python3-devel dos2unix $extra_pkgs parted-devel httpd
+dnf -y install jq git wget iproute openldap-devel dos2unix $extra_pkgs parted-devel httpd
 if [ "$MYSQL_BUILD" == "1" ]
 then
         systemctl enable --now mariadb
