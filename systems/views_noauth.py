@@ -309,6 +309,15 @@ class IPXEAPIView(MProvView):
         if "rescue" in request.query_params:
             rescue_param = " mprov_rescue=1"
 
+        
+
+        if not nic.system.systemimage.customIPXE == "" and not nic.system.systemimage.customIPXE == None:
+           # let's just serve up the custom IPXE script.
+           template = Template(nic.system.systemimage.customIPXE)
+           context = Context(dict(nic=nic))
+           rendered: str = template.render(context)
+           return HttpResponse(content=rendered)
+        
         template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
         # print(nic)
         nic.bootserver=platform.node()
@@ -319,13 +328,6 @@ class IPXEAPIView(MProvView):
         rendered: str = template.render(context)
         nic.system.systemimage.osdistro.install_kernel_cmdline = rendered + rescue_param
         print(nic.system.systemimage.osdistro.install_kernel_cmdline)
-
-        if not nic.system.systemimage.customIPXE == "" and not nic.system.systemimage.customIPXE == None:
-           # let's just serve up the custom IPXE script.
-           template = Template(nic.system.systemimage.customIPXE)
-           context = Context(dict(nic=nic))
-           rendered: str = template.render(context)
-           return HttpResponse(content=rendered)
            
         context= {
             'nic': nic,
