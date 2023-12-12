@@ -123,7 +123,11 @@ then
         echo -e "9\n${ver}" | sort -C -V
         if [ "$?" != "0" ]
         then
-                extra_pkgs="$extra_pkgs python38-devel python38-mod_wsgi.x86_64"
+		# need to install python3 in rocky 8 first.
+  		dnf -y install python3 python3-devel python38-devel python38-mod_wsgi.x86_64
+                extra_pkgs=""
+		# and set python3 to 3.8
+  		alternatives --set python3 /usr/bin/python3.8
 		dnf config-manager --enable powertools
         else
                 extra_pkgs="$extra_pkgs python3-devel python3-mod_wsgi.x86_64"
