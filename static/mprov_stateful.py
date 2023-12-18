@@ -192,12 +192,12 @@ class mProvStatefulInstaller():
         bootpart={'filesystem': 'efi', 'size': 100, 'fill': False, 'partnum': 2}
         start = start + self._createPartition(device, disk, bootpart, sectorsize, start, parttype=parted.PARTITION_NORMAL)
         self._makeFS(bootpart, pdisk)
-        if device.path.startswith("/dev/nvme"):
-          part_prefix="p"
-        else:
-          part_prefix=""
-        with open("/tmp/fstab", "a") as fstab:
-            fstab.write(f"{device.path}{part_prefix}{partnum}\t{part['mount']}\t\tvfat\tdefaults\t0 0\n")
+        # if device.path.startswith("/dev/nvme"):
+        #   part_prefix="p"
+        # else:
+        #   part_prefix=""
+        # with open("/tmp/fstab", "a") as fstab:
+        #     fstab.write(f"{device.path}{part_prefix}{partnum}\t{part['mount']}\t\tvfat\tdefaults\t0 0\n")
         partnum += 1
 
       pdisk['partitions'] = sorted(pdisk['partitions'], key=lambda d: d['partnum'])
@@ -302,11 +302,16 @@ class mProvStatefulInstaller():
     # XXX: Does NOT handle spaces in the path 
     # or any other spaces well.
     for idx,line in enumerate(newFstabLines):
+      found=False
       newFstabLines[idx] = line.split()
       newFstabLines[idx].append("\n")
+
       for cidx, currLine in enumerate(currFstabLines):
         if currLine[1] == newFstabLines[idx][1]:
-          currFstabLines[cidx] = newFstabLines[idx] 
+          found=True
+          currFstabLines[cidx] = newFstabLines[idx]
+      if not found:
+        currFstabLines.append(newFstabLines[idx])
     
     # now join the current array back with 4 spaces as the separator
     # and write out the lines to the file
