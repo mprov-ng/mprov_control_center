@@ -249,6 +249,7 @@ class NetworkInterface(models.Model):
   hostaliases=models.CharField(max_length=4096, help_text="A space separated list of alternate hostnames.", null=True, blank=True)
   ipaddress=models.GenericIPAddressField(verbose_name="IP Address ", blank=True, null=True)
   ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address", blank=True, null=True)
+  mtu = models.IntegerField(verbose_name="MTU", default=1500)
   mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)
   switch_port=models.OneToOneField(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
   network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Network")

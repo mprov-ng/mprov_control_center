@@ -6,6 +6,12 @@ then
   /bin/setsid /bin/bash -m  <> /dev/tty1 >&0 2>&1
   exit 0
 fi
+# # ifconfig $MPROV_PROV_INTF down
+
+echo "Shutting down network"
+pkill udhcpc
+ip addr flush dev $MPROV_PROV_INTF
+ip link set $MPROV_PROV_INTF down
 umount /proc
 umount /sys
 umount /dev
