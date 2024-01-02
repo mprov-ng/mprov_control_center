@@ -16,6 +16,7 @@ from django.shortcuts import render
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
 from django.db.models import ManyToManyField
+from scripts.models import Script
 
 
 from .models import (
@@ -368,6 +369,11 @@ class SystemImageAdmin(admin.ModelAdmin):
   def registered_jobservers(self, obj):
     return ", ".join([jm.name for jm in obj.jobservers.all()])
   registered_jobservers.short_description = 'Registered Job Servers'
+
+  def get_form(self, request, obj, **kwargs):
+    form = super(SystemImageAdmin, self).get_form(request, obj, **kwargs)
+    form.base_fields['scripts'].queryset = Script.objects.exclude(scriptType='post-boot')
+    return form
   
   
 admin.site.register(SystemImage, SystemImageAdmin)
