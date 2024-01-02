@@ -79,7 +79,7 @@ If no primary key is specified, 404 is returned.
       js = js_set[0]
       # if ":" in js.address:
       #   js.address = f"[{js.address}]"
-      imageURL = "http://" + js.name + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
+      imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
       if isInitRamFS:
         imageURL += ".initramfs"
       else:
@@ -103,7 +103,7 @@ If no primary key is specified, 404 is returned.
         js = js_set[0]
         # if ":" in js.name:
         #   js.address = f"[{js.address}]"
-        imageURL = "http://" + js.name + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
+        imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
         if isInitRamFS:
           imageURL += ".initramfs"
         else:
@@ -132,12 +132,12 @@ If no primary key is specified, 404 is returned.
       if clientIP is not None:
         if ":" in clientIP:
           try:
-            answer = dns.resolver.resolve(str(js_set[0]), "AAAA", search=True)
+            answer = dns.resolver.resolve(str(js_set[0]['address']), "AAAA", search=True)
           except:
             raise NotFound(detail="Error 404, No resolvable IPv6 Jobservers for Image", code=404)
         else:
           try:
-            answer = dns.resolver.resolve(str(js_set[0]), search=True)
+            answer = dns.resolver.resolve(str(js_set[0]['address']), search=True)
           except Exception as e:
             raise NotFound(detail=f"Error 404, No Resolvable Jobservers for Image: {e}", code=404)
         if answer is not None:
