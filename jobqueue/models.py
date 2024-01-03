@@ -61,7 +61,7 @@ class JobServer(models.Model):
     """
     endpoint="/jobservers/"
     name = models.CharField(max_length=255, unique=True)
-    address = models.GenericIPAddressField()
+    address = models.CharField(max_length=1024, default="mprov")
     port = models.IntegerField(verbose_name="Port", default=8080, )
     heartbeat_time = models.DateTimeField(auto_now=True, verbose_name="Last Heart Beat")
     jobmodules=models.ManyToManyField(JobModule, verbose_name="Handled Job Modules")
