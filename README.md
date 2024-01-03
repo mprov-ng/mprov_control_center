@@ -52,4 +52,4 @@ Docker images exist for the mPCC as well.  More information on how to use the do
 
 # Post installation
 The succesfully installed MPCC admin UI is available at http://<FQDN or IP>/admin/login/?next=/admin/ . The default credntails are admin / admin. 
-Once you have the installation installed, it is highly suggested that you create an API Key and get a job server running..
+Once you have the installation installed, it is highly suggested that you create an API Key and get a job server running, https://github.com/mprov-ng/mprov_jobserver/blob/main/README.md
