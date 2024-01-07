@@ -15,6 +15,7 @@ from django.shortcuts import render
 import requests
 import dns.resolver
 import platform
+from ipaddress import ip_address, IPv4Address
 
 class ImagesAPIView(MProvView, generics.ListAPIView):
     '''
@@ -123,21 +124,31 @@ If no primary key is specified, 404 is returned.
       # choose a jobserver with the lowest one minute load avg.
       print(clientIP)
       
-      js_set = list(image.jobservers.all().order_by('one_minute_load'))
-        
+      js_set = list(image.jobservers.all().order_by('one_minute_load'),)
+      print(js_set)
       if(len(js_set)==0):
         # if there are no jobservers, return 404
         raise NotFound(detail="Error 404, No Jobservers in mPCC for Image", code=404)
       answer = None
+
+      try: 
+          tmp = ip_address(js_set[0].address)
+          # return the job server if a valid IP is found
+          return js_set
+      except ValueError: 
+          # if not a valid ip, assume it's a host name
+         pass
+      
+      
       if clientIP is not None:
         if ":" in clientIP:
           try:
-            answer = dns.resolver.resolve(str(js_set[0]['address']), "AAAA", search=True)
+            answer = dns.resolver.resolve(str(js_set[0].address), "AAAA", search=True)
           except:
             raise NotFound(detail="Error 404, No resolvable IPv6 Jobservers for Image", code=404)
         else:
           try:
-            answer = dns.resolver.resolve(str(js_set[0]['address']), search=True)
+            answer = dns.resolver.resolve(str(js_set[0].address), search=True)
           except Exception as e:
             raise NotFound(detail=f"Error 404, No Resolvable Jobservers for Image: {e}", code=404)
         if answer is not None:
