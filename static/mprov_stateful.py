@@ -192,12 +192,13 @@ class mProvStatefulInstaller():
         bootpart={'filesystem': 'efi', 'size': 100, 'fill': False, 'partnum': 2}
         start = start + self._createPartition(device, disk, bootpart, sectorsize, start, parttype=parted.PARTITION_NORMAL)
         self._makeFS(bootpart, pdisk)
-        # if device.path.startswith("/dev/nvme"):
-        #   part_prefix="p"
-        # else:
-        #   part_prefix=""
-        # with open("/tmp/fstab", "a") as fstab:
-        #     fstab.write(f"{device.path}{part_prefix}{partnum}\t{part['mount']}\t\tvfat\tdefaults\t0 0\n")
+        
+        if device.path.startswith("/dev/nvme"):
+          part_prefix="p"
+        else:
+          part_prefix=""
+        with open("/tmp/fstab", "a") as fstab:
+            fstab.write(f"{device.path}{part_prefix}{partnum}\t/boot/efi\t\tvfat\tdefaults,noauto\t0 0\n")
         partnum += 1
 
       pdisk['partitions'] = sorted(pdisk['partitions'], key=lambda d: d['partnum'])
@@ -396,12 +397,21 @@ class mProvStatefulInstaller():
     print(f"Regenerating initial ramdisk... ")
     sh.chroot([f"/newroot", f"dracut", "--regenerate-all", "-f", "--mdadmconf", "--force-add", "mdraid", "--add-drivers", f"{self.modules}"])
 
-    print(f"Running installing boot loader...")
+    print(f"Installing boot loader...")
 
-    sh.chroot(["/newroot", "dnf", "-y", f"reinstall", "shim-*", "grub2-efi-*", "grub2-common"])
-    sh.mkdir(["-p", "/newroot/boot/efi/EFI/Linux/"])
-    sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/efi/EFI/Linux/grub.cfg"])
-    sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/grub2/grub.cfg"])
+    # TODO: Check [ -d /sys/firmware/efi ] && echo UEFI || echo BIOS
+
+    try:
+      sh.chroot(["/newroot", "dnf", "-y", "install", "shim", "grub2-efi-*", "grub2-common"])
+    except:
+      pass
+
+    sh.chroot(["/newroot", "dnf", "-y", f"reinstall", "shim", "grub2-efi-*", "grub2-common"])
+    sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/etc/grub2-efi.cfg"])
+    sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/grub2/grub2-efi.cfg"])
+    # sh.mkdir(["-p", "/newroot/boot/efi/EFI/Linux/"])
+    # sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/efi/EFI/Linux/grub.cfg"])
+    
     #raise Exception()
     # sh.chroot([
     #   f"/newroot", 
