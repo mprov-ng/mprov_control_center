@@ -573,6 +573,10 @@ class mProvStatefulInstaller():
       print(f"Building biosboot ext2 file system on {pdisk['diskname']}{partprefix}{part['partnum']}...")
       sh.mkfs(['-t', 'ext2', "-F", f"{pdisk['diskname']}{partprefix}{part['partnum']}"])
       return None
+    
+    if 'format' in part:
+      if part['format'] is False:
+        return None
 
     # everything else is offset by the extended and boot partitions if applicablew
     partOffset = 0

@@ -17,7 +17,7 @@ class DiskPartition(models.Model):
   filesystem=models.CharField(verbose_name="Filesysetm", max_length=255)
   disklayout = models.ForeignKey("DiskLayout", on_delete=models.CASCADE, verbose_name="Associated Layout", related_name='partitions')
   bootable = models.BooleanField("Bootable Partition?", default=False)
-  
+  format = models.BooleanField(verbose_name="Format?", default=True)
   
   def __str__(self) -> str:
     layout = self.disklayout.slug
