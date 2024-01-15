@@ -123,7 +123,7 @@ def OSDistroDeleteJob(sender, **kwargs):
         defaults={'status': JobStatus.objects.get(pk=1)}
       )
         
-@receiver(pre_save, sender=OSRepo)
+@receiver(post_save, sender=OSRepo)
 def RepoUpdateJob(sender, instance, **kwargs):
   RepoJobType = None
   # get or create the OSIMAGE_UPDATE job module in the DB
@@ -144,6 +144,7 @@ def RepoUpdateJob(sender, instance, **kwargs):
           params=params,          
       )
       instance.hosted_by.clear()
+      instance.save()
 
 @receiver(pre_delete, sender=OSRepo)
 def RepoDeleteJob(sender, **kwargs):
