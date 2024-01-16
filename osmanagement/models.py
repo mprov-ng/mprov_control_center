@@ -125,8 +125,12 @@ def OSDistroDeleteJob(sender, **kwargs):
         defaults={'status': JobStatus.objects.get(pk=1)}
       )
         
-@receiver(pre_save, sender=OSRepo)
+@receiver(post_save, sender=OSRepo)
 def RepoUpdateJob(sender, instance, **kwargs):
+  if hasattr(instance, '_post_save'):
+     # if we are fired off from a previous post_save call, skip post_save.
+     return
+  
   RepoJobType = None
   # get or create the OSIMAGE_UPDATE job module in the DB
   # TODO get the jobtype, do nothing if it's not defined.
@@ -145,7 +149,11 @@ def RepoUpdateJob(sender, instance, **kwargs):
           params=params,          
       )
       instance.hosted_by.clear()
-      instance.save()
+      try: 
+        instance._post_save = True
+        instance.save()
+      finally:
+         del instance._post_save
 
 @receiver(pre_delete, sender=OSRepo)
 def RepoDeleteJob(sender, **kwargs):
