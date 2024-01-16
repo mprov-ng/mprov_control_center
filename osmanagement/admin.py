@@ -24,6 +24,9 @@ class OSDistroAdmin(admin.ModelAdmin):
         'name',
         'vendor',
         'version',
+        'managed',
+        'update',
+        'baseurl',
         'baserepo',
         'osrepos',
 

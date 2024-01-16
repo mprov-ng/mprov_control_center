@@ -20,7 +20,9 @@ class OSDistro(models.Model):
   name=models.CharField(max_length=100)
   vendor=models.CharField(max_length=100)
   version=models.CharField(max_length=100)
-  
+  managed=models.BooleanField(default=False)
+  update=models.BooleanField(default=False)
+  baseurl=models.CharField(max_length=4096)
   baserepo=models.ForeignKey(
     'OSRepo', 
     on_delete=models.CASCADE, 
