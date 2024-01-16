@@ -125,7 +125,7 @@ def OSDistroDeleteJob(sender, **kwargs):
         defaults={'status': JobStatus.objects.get(pk=1)}
       )
         
-@receiver(post_save, sender=OSRepo)
+@receiver(pre_save, sender=OSRepo)
 def RepoUpdateJob(sender, instance, **kwargs):
   RepoJobType = None
   # get or create the OSIMAGE_UPDATE job module in the DB
@@ -134,7 +134,6 @@ def RepoUpdateJob(sender, instance, **kwargs):
       RepoJobType = JobModule.objects.get(slug='repo-update')
   except:
       RepoJobType = None
-  print(RepoJobType)
   if RepoJobType is not None and instance.update and instance.id is not None:
       instance.version = instance.version +1 
       # save a new job, if one doesn't already exist.
