@@ -151,7 +151,8 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
          name=repo, 
          repo_package_url=f"{baseURL}/{repo}/{instance.distArch}/os/",
          update=instance.update,
-         managed=instance.managed
+         managed=instance.managed,
+         ostype=instance.distType
          )
     newRepo.name = f"{repo}-{instance.version}"
     newRepo.repo_package_url = f"{baseURL}/{repo}/{instance.distArch}/os/"
@@ -181,6 +182,7 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
   # add managed and update based on distro values
   newRepo.update = instance.update
   newRepo.managed = instance.managed
+  newRepo.ostype = instance.distType
   newRepo.save()
   newRepo.refresh_from_db()
   instance.osrepos.add(newRepo)
