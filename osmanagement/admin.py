@@ -18,17 +18,22 @@ class OSDistroAdmin(admin.ModelAdmin):
   #inlines = [RepoInline]
   list_display=['id', 'name', 'vendor', 'version']
   list_display_links=['id', 'name']
+  readonly_fields = ['osrepos']
   fieldsets = (
     (None, {
       'fields': (
         'name',
         'vendor',
         'version',
+        'distType',
+        'distArch',
         'managed',
         'update',
         'baseurl',
         'baserepo',
         'osrepos',
+        'extrarepos',
+
 
       )
     }),

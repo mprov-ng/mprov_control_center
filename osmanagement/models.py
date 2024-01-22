@@ -15,11 +15,19 @@ class OSType(models.Model):
 
  
 class OSDistro(models.Model):
+  ARCH = (
+     ("x86_64", "x86_64"),
+     ("aarch64", "aarch64"),
+     ("ppc64le", "ppc64le"),
+     ("s390x", "s390x"),
+  )
   """ This is where you would define what OS Distributions you would like the mPCC to manage."""
   endpoint="/distros/"
   name=models.CharField(max_length=100)
   vendor=models.CharField(max_length=100)
   version=models.CharField(max_length=100)
+  distType=models.ForeignKey(OSType, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="OS Type")
+  distArch=models.CharField(max_length=400,default="x86_64", choices=ARCH)
   managed=models.BooleanField(default=False)
   update=models.BooleanField(default=False)
   baseurl=models.CharField(max_length=4096)
@@ -28,11 +36,19 @@ class OSDistro(models.Model):
     on_delete=models.CASCADE, 
     related_name='baseRepository',
     verbose_name='OS Base Repository',
+    blank=True,
+    null=True
   )
   osrepos=models.ManyToManyField(
     'OSRepo',
     blank=True,
     verbose_name="OS Repositories",
+    related_name="+"
+  )
+  extrarepos=models.ManyToManyField(
+    'OSRepo',
+    blank=True,
+    verbose_name="Extra Repositories",
     related_name="+"
   )
   config_params=models.TextField(
@@ -107,6 +123,73 @@ def OSDistroUpdateJob(sender, **kwargs):
         name="Update OS Images", module=OSImageJobType,
         defaults={'status': JobStatus.objects.get(pk=1)}
       )
+    
+@receiver(post_save, sender=OSDistro)
+def OSDistroCreateRepos(sender, instance, **kwargs):
+  if hasattr(instance, "_post_save"):
+    # if we are fired off from a previous post save clal, skip.
+    return
+  baseURL=instance.baseurl
+  # remov trailing slash
+  if baseURL[-1] == '/':
+     baseURL = baseURL[:-1]
+
+  genRepos = ['AppStream', 'BaseOS', 'extras' ]
+  if float(instance.version) >= 9:
+    genRepos.append('CRB')
+  else: 
+    genRepos.append('PowerTools')
+ 
+
+  # loop through genRepos and create Repos for each one
+  for repo in genRepos:
+    newRepo = OSRepo.objects.filter(name=f"{repo}-{instance.version}")
+    if newRepo.count() > 0:
+       newRepo = newRepo[0]
+    else:
+      newRepo = OSRepo(
+         name=repo, 
+         repo_package_url=f"{baseURL}/{repo}/{instance.distArch}/os/",
+         update=instance.update,
+         managed=instance.managed
+         )
+    newRepo.name = f"{repo}-{instance.version}"
+    newRepo.repo_package_url = f"{baseURL}/{repo}/{instance.distArch}/os/"
+    newRepo.update = instance.update
+    newRepo.managed = instance.managed
+    newRepo.save()
+    newRepo.refresh_from_db()
+
+    if repo == "BaseOS":
+      instance.baserepo = newRepo
+    else:
+       instance.osrepos.add(newRepo)
+  newRepo = None
+  # special case for EPEL
+  # https://dl.fedoraproject.org/pub/archive/epel/8.8/Everything/x86_64/
+  newRepo = OSRepo.objects.filter(name=f"EPEL-{instance.version}")
+  if newRepo.count() > 0:
+      newRepo = newRepo[0]
+  else:
+    newRepo = OSRepo()
+  newRepo.name = f"EPEL-{instance.version}"
+  # if the version has a . in it, use the archive.  if not, assume latest, pull from main latest.
+  if "." in instance.version:
+    newRepo.repo_package_url = f"https://dl.fedoraproject.org/pub/archive/epel/{instance.version}/Everything/{instance.distArch}/"
+  else:
+    newRepo.repo_package_url = f"https://dl.fedoraproject.org/pub/epel/{instance.version}/Everything/{instance.distArch}/"
+  # add managed and update based on distro values
+  newRepo.update = instance.update
+  newRepo.managed = instance.managed
+  newRepo.save()
+  newRepo.refresh_from_db()
+  instance.osrepos.add(newRepo)
+  instance.update = False
+  try: 
+    instance._post_save = True
+    instance.save()
+  finally:
+      del instance._post_save
 
 @receiver(pre_delete, sender=OSDistro)
 def OSDistroDeleteJob(sender, **kwargs):
@@ -132,8 +215,7 @@ def RepoUpdateJob(sender, instance, **kwargs):
      return
   
   RepoJobType = None
-  # get or create the OSIMAGE_UPDATE job module in the DB
-  # TODO get the jobtype, do nothing if it's not defined.
+  # get the jobtype, do nothing if it's not defined.
   try:
       RepoJobType = JobModule.objects.get(slug='repo-update')
   except:
@@ -163,8 +245,7 @@ def RepoDeleteJob(sender, **kwargs):
   except:
       RepoJobType = None
   print(RepoJobType)
-  # get or create the OSIMAGE_UPDATE job module in the DB
-  # TODO get the jobtype, do nothing if it's not defined.
+  # get the jobtype, do nothing if it's not defined.
   if RepoJobType is not None:
       # save a new job, if one doesn't already exist.
       Job.objects.update_or_create(
@@ -176,8 +257,7 @@ def RepoDeleteJob(sender, **kwargs):
 @receiver(pre_delete, sender=JobServer)
 def DeleteJobserver(sender, instance, **kwargs):
     RepoJobType = None
-    # get or create the OSIMAGE_UPDATE job module in the DB
-    # TODO get the jobtype, do nothing if it's not defined.
+    # get the jobtype, do nothing if it's not defined.
     try:
         RepoJobType = JobModule.objects.get(slug='repo-update')
     except:
