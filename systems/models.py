@@ -12,6 +12,7 @@ from django.utils.text import slugify
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 from disklayouts.models import *
 from django.contrib.auth.models import AnonymousUser, User
+from django.utils import timezone
 import yaml
 
 class SystemGroup(models.Model):
@@ -72,13 +73,13 @@ class System(models.Model):
   provisioning system."""
   endpoint="/systems/"
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
-  timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
+  timestamp=models.DateTimeField(default=timezone.now, verbose_name="Created")
   created_by=models.ForeignKey(
     settings.AUTH_USER_MODEL, 
     on_delete=models.SET(1),
     verbose_name="Created By"
   )
-  updated=models.DateTimeField(auto_now=True, verbose_name="Lasted Updated")
+  updated=models.DateTimeField(default=timezone.now, verbose_name="Lasted Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True, through=SystemGroup.systems.through)
   scripts = models.ManyToManyField(Script, blank=True, )
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
@@ -264,13 +265,13 @@ class SystemImage(models.Model):
   endpoint="/systemimages/"
   name=models.CharField(max_length=255, verbose_name="Image Name",unique=True,)
   slug=models.SlugField(max_length=255, unique=True, editable=False, verbose_name='Image ID', primary_key=True)
-  timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
+  timestamp=models.DateTimeField(default=timezone.now, verbose_name="Created")
   created_by=models.ForeignKey(
     settings.AUTH_USER_MODEL, 
     on_delete=models.SET(1),
     verbose_name="Created By",
   )
-  updated=models.DateTimeField(auto_now=True, verbose_name="Lasted Updated")
+  updated=models.DateTimeField(default=timezone.now, verbose_name="Lasted Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
   scripts = models.ManyToManyField(Script, blank=True, )
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
@@ -314,7 +315,7 @@ class SystemImage(models.Model):
 
 class NADSSystem(models.Model):
   mac=models.CharField(max_length=100, verbose_name="MAC Address", unique=True)
-  discovered=models.DateTimeField(auto_now_add=True, verbose_name="Discovered")
+  discovered=models.DateTimeField(default=timezone.now, verbose_name="Discovered")
   system=models.ForeignKey(System, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Assign System")
 
   def __str__(self):

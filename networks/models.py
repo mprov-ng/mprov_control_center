@@ -5,6 +5,7 @@ from django.dispatch import receiver
 from django.db.models.signals import pre_save, pre_delete
 from jobqueue.models import JobModule, JobStatus, Job
 from django.contrib.auth.models import AnonymousUser, User
+from django.utils import timezone
 
 
 class NetworkType(models.Model):
@@ -75,13 +76,13 @@ class Switch(models.Model):
   """ This is where you would define the switches that the mPCC should know about for handling Node Auto Detection."""
   endpoint="/switches/"
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
-  timestamp=models.DateTimeField(auto_now_add=True, verbose_name="Created")
+  timestamp=models.DateTimeField(default=timezone.now, verbose_name="Created")
   created_by=models.ForeignKey(
     settings.AUTH_USER_MODEL, 
     on_delete=models.SET(1),
     verbose_name="Created By"
   )
-  updated=models.DateTimeField(auto_now=True, verbose_name="Last Updated")
+  updated=models.DateTimeField(default=timezone.now, verbose_name="Last Updated")
   network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Management\nNetwork')
   mgmt_ip=models.GenericIPAddressField(verbose_name="Management IP")
   mgmt_mac=models.CharField(max_length=100, verbose_name="Management MAC")

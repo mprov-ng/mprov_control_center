@@ -3,6 +3,8 @@ from tabnanny import verbose
 from django.db import models
 from django.apps import apps
 from django.utils.timezone import make_aware
+from django.utils import timezone
+
 
 class Job(models.Model):
     """Jobs are internal mProv jobs that are run by the Jobservers. Jobs function to do tasks on behalf of the mPCC.  
@@ -11,10 +13,10 @@ class Job(models.Model):
     """
     endpoint="/jobs/"
     name=models.CharField(max_length=255)
-    create_time=models.DateTimeField(auto_now_add=True, verbose_name="Created Time")
+    create_time=models.DateTimeField(default=timezone.now, verbose_name="Created Time")
     start_time=models.DateTimeField(blank=True, null=True, verbose_name="Start Time")
     end_time = models.DateTimeField(blank=True, null=True, verbose_name="End Time")
-    last_update = models.DateTimeField(auto_now=True, blank=True, null=True, verbose_name="Last Update")
+    last_update = models.DateTimeField(default=timezone.now, blank=True, null=True, verbose_name="Last Update")
     return_code = models.IntegerField(blank=True, null=True, verbose_name='Return Code')
     module = models.ForeignKey('JobModule', on_delete=models.CASCADE)
     params = models.JSONField(verbose_name="Job Parameters", default=dict, null=True)
@@ -63,7 +65,7 @@ class JobServer(models.Model):
     name = models.CharField(max_length=255, unique=True)
     address = models.CharField(max_length=1024, default="mprov")
     port = models.IntegerField(verbose_name="Port", default=8080, )
-    heartbeat_time = models.DateTimeField(auto_now=True, verbose_name="Last Heart Beat")
+    heartbeat_time = models.DateTimeField(default=timezone.now, verbose_name="Last Heart Beat")
     jobmodules=models.ManyToManyField(JobModule, verbose_name="Handled Job Modules")
     one_minute_load=models.FloatField(verbose_name="1 Minute Load Avg.", default=0.00, null=True)
     network=models.ForeignKey('networks.Network', blank=True, null=True, on_delete=models.SET_NULL)
