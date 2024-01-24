@@ -273,7 +273,7 @@ class SystemImage(models.Model):
   )
   updated=models.DateTimeField(default=timezone.now, verbose_name="Lasted Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
-  scripts = models.ManyToManyField(Script, blank=True, )
+  scripts = models.ManyToManyField(Script, blank=True, default="install_mprov_script_runner_sh")
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
   ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles")
   ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
