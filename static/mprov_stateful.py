@@ -399,44 +399,28 @@ class mProvStatefulInstaller():
 
     print(f"Installing boot loader...")
 
-    # TODO: Check [ -d /sys/firmware/efi ] && echo UEFI || echo BIOS
+    # Check [ -d /sys/firmware/efi ] && echo UEFI || echo BIOS
+    if os.path.exists("/sys/firmware/efi"):
+      print("Configuring GRUB2 EFI Setup...")
+      try:
+        sh.chroot(["/newroot", "dnf", "-y", "install", "shim", "grub2-efi-*", "grub2-common"])
+      except:
+        pass
 
-    try:
-      sh.chroot(["/newroot", "dnf", "-y", "install", "shim", "grub2-efi-*", "grub2-common"])
-    except:
-      pass
+      sh.chroot(["/newroot", "dnf", "-y", f"reinstall", "shim", "grub2-efi-*", "grub2-common"])
+      sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/etc/grub2-efi.cfg"])
+      sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/grub2/grub2-efi.cfg"])
+    else:
+      print("Configuring GRUB2 BIOS Setup...")
+      sh.chroot([
+        f"/newroot", 
+        "grub2-install", 
+        "--boot-directory=/boot",
+        "--recheck",
+        "--verbose",
+        bootdisk ])
+      sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/etc/grub2.cfg"])
 
-    sh.chroot(["/newroot", "dnf", "-y", f"reinstall", "shim", "grub2-efi-*", "grub2-common"])
-    sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/etc/grub2-efi.cfg"])
-    sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/grub2/grub2-efi.cfg"])
-    # sh.mkdir(["-p", "/newroot/boot/efi/EFI/Linux/"])
-    # sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/efi/EFI/Linux/grub.cfg"])
-    
-    #raise Exception()
-    # sh.chroot([
-    #   f"/newroot", 
-    #   "grub2-install", 
-    #   "--target=x86_64-efi",
-    #   "--boot-directory=/boot",
-    #   "--efi-directory=/boot/efi",
-    #   "--recheck",
-    #   "--verbose",
-    #   bootdisk ])
-
-    # print("Configuring GRUB2 EFI setup...")
-    # create the efi file
-    
-
-    # print("Configuring GRUB2 BIOS Setup...")
-    
-    # # create a bios boot grub file.
-    # with open("/newroot/etc/grub2.cfg", "w") as grubfile:
-    #   grubfile.write("search --no-floppy --set efi --file /efi/grub.cfg")
-    #   grubfile.write("configfile ($efi)/efi/grub.cfg")
-
-    # # unmount our stuff.
-    # for mount in bindMounts:
-    #   sh.umount([f"/newroot/{mount}"])
     
   def cleanupAndSwitchroot(self):
     # disable netboot
