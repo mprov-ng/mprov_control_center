@@ -147,17 +147,12 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
     if newRepo.count() > 0:
        newRepo = newRepo[0]
     else:
-      newRepo = OSRepo(
-         name=repo, 
-         repo_package_url=f"{baseURL}/{repo}/{instance.distArch}/os/",
-         update=instance.update,
-         managed=instance.managed,
-         ostype=instance.distType
-         )
+      newRepo = OSRepo()
     newRepo.name = f"{repo}-{instance.version}"
     newRepo.repo_package_url = f"{baseURL}/{repo}/{instance.distArch}/os/"
     newRepo.update = instance.update
     newRepo.managed = instance.managed
+    newRepo.ostype = instance.distType
     newRepo.save()
     newRepo.refresh_from_db()
 
