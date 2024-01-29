@@ -463,7 +463,7 @@ def UpdateSystemImages(sender, instance, **kwargs):
   if JobType is not None:
 
       # save a new job, if one doesn't already exist.
-      params = { 'imageId': instance.slug}
+      params = { 'imageId': instance.slug, 'origin': 'pre_save'}
       Job.objects.create( name=JobType.name, 
           module=JobType, 
           status=JobStatus.objects.get(pk=1), 
@@ -473,3 +473,4 @@ def UpdateSystemImages(sender, instance, **kwargs):
       # Increment version number and clear out jobservers field.
       instance.jobservers.clear()
       instance.version = instance.version + 1
+      instance.needs_rebuild = False

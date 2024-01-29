@@ -661,7 +661,8 @@ Format returned:
           sysimage = self.model.objects.get(pk=kwargs['pk'])
         if sysimage == None:
           return Response(None, status=404)
-        
+        if 'needs_rebuild' in request.data:
+            sysimage.needs_rebuild = request.data['need_rebuild']
         # if the incoming 'jobservers' param is an array, let's merge it with 
         # the existing one.
         if 'jobservers' in request.data:
