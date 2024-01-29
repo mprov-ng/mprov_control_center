@@ -8,6 +8,7 @@ import parted
 import traceback
 import requests
 import sh
+import subprocess
 
 # This scirpt will:
 # - grab the disklayout from the mPCC, 
@@ -567,10 +568,7 @@ class mProvStatefulInstaller():
       print(f"Building biosboot ext2 file system on {pdisk['diskname']}{partprefix}{part['partnum']}...")
       sh.mkfs(['-t', 'ext2', "-F", f"{pdisk['diskname']}{partprefix}{part['partnum']}"])
       return None
-    
-    if 'format' in part:
-      if part['format'] is False:
-        return None
+  
 
     # everything else is offset by the extended and boot partitions if applicablew
     partOffset = 0
@@ -579,6 +577,25 @@ class mProvStatefulInstaller():
       partOffset += 2
     if part['partnum'] != '':
       part['partnum'] = int(part['partnum']) + partOffset
+
+      
+    if 'format' in part:
+      if part['format'] is False:
+        # get the blkid.
+        part['uuid'] = ""
+
+        try:
+          part['uuid'] = subprocess.run(
+            ['blkid', '-o', 'value', '--match-tag=UUID', f"{pdisk['diskname']}{partprefix}{part['partnum']}"],
+            text=True, capture_output=True
+            ).stdout.split("\n")[0]
+        except:
+          pass
+        # here we check if we got a string back from the blkid, if so, assume it's formated
+        # and return the UUID.  If not, format.
+        if part['uuid'] != "":
+          return part['uuid']
+      
     # make a uuid 
     partuuid = uuid.uuid4()
     if part['filesystem'] == 'xfs':
