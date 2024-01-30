@@ -157,3 +157,4 @@ static/debug_toolbar/js/utils.js
 mprov_control_center.code-workspace
 install_scripts/env.db
 static/bootx64.efi
+static/mlnx
