@@ -10,16 +10,7 @@ import requests
 import sh
 from ipaddress import IPv4Network
 
-# This scirpt will:
-# - grab the disklayout from the mPCC, 
-# - build the partition table(s)
-# - build the file system(s)
-# - update the /etc/fstab
-# - mount the root filesystem to a subdir
-# - chroot in and mount the remaining filesystems, 
-# - rsync the RAM image to the disk
-# - mark the system's bootable NIC as not bootable to indicate it's provisioned
-# - hand control over to systemd or reboot
+
 
 def exception_hook(exctype, value, tracebak):
   traceback.print_exc()
@@ -178,7 +169,7 @@ class mProvNetworkScriptGenerator():
         netScript.write(f"NETMASK={intf['netmask']}\n")
         if intf['mac'] is not None and intf['mac'] != "":
           netScript.write(f"HWADDR={intf['mac']}\n")
-        if intf['gateway'] is not None and intf['gateway'] != "":
+        if intf['gateway'] is not None and intf['gateway'] != "" and intf['gateway'] == True:
           netScript.write(f"GATEWAY={intf['gateway']}\n")
         if intf['mtu'] is not None and intf['mtu'] != "":
           netScript.write(f"MTU={intf['mtu']}\n")
