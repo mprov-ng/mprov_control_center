@@ -1,6 +1,6 @@
 from http.client import NETWORK_AUTHENTICATION_REQUIRED
 from django.http import HttpResponseNotAllowed
-
+from django.shortcuts import redirect
 from re import template
 from unicodedata import name
 from .serializers import (
@@ -290,7 +290,25 @@ Format returned:
     def get(self, request, format=None, **kwargs):
         # XXX: Fix this to work with the base class
         # get() function
+        
+        if 'powerstate' in request.query_params:
+            # get the power state via IPMI
+            if 'pk' in kwargs:
+                systemObj = System.objects.get(pk=kwargs['pk'])
+                bmcObj = SystemBMC.objects.filter(system=systemObj)
+                if bmcObj.count() != 1:
+                    return redirect(f"/static/images/power_unknown.svg")
+                bmcStatus = SystemPowerAPIView()._doPowerCmd(bmcObj[0], "status")
+                # TODO: Serve the image file based on status
+                if bmcStatus['chassis_status'] == "unknown":
+                    bmcStatus = "unknown"
+                else:
+                    bmcStatus = "on" if bmcStatus['chassis_status'] else "off"
+                return redirect(f"/static/images/power_{bmcStatus}.svg")
 
+            else:
+                return redirect(f"/static/images/power_unknown.svg")
+        
         if 'pk' in kwargs:
             self.serializer_class = SystemSerializer
 
@@ -642,6 +660,7 @@ Format returned:
     jobservers=JobServerAPISerializer(many=True)
     
     def get(self, request, format=None, **kwargs):
+
         result = super().get(request, format, **kwargs)
         if 'pk' in kwargs:
             self.serializer_class = SystemImageDetailsSerializer
@@ -844,8 +863,11 @@ class SystemPowerAPIView(MProvView):
                 ipmi.chassis_control_hard_reset()
             elif action=="cycle":
                 ipmi.chassis_control_power_cycle()
+            elif action=="status":
+                chassis = ipmi.get_chassis_status()
+                return({'details': '', 'status': 200, 'chassis_status': chassis.power_on})
         except Exception as e:
-            return({'details': f"Exception {e}", "status": "400"})
+            return({'details': f"Exception {e}", "status": "400", 'chassis_status': 'unknown'})
         return({'details': '', 'status': 200})
 
 

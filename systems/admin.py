@@ -114,9 +114,10 @@ class SystemAdmin(admin.ModelAdmin):
   actions = [ 'bulk_update' ]
   
   inlines = [ NetworkInterfaceInline, BMCInLine]
-  list_display = ['id', 'hostname', 'getMacs', 'getSwitchPort']
+  list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort']
   readonly_fields = ['timestamp', 'updated', 'created_by']
   list_display_links = ['id', 'hostname']
+  list_per_page = 25
   change_form_template ='admin/system_change_form.html'
   fieldsets = (
     (None, {
@@ -148,6 +149,8 @@ class SystemAdmin(admin.ModelAdmin):
     }
     ),
   )
+  def getPower(self, obj):
+     return mark_safe(f"<img src=\"/systems/{obj.id}/?powerstate\" width=\"32\" height=\"32\" />")
   def getMacs(self, obj):
 
     query = NetworkInterface.objects.filter(system=obj).select_related('switch_port')
@@ -165,6 +168,7 @@ class SystemAdmin(admin.ModelAdmin):
     return mark_safe(portstr)
   getSwitchPort.short_description = "Switch Ports"
   getMacs.short_description = 'Network\nInterfaces'
+  getPower.short_description = "Status"
 
   @admin.action(description="Update fields on multiple systems")
   def bulk_update(self, request, queryset):
