@@ -14,7 +14,7 @@ class DiskPartition(models.Model):
   mount=models.CharField(verbose_name="Mount Point", max_length=4096, help_text="The directory this partition will mount to or 'raid' if it is a Software RAID member.")
   size=models.BigIntegerField(verbose_name="Size (in MB)")
   fill=models.BooleanField(default=False, verbose_name="Grow to fill?")
-  filesystem=models.CharField(verbose_name="Filesysetm", max_length=255)
+  filesystem=models.CharField(verbose_name="Filesystem", max_length=255)
   disklayout = models.ForeignKey("DiskLayout", on_delete=models.CASCADE, verbose_name="Associated Layout", related_name='partitions')
   bootable = models.BooleanField("Bootable Partition?", default=False)
   format = models.BooleanField(verbose_name="Force Format?", default=True, help_text="If checked, the partition will always be wiped. If unchecked, the partition will only be wiped if no filesystem is detected.")
