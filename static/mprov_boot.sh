@@ -104,6 +104,7 @@ mount -t tmpfs -o size=$MPROV_TMPFS_SIZE tmpfs /image
 mkdir /image/tmp
 date > /image/tmp/boot_timing
 echo "Image directory setup."
+chmod 755 /image
 cd /image
 
 echo; echo "Downloading and extracting image to image directory... "
