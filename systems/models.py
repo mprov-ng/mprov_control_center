@@ -249,7 +249,7 @@ class NetworkInterface(models.Model):
   hostname=models.CharField(max_length=255, )
   hostaliases=models.CharField(max_length=4096, help_text="A space separated list of alternate hostnames.", null=True, blank=True)
   ipaddress=models.GenericIPAddressField(verbose_name="IP Address ", blank=True, null=True)
-  gateway=models.BooleanField(verbose_name="Gateway Nic?", default=True)
+  isgateway=models.BooleanField(verbose_name="Gateway Nic?", default=True)
   ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address", blank=True, null=True)
   mtu = models.IntegerField(verbose_name="MTU", default=1500)
   mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)

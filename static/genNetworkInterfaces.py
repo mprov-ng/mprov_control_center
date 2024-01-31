@@ -169,7 +169,7 @@ class mProvNetworkScriptGenerator():
         netScript.write(f"NETMASK={intf['netmask']}\n")
         if intf['mac'] is not None and intf['mac'] != "":
           netScript.write(f"HWADDR={intf['mac']}\n")
-        if intf['gateway'] is not None and intf['gateway'] != "" and intf['gateway'] == True:
+        if intf['gateway'] is not None and intf['gateway'] != "" and intf['isgateway'] == True:
           netScript.write(f"GATEWAY={intf['gateway']}\n")
         if intf['mtu'] is not None and intf['mtu'] != "":
           netScript.write(f"MTU={intf['mtu']}\n")
