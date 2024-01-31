@@ -146,7 +146,7 @@ then
 fi
 
 echo -n "Starting mProv for: "
-if [ "$MPROV_STATEFUL" == "1" ]
+if [ "$MPROV_STATEFUL" == "1" ] && [ ! -e /image/etc/mprov/nads.yaml ]
 then
   echo "Stateful Installation"
  
