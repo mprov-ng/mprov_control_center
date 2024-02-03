@@ -81,6 +81,8 @@ then
 #DB_PASS=mprov
 #DB_HOST=127.0.0.1
 #DB_PORT=3306
+NO_MLX_OFED=1
+NO_NVIDIA=1
 
 EOFdb
 	if [ "$BUILD_DOCKER" != "1" ]
