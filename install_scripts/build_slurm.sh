@@ -57,7 +57,6 @@ else
       hwloc \
       hwloc-plugins \
       pmix-devel \
-      ucx-devel \
       lz4-devel \
       freeipmi \
       rrdtool \
@@ -68,15 +67,12 @@ else
       libcurl-devel \
       lua-devel \
       kmod-iser \
-      kmod-isert \
       kmod-kernel-mft-mlnx \
       kmod-knem \
       kmod-mlnx-ofa_kernel \
       kmod-srp \
       hcoll \
       ibutils2 \
-      infiniband-diags \
-      infiniband-diags-compat \
       libibumad \
       libibverbs \
       libibverbs-utils \
@@ -87,18 +83,13 @@ else
       mlnx-iproute2 \
       mlnx-ofa_kernel \
       mlnx-ofa_kernel-devel \
-      mlnx-ofed-basic \
       mstflint \
       ofed-scripts \
       python3-pyverbs \
       rdma-core \
       rdma-core-devel \
       sharp \
-      ucx-cma \
-      ucx-devel \
-      ucx-ib \
-      ucx-knem 
-
+      
     printf "Downloading $latest_file to $slurmdl...\n"
     pushd $slurmdl
     sudo -u slurm wget -q $dlurl/$latest_file -O $latest_file
