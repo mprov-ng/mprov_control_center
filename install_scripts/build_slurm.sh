@@ -66,29 +66,15 @@ else
       readline-devel \
       libcurl-devel \
       lua-devel \
-      kmod-iser \
-      kmod-kernel-mft-mlnx \
-      kmod-knem \
-      kmod-mlnx-ofa_kernel \
-      kmod-srp \
-      hcoll \
-      ibutils2 \
       libibumad \
       libibverbs \
       libibverbs-utils \
       librdmacm \
       librdmacm-utils \
-      mft \
-      mlnx-ethtool \
-      mlnx-iproute2 \
-      mlnx-ofa_kernel \
-      mlnx-ofa_kernel-devel \
       mstflint \
-      ofed-scripts \
       python3-pyverbs \
       rdma-core \
-      rdma-core-devel \
-      sharp \
+      rdma-core-devel 
       
     printf "Downloading $latest_file to $slurmdl...\n"
     pushd $slurmdl
