@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$NO_MLX_OFED" ]
+if [ "$NO_MLX_OFED" == "1"]
 then
   exit 0
 fi
