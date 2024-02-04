@@ -1,4 +1,5 @@
 #!/bin/bash
+. /var/www/mprov_control_center/.env
 
 if [ "$NO_NVIDIA" == "1" ]
 then
