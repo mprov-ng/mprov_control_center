@@ -74,7 +74,8 @@ else
       mstflint \
       python3-pyverbs \
       rdma-core \
-      rdma-core-devel 
+      rdma-core-devel \
+      ucx-devel
       
     printf "Downloading $latest_file to $slurmdl...\n"
     pushd $slurmdl
