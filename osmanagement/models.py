@@ -131,7 +131,7 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
     return
   baseURL=instance.baseurl
   # remov trailing slash
-  if baseURL[-1] == '/':
+  if baseURL[:-1] == '/':
      baseURL = baseURL[:-1]
 
   genRepos = ['AppStream', 'BaseOS', 'extras' ]
