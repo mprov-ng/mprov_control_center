@@ -1,10 +1,10 @@
 #!/bin/bash
+. /var/www/mprov_control_center/.env
 
 if [ "$DISABLE_SLURM" == "1" ]
 then
   exit 0
 fi
-. /var/www/mprov_control_center/.env
 if [ "$DB_ENGINE" != "django.db.backends.mysql" ]
 then
   echo "WARN: Django isn't using the mysql backend, automatic slurmdbd config may fail."
