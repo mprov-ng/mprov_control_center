@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$NO_NVIDIA" == "1"]
+if [ "$NO_NVIDIA" == "1" ]
 then
   exit 0
 fi
