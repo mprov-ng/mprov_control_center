@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$DISABLE_SLURM" ]
+if [ "$DISABLE_SLURM" == "1" ]
 then
   exit 0
 fi
