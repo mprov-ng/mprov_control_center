@@ -25,3 +25,7 @@
     tmpfs_root_size: 8
     initial_mods: "e1000,tg3,ixgbe,bnx2x,megaraid_sas,sd_mod"
     prov_interface: "eth0"
+    distType: "rhel"
+    managed: True
+    update: True
+    baseurl: "https://download.rockylinux.org/pub/rocky/8/"
