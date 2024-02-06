@@ -9,7 +9,6 @@
     timestamp: "1970-01-01T00:00+00:00"
     updated: "1970-01-01T00:00+00:00"
     scripts:
-      - set_root_pw_sh
       - setup_ssh_sh
       - install_mprov_script_runner_sh
       - extra_packages_sh
@@ -25,7 +24,6 @@
     timestamp: "1970-01-01T00:00+00:00"
     updated: "1970-01-01T00:00+00:00"
     scripts:
-      - set_root_pw_sh
       - setup_ssh_sh
       - install_mprov_script_runner_sh
       - extra_packages_sh
@@ -34,6 +32,8 @@
   pk: 1
   fields:
     name: compute
+    scripts: 
+      - setupbmc_py
 
 - model: systems.system
   pk: 1
@@ -53,6 +53,16 @@
     hostname: c01
     ipaddress: 172.16.10.1
     bootable: True
+    network: 1
+
+- model: systems.systembmc
+  pk: 1
+  fields:
+    system: 1
+    ipaddress: 172.17.10.1
+    username: root
+    password: root
+    network: 2
 
 - model: systems.system
   pk: 2
@@ -72,6 +82,16 @@
     hostname: c02
     ipaddress: 172.16.10.2
     bootable: True
+    network: 1
+
+- model: systems.systembmc
+  pk: 2
+  fields:
+    system: 2
+    ipaddress: 172.17.10.2
+    username: root
+    password: root
+    network: 2
 
 - model: systems.system
   pk: 3
@@ -91,6 +111,16 @@
     hostname: c03
     ipaddress: 172.16.10.3
     bootable: True
+    network: 1
+
+- model: systems.systembmc
+  pk: 3
+  fields:
+    system: 3
+    ipaddress: 172.17.10.3
+    username: root
+    password: root
+    network: 2
 
 - model: systems.system
   pk: 4
@@ -110,6 +140,16 @@
     hostname: c04
     ipaddress: 172.16.10.4
     bootable: True
+    network: 1
+
+- model: systems.systembmc
+  pk: 4
+  fields:
+    system: 4
+    ipaddress: 172.17.10.4
+    username: root
+    password: root
+    network: 2
 
 - model: systems.system
   pk: 5
@@ -129,6 +169,16 @@
     hostname: c05
     ipaddress: 172.16.10.5
     bootable: True
+    network: 1
+
+- model: systems.systembmc
+  pk: 5
+  fields:
+    system: 5
+    ipaddress: 172.17.10.5
+    username: root
+    password: root
+    network: 2
 
 - model: systems.system
   pk: 6
@@ -148,6 +198,16 @@
     hostname: c06
     ipaddress: 172.16.10.6
     bootable: True
+    network: 1
+
+- model: systems.systembmc
+  pk: 6
+  fields:
+    system: 6
+    ipaddress: 172.17.10.6
+    username: root
+    password: root
+    network: 2
 
 - model: systems.system
   pk: 7
@@ -167,6 +227,16 @@
     hostname: c07
     ipaddress: 172.16.10.7
     bootable: True
+    network: 1
+
+- model: systems.systembmc
+  pk: 7
+  fields:
+    system: 7
+    ipaddress: 172.17.10.7
+    username: root
+    password: root
+    network: 2
 
 - model: systems.system
   pk: 8
@@ -186,3 +256,13 @@
     hostname: c08
     ipaddress: 172.16.10.8
     bootable: True
+    network: 1
+
+- model: systems.systembmc
+  pk: 8
+  fields:
+    system: 8
+    ipaddress: 172.17.10.8
+    username: root
+    password: root
+    network: 2
