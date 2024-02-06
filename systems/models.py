@@ -318,7 +318,10 @@ class NADSSystem(models.Model):
   mac=models.CharField(max_length=100, verbose_name="MAC Address", unique=True)
   discovered=models.DateTimeField(default=timezone.now, verbose_name="Discovered")
   system=models.ForeignKey(System, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Assign System")
-
+  switch=models.CharField(max_length=1024, verbose_name="Detected Switch", null=True, blank=True,)
+  port=models.CharField(max_length=1024, verbose_name="Detected Port", null=True, blank=True,)
+  vendor=models.CharField(max_length=1024, verbose_name="Detected Vendor", null=True, blank=True,)
+  model=models.CharField(max_length=1024, verbose_name="Detected Model",  null=True, blank=True,)
   def __str__(self):
     return self.mac
 

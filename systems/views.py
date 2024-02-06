@@ -171,7 +171,13 @@ NADS Packet:
         if sysnic.count() > 0:
             return Response(None, status=200)
         else: 
-            nadssys = NADSSystem.objects.update_or_create(mac=request.data['mac'])
+            nadssys = NADSSystem.objects.update_or_create(
+                mac=request.data['mac'],
+                switch=request.data['switch'],
+                port=request.data['port'],
+                vendor=request.data['vendor'],
+                model=request.data['model']
+                )
         print(sysnic)
    
         # TODO insert MAC ban code here if needed.
