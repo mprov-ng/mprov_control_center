@@ -2,9 +2,10 @@ import ipaddress, time, datetime
 from tabnanny import verbose
 from django.db import models
 from django.apps import apps
-from django.utils.timezone import make_aware
+from django.utils.timezone import make_aware, is_aware
 from django.utils import timezone
-
+from django.dispatch import receiver
+from django.db.models.signals import pre_save
 
 class Job(models.Model):
     """Jobs are internal mProv jobs that are run by the Jobservers. Jobs function to do tasks on behalf of the mPCC.  
@@ -103,3 +104,10 @@ class JobServer(models.Model):
         if found_net != None:
             self.network = found_net
         super().save(*args, **kwargs)
+
+
+@receiver(pre_save, sender=JobServer)
+def convertJobServerTS(sender, instance, **kwarg):
+    if not is_aware(instance.heartbeat_time):
+        instance.heartbeat_time = make_aware(instance.heartbeat_time)
+    pass
