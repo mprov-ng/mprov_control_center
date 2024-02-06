@@ -92,15 +92,20 @@ NADS Packet:
         print(request.data)
         
         if request.data['switch'] is not None:
-
-            switch = Switch.objects.get(hostname=request.data['switch'])
+            try:
+                switch = Switch.objects.get(hostname=request.data['switch'])
+            except:
+                switch = None
         else:
             switch = None
 
         model_slug = slugify(f"{request.data['vendor']} {request.data['model']}")
         
         if request.data['port'] is not None:
-            port= SwitchPort.objects.get(name=request.data['port'], switch=switch)
+            try:
+                port= SwitchPort.objects.get(name=request.data['port'], switch=switch)
+            except:
+                port = None
         else:
             port = None
         #print(port)
