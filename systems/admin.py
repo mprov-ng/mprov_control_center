@@ -309,6 +309,8 @@ class SystemModelAdmin(admin.ModelAdmin):
 class NADSAdmin(admin.ModelAdmin):
   verbose_name = "N.A.D.S Discovered"
   verbose_name_plural = "N.A.D.S Discovered"
+  list_display = ['mac', 'vendor', 'model', 'switch', 'port']
+  readonly_fields = ['mac', 'vendor', 'model', 'switch', 'port']
 
 @admin.action(description="Mark images as needing rebuild.")
 def mark_rebuild(modeladmin, request, queryset):
