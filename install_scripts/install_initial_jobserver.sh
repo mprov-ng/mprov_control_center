@@ -27,7 +27,7 @@ cat << EOF > /etc/mprov/jobserver.yaml
     # this is the interval which this jobserver will check in with the mPCC
     heartbeatInterval: 10
     # runonce: True # uncomment to run the jobserver once and exit.
-    myaddress: '' # set this to the address of this jobserver.
+    myaddress: '$hostname' # set this to the address of this jobserver.
     jobmodules:
       # set the jobmodules you want to run here.
       - repo-delete
