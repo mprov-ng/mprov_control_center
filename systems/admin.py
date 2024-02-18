@@ -118,6 +118,7 @@ class SystemAdmin(admin.ModelAdmin):
   readonly_fields = ['timestamp', 'updated', 'created_by']
   list_display_links = ['id', 'hostname']
   list_per_page = 25
+  search_fields = ['hostname']
   change_form_template ='admin/system_change_form.html'
   fieldsets = (
     (None, {
