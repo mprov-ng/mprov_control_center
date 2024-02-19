@@ -88,7 +88,10 @@ ip link set $MPROV_PROV_INTF down
 ip link set $MPROV_PROV_INTF up
 # wait a couple of seconds for the link
 sleep 5
-udhcpc -s /bin/default.script -b
+for intf in `ip link | grep state | awk '{print $2}' | tr -d : | grep -v ^lo$`
+do
+  udhcpc -s /bin/default.script -b -i $intf &
+done
 
 echo "Network up."
 echo; 
