@@ -27,7 +27,7 @@ from jobqueue.serializers import JobServerAPISerializer
 from django.utils.text import slugify
 import pyipmi
 import pyipmi.interfaces
-
+from func_timeout import func_timeout, FunctionTimedOut
 
 class SystemRegAPIView(MProvView):
     '''
@@ -310,7 +310,12 @@ Format returned:
                 bmcObj = SystemBMC.objects.filter(system=systemObj)
                 if bmcObj.count() != 1:
                     return redirect(f"/static/images/power_unknown.svg")
-                bmcStatus = SystemPowerAPIView()._doPowerCmd(bmcObj[0], "status")
+
+                try:
+                    bmcStatus = func_timeout(1, SystemPowerAPIView()._doPowerCmd, [bmcObj[0], "status"])
+                except FunctionTimedOut:
+                    return redirect(f"/static/images/power_unknown.svg")
+                    
                 # TODO: Serve the image file based on status
                 if bmcStatus['chassis_status'] == "unknown":
                     bmcStatus = "unknown"
@@ -876,12 +881,12 @@ class SystemPowerAPIView(MProvView):
             elif action=="cycle":
                 ipmi.chassis_control_power_cycle()
             elif action=="status":
-                chassis = ipmi.get_chassis_status()
+                
+                chassis = func_timeout(1, ipmi.get_chassis_status())
+             
                 return({'details': '', 'status': 200, 'chassis_status': chassis.power_on})
         except Exception as e:
             return({'details': f"Exception {e}", "status": "400", 'chassis_status': 'unknown'})
-        return({'details': '', 'status': 200})
-
 
     def post(self, request, *args, **kwargs):
         return Response("Bad Request", status=400)
