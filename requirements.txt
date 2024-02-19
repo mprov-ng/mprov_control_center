@@ -15,6 +15,7 @@ bs4 # https://pypi.org/project/beautifulsoup4/ - MIT
 pymemcache
 django-auth-ldap
 python-ipmi
+func_timeout
 dnspython
 django-dbbackup
 netifaces
