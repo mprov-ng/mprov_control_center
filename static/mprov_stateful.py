@@ -40,6 +40,7 @@ class mProvStatefulInstaller():
   bootdisk = None
   bootpart = None
   modules = ""
+  rootpartUUID = ""
 
   def __init__(self, **kwargs):
     print("mProv Stateful Installer Starting.")
@@ -217,6 +218,9 @@ class mProvStatefulInstaller():
           # update /tmp/fstab
           with open("/tmp/fstab", "a") as fstab:
             fstab.write(f"UUID={partuuid}\t{part['mount']}\t\t{part['filesystem']}\tdefaults\t0 0\n")
+          if part['mount'] == "/":
+            self.rootpartUUID=f"UUID={partuuid}"
+            print(self.rootpartUUID)
 
         partnum+=1
 
@@ -228,6 +232,9 @@ class mProvStatefulInstaller():
           # update /tmp/fstab
           with open("/tmp/fstab", "a") as fstab:
             fstab.write(f"UUID={partuuid}\t{fillpart['mount']}\t\t{fillpart['filesystem']}\tdefaults\t0 0\n")
+          if fillpart['mount'] == "/":
+            self.rootpartUUID=f"UUID={partuuid}"
+            print(self.rootpartUUID)
     
   def buildRAIDs(self):
     print("Building software RAID devices (if any) ... ")
@@ -263,6 +270,9 @@ class mProvStatefulInstaller():
       # update /tmp/fstab
       with open("/tmp/fstab", "a") as fstab:
         fstab.write(f"UUID={partuuid}\t{pdisk['mount']}\t\t{part['filesystem']}\tdefaults\t0 0\n")
+      if pdisk['mount'] == "/":
+        self.rootpartUUID=f"UUID={partuuid}"
+        print(self.rootpartUUID)
     print("Done With RAID devices.")
     
 
@@ -389,7 +399,7 @@ class mProvStatefulInstaller():
     grubfileNew = [line for line in grubfileLines if not 'GRUB_CMDLINE_LINUX=' in line]
     
     # now add our new commandline
-    grubfileNew.append(f"GRUB_CMDLINE_LINUX=\"{' '.join(newcmdline)}\"")
+    grubfileNew.append(f"GRUB_CMDLINE_LINUX=\"{' '.join(newcmdline)} {self.rootpartUUID}\"")
 
     # write out the new file
     with open("/newroot/etc/default/grub", "w") as grubfileout:
