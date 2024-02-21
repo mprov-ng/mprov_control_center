@@ -315,7 +315,7 @@ Format returned:
                     bmcStatus = func_timeout(1, SystemPowerAPIView()._doPowerCmd, [bmcObj[0], "status"])
                 except FunctionTimedOut:
                     return redirect(f"/static/images/power_unknown.svg")
-                    
+
                 # TODO: Serve the image file based on status
                 if bmcStatus['chassis_status'] == "unknown":
                     bmcStatus = "unknown"
@@ -882,7 +882,7 @@ class SystemPowerAPIView(MProvView):
                 ipmi.chassis_control_power_cycle()
             elif action=="status":
                 
-                chassis = func_timeout(1, ipmi.get_chassis_status())
+                chassis = ipmi.get_chassis_status()
              
                 return({'details': '', 'status': 200, 'chassis_status': chassis.power_on})
         except Exception as e:
