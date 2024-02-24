@@ -89,20 +89,20 @@ class JobServer(models.Model):
             self.__class__.objects.filter(heartbeat_time__lte=delDateTime).delete()
         
         # search for a network that our address is in.
-        myaddr = ipaddress.ip_address(self.address)
+        #myaddr = ipaddress.ip_address(self.address)
         # get a ref to the networks class
-        networkcls = apps.get_model('networks.Network')
-        networks = networkcls.objects.all()
-        found_net = None
-        for network in networks:
-            ipnet = network.subnet
-            ipmask = network.netmask
-            mynet = ipaddress.ip_network(f"{ipnet}/{ipmask}")
-            if myaddr in mynet:
-                found_net = network
-                break
-        if found_net != None:
-            self.network = found_net
+        #networkcls = apps.get_model('networks.Network')
+        #networks = networkcls.objects.all()
+        #found_net = None
+        #for network in networks:
+        #    ipnet = network.subnet
+        #    ipmask = network.netmask
+        #    mynet = ipaddress.ip_network(f"{ipnet}/{ipmask}")
+        #    if myaddr in mynet:
+        #        found_net = network
+        #        break
+        #if found_net != None:
+        #    self.network = found_net
         super().save(*args, **kwargs)
 
 
