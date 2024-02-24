@@ -17,6 +17,9 @@ from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
 from django.db.models import ManyToManyField
 from scripts.models import Script
+import pyipmi
+import pyipmi.interfaces
+from func_timeout import func_timeout, FunctionTimedOut
 
 
 from .models import (
@@ -111,7 +114,7 @@ class BMCInLine(admin.StackedInline):
 
 
 class SystemAdmin(admin.ModelAdmin):
-  actions = [ 'bulk_update' ]
+  actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', ]
   
   inlines = [ NetworkInterfaceInline, BMCInLine]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort']
@@ -171,6 +174,72 @@ class SystemAdmin(admin.ModelAdmin):
   getMacs.short_description = 'Network\nInterfaces'
   getPower.short_description = "Status"
 
+  @admin.action(description="Power Cycle")
+  def sys_cycle(self, request, queryset):
+     for system in queryset:
+        mybmc = SystemBMC.objects.all().filter(system=system.id)
+        if len(mybmc) != 1:
+           print(f"Error: Unable to find bmc for {system.name}")
+           continue
+        mybmc = mybmc[0]
+        try:
+          func_timeout(1, self._doPowerCmd, [mybmc, "cycle"])
+        except FunctionTimedOut:
+           print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
+  @admin.action(description="Power On")
+  def sys_on(self, request, queryset):
+     for system in queryset:
+        mybmc = SystemBMC.objects.all().filter(system=system.id)
+        if len(mybmc) != 1:
+           print(f"Error: Unable to find bmc for {system.name}")
+           continue
+        mybmc = mybmc[0]
+        try:
+          func_timeout(1, self._doPowerCmd, [mybmc, "on"])
+        except FunctionTimedOut:
+           print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
+  @admin.action(description="Power Off")
+  def sys_off(self, request, queryset):
+     for system in queryset:
+        mybmc = SystemBMC.objects.all().filter(system=system.id)
+        if len(mybmc) != 1:
+           print(f"Error: Unable to find bmc for {system.name}")
+           continue
+        mybmc = mybmc[0]
+        try:
+          func_timeout(1, self._doPowerCmd, [mybmc, "off"])
+        except FunctionTimedOut:
+           print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
+  
+  def _doPowerCmd(self, bmc, action="on"):
+    print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, pass: {bmc.password}, action: {action}")
+    interface = pyipmi.interfaces.create_interface('rmcp', slave_address=0x81,
+                                            host_target_address=0x20,
+                                            keep_alive_interval=0)
+    interface = pyipmi.interfaces.create_interface('ipmitool', interface_type='lanplus')
+    ipmi = pyipmi.create_connection(interface)
+    ipmi.session.set_session_type_rmcp(bmc.ipaddress, 623)
+    ipmi.session.set_auth_type_user(bmc.username, bmc.password)
+    
+    try:
+        ipmi.session.establish()
+        ipmi.target = pyipmi.Target(ipmb_address=0x20)
+        if action=="on":
+            ipmi.chassis_control_power_up()
+        elif action=="off":
+            ipmi.chassis_control_power_down()
+        elif action=="reset":
+            ipmi.chassis_control_hard_reset()
+        elif action=="cycle":
+            ipmi.chassis_control_power_cycle()
+        elif action=="status":
+            
+            chassis = ipmi.get_chassis_status()
+          
+            print({'status': 200, 'chassis_status': chassis.power_on})
+    except Exception as e:
+        print({'details': f"Exception {e}", "status": "400", 'chassis_status': 'unknown'})
+  
   @admin.action(description="Update fields on multiple systems")
   def bulk_update(self, request, queryset):
     # fields to allow multiple updates to.
