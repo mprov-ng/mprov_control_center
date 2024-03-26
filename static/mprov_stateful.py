@@ -399,7 +399,7 @@ class mProvStatefulInstaller():
     grubfileNew = [line for line in grubfileLines if not 'GRUB_CMDLINE_LINUX=' in line]
     
     # now add our new commandline
-    grubfileNew.append(f"GRUB_CMDLINE_LINUX=\"{' '.join(newcmdline)} {self.rootpartUUID}\"")
+    grubfileNew.append(f"GRUB_CMDLINE_LINUX=\"{' '.join(newcmdline)} root={self.rootpartUUID}\"")
 
     # write out the new file
     with open("/newroot/etc/default/grub", "w") as grubfileout:
