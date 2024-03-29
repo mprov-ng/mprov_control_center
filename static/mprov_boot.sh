@@ -115,7 +115,8 @@ echo "Retrieving $MPROV_IMAGE_URL"
 trap ERR
 while [ 1 ]
 do
-  wget $MPROV_IMAGE_URL -O - | gunzip -c | cpio -id --quiet
+  cd /image
+  wget $MPROV_IMAGE_URL -O - | gunzip -c | tar -x
   if [ "$?" == "0" ]
   then 
     break
