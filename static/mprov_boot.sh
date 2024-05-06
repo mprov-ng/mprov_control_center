@@ -159,6 +159,7 @@ then
   /bin/cp /tmp/mprov_stateful.sh /image/tmp/mprov_stateful.sh
   /bin/chmod 755 /image/tmp/mprov_stateful.py /image/tmp/mprov_stateful.sh 
   /bin/cp /etc/resolv.conf /image/etc/resolv.conf
+
   # mount devpts
   mkdir -p /image/dev/pts
   mount -t devpts devpts /image/dev/pts
@@ -187,14 +188,36 @@ echo "Shutting down network"
 pkill udhcpc
 ifconfig $MPROV_PROV_INTF down
 ip link set $MPROV_PROV_INTF down
+
+# disable error trap
+trap ERR
 oldIFS=$IFS
 IFS=,
+echo "Attempting to unload modules:"
 for mod in $MPROV_INITIAL_MODS
 do  
-  if [ "$mod" != "" ]
-  then
-    /sbin/modprobe -r $mod
-  fi
+  ret=1
+  # retry=0
+  # while [ $ret != 0 ] && [ $retry -lt 5 ]
+  # do
+    
+    if [ "$mod" != "" ]
+    then
+      echo -en "\t*** $mod"
+      /sbin/modprobe -r $mod > /dev/null 2>&1
+      ret=$?
+      retry=$((retry+1))
+      if [ $ret == 0 ]
+      then
+        echo "DONE"
+      else
+        echo "FAILED"
+        sleep 1
+      fi
+    else
+      ret=0
+    fi
+  # done
 done
 IFS=$oldIFS
 

@@ -243,7 +243,7 @@ class SystemAdmin(admin.ModelAdmin):
   @admin.action(description="Update fields on multiple systems")
   def bulk_update(self, request, queryset):
     # fields to allow multiple updates to.
-    fields = ['systemimage','systemmodel','stateful','prov_interface','initial_mods', 'systemgroups']
+    fields = ['systemimage','systemmodel','stateful','prov_interface','initial_mods', 'systemgroups', 'disks']
     def remove_fields(form):
         for field in list(form.base_fields.keys()):
             if field  not in fields:
