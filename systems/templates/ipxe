@@ -36,6 +36,11 @@ initrd /static/default6.script /bin/default6.script mode=755 || goto retrydownlo
 imgstat
 boot
 {% else %}
+echo
+echo 
+echo ***** System not set to bootable in the mProv Control Center.  
+echo ***** Attempting local boot.
+sleep 3
 exit
 {% endif %}
 
