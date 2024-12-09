@@ -90,7 +90,7 @@ ip link set $MPROV_PROV_INTF up
 sleep 5
 for intf in `ip link | grep state | awk '{print $2}' | tr -d : | grep -v ^lo$`
 do
-  udhcpc -s /bin/default.script -b -i $intf &
+  udhcpc -s /bin/default.script -b -i $intf
 done
 
 echo "Network up."
@@ -98,6 +98,24 @@ echo;
 echo;
 
 ip addr show dev $MPROV_PROV_INTF
+
+
+
+if [ "$mprov_rescue" == "1" ]
+then
+  read -p "Would you like an early shell? (y/Y)" -t 10 early_shell
+
+  if [ "$early_shell" == "y" ] || [ "$early_shell" == "Y" ] 
+  then
+  
+    echo "EMERGENCY SHELL REQUESTED!"
+    export -f get_kcmdline_opt
+
+    mount -t devtmpfs devtmpfs /dev
+
+    /bin/setsid /bin/bash -m  <> /dev/tty0 >&0 2>&1
+  fi
+fi
 
 echo
 echo -n "Creating image directory at /image... "
@@ -109,6 +127,7 @@ date > /image/tmp/boot_timing
 echo "Image directory setup."
 chmod 755 /image
 cd /image
+sleep 5
 
 echo; echo "Downloading and extracting image to image directory... "
 echo "Retrieving $MPROV_IMAGE_URL"
