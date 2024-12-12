@@ -61,7 +61,7 @@ RUN git clone https://github.com/mprov-ng/mprov_control_center.git && \
 WORKDIR /var/www/mprov_control_center
 
 # Prepare environment file
-RUN export echo "DJANGO_SUPERUSER_USERNAME=admin" >> /var/www/mprov_control_center/.env && \
+RUN echo "DJANGO_SUPERUSER_USERNAME=admin" >> /var/www/mprov_control_center/.env && \
     echo "DJANGO_SUPERUSER_PASSWORD=admin" >> /var/www/mprov_control_center/.env && \
     echo "DJANGO_SUPERUSER_EMAIL=root@localhost" >> /var/www/mprov_control_center/.env 
     #echo "ALLOWED_HOSTS=$(hostname),127.0.0.1" >> /var/www/mprov_control_center/.env
