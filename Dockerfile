@@ -61,9 +61,7 @@ RUN git clone https://github.com/mprov-ng/mprov_control_center.git && \
 WORKDIR /var/www/mprov_control_center
 
 # Prepare environment file
-RUN export SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())') && \
-    echo "SECRET_KEY=$SECRET_KEY" >> /var/www/mprov_control_center/.env && \
-    echo "DJANGO_SUPERUSER_USERNAME=admin" >> /var/www/mprov_control_center/.env && \
+RUN export echo "DJANGO_SUPERUSER_USERNAME=admin" >> /var/www/mprov_control_center/.env && \
     echo "DJANGO_SUPERUSER_PASSWORD=admin" >> /var/www/mprov_control_center/.env && \
     echo "DJANGO_SUPERUSER_EMAIL=root@localhost" >> /var/www/mprov_control_center/.env 
     #echo "ALLOWED_HOSTS=$(hostname),127.0.0.1" >> /var/www/mprov_control_center/.env
