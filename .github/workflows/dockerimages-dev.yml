@@ -1,7 +1,8 @@
 name: Docker Image CI for Dev
 on:
-  release: 
-    types: [push]
+  push:
+    branches:
+      - main
 jobs:
   build:
     runs-on: ubuntu-latest
