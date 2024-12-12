@@ -2,7 +2,7 @@
 
 services:
   db:
-    image: mariadb
+    image: mariadb:10.4
     restart: unless-stopped
     volumes:
       - db:/var/lib/mysql
@@ -10,12 +10,18 @@ services:
       - stack.env
 
   mpcc:
-    image: 
+    image: ghcr.io/mprov-ng/mprov-control-center:dev
     restart: unless-stopped
+    depends_on:
+      db:
     volumes: 
       - mpcc-media:/var/www/mprov_control_center/media
     env_file:
      - stack.env
+    ports:
+     - 80:80
+     - 443:443
+    command: sh -c '/wait-for-it.sh -t 0 db:3306 -- /var/www/mprov_control_center/install_scripts/init_mpcc.sh -d'
 
 
 volumes:
