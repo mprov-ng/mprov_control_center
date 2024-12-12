@@ -29,5 +29,5 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           tags: |
-            ghcr.io/mprov-ng/mprov-control-center-mariadb:dev
+            ghcr.io/mprov-ng/mprov-control-center:dev
           push: true
