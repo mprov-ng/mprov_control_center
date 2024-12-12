@@ -2,6 +2,10 @@
 cd /var/www/mprov_control_center
 . bin/activate
 
+# set up the secret key
+SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())') 
+echo "SECRET_KEY=$SECRET_KEY" >> /var/www/mprov_control_center/.env
+
 python manage.py migrate
 python manage.py createsuperuser --noinput
 
