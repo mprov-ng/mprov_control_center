@@ -1,5 +1,6 @@
 # Start with Rocky Linux 8.8 as the base image
-FROM rockylinux:8.8 
+# Use the full URL to avoid confusion with podman builds.
+FROM docker.io/rockylinux/rockylinux:8.8 
 
 # Set environment variables
 ENV LANG=en_US.UTF-8 \
