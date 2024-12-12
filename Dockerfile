@@ -81,6 +81,7 @@ RUN wget -q -O static/busybox https://busybox.net/downloads/binaries/1.35.0-x86_
     chmod u+sw media/ -R
     
 COPY static/mprov_control_center.conf /etc/httpd/conf.d/mprov_control_center.conf
+COPY wait-for-it-.sh /
 
 # Expose HTTP port
 EXPOSE 80
