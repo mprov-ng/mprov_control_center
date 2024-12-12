@@ -1,4 +1,4 @@
-django>=3.2,<3.3  #https://www.djangoproject.com/ - 3-clause BSD
+django  #https://www.djangoproject.com/ - 3-clause BSD
 django-dotenv # https://pypi.org/project/django-dotenv/ - MIT
 djangorestframework # https://pypi.org/project/djangorestframework/ - BSD License (BSD)
 pyyaml # https://pypi.org/project/PyYAML/ - MIT
