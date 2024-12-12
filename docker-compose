@@ -1,0 +1,24 @@
+
+
+services:
+  db:
+    image: mariadb
+    restart: unless-stopped
+    volumes:
+      - db:/var/lib/mysql
+    env_file:
+      - stack.env
+
+  mpcc:
+    image: 
+    restart: unless-stopped
+    volumes: 
+      - mpcc-media:/var/www/mprov_control_center/media
+    env_file:
+     - stack.env
+
+
+volumes:
+  db:
+  mpcc-media:
+
