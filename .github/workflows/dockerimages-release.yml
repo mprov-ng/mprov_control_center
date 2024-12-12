@@ -23,14 +23,7 @@ jobs:
           username: ${{ secrets.CR_USER }}
           password: ${{ secrets.CR_PAT }}
 
-      - 
-        name: Build the SQLite Docker Image
-        uses: docker/build-push-action@v4.1.1
-        with:
-          tags: |
-            ghcr.io/mprov-ng/mprov-control-center-sqlite:${{github.ref_name}}
-            ghcr.io/mprov-ng/mprov-control-center-sqlite:latest
-          push: true
+
 
       - 
         name: Build the MariaDB Docker Image
@@ -39,17 +32,8 @@ jobs:
           build-args: |
             MPROV_INSTALL_OPTS=-m
           tags: |
-            ghcr.io/mprov-ng/mprov-control-center-mariadb:${{github.ref_name}}
-            ghcr.io/mprov-ng/mprov-control-center-mariadb:latest
+            ghcr.io/mprov-ng/mprov-control-center:${{github.ref_name}}
+            ghcr.io/mprov-ng/mprov-control-center:latest
           push: true
 
-      - 
-        name: Build the PostgreSQL DB Docker Image
-        uses: docker/build-push-action@v2
-        with:
-          build-args: |
-            MPROV_INSTALL_OPTS=-p
-          tags: |
-            ghcr.io/mprov-ng/mprov-control-center-pgsql:${{github.ref_name}}
-            ghcr.io/mprov-ng/mprov-control-center-pgsql:latest
-          push: true
+
