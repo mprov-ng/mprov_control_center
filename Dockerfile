@@ -41,6 +41,10 @@ RUN alternatives --set python3 /usr/bin/python3.8 || true && \
     dnf install -y parted-devel && \
     dnf clean all
 
+# gen ssl
+RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/localhost.key -x509 -days 365 -out /etc/pki/tls/certs/localhost.crt
+
+
 # Set up application environment
 WORKDIR /var/www/
 RUN git clone https://github.com/mprov-ng/mprov_control_center.git && \
