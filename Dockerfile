@@ -22,6 +22,7 @@ RUN dnf update -y && \
         openldap-devel \
         dos2unix \
         httpd \
+        mod_ssl \
         python38-devel \
 	    mariadb \
 	    mariadb-common \
