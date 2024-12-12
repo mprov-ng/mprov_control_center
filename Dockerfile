@@ -2,14 +2,6 @@
 # Use the full URL to avoid confusion with podman builds.
 FROM docker.io/rockylinux/rockylinux:8.8 
 
-# Set environment variables
-ENV LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8
-
-# Disable SELinux
-RUN sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config && \
-    setenforce 0 || true
-
 # Update system and install necessary dependencies
 RUN dnf update -y && \
     dnf install -y \
