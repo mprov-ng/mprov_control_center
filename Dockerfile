@@ -3,7 +3,7 @@
 FROM docker.io/rockylinux/rockylinux:8.8 
 
 # Update system and install necessary dependencies
-RUN dnf update -y && \
+RUN dnf clean all && dnf update -y && \
     dnf install -y \
         curl \
         wget \
@@ -42,7 +42,7 @@ RUN alternatives --set python3 /usr/bin/python3.8 || true && \
     dnf clean all
 
 # gen ssl
-RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/localhost.key -x509 -days 365 -out /etc/pki/tls/certs/localhost.crt
+RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/localhost.key -x509 -days 365 -out /etc/pki/tls/certs/localhost.crt -nodes -subj "/C=US/ST=Maryland/L=Baltimore/O=Johns Hopkins/OU=ARCH/CN=localhost"
 
 
 # Set up application environment
