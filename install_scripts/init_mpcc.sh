@@ -16,10 +16,10 @@ then
               /var/www/mprov_control_center/install_scripts/init.d/$i
        done
 else
-       if [ ! -e /var/www/mprov_control_center/static/.initialized ]
+       if [ ! -e /var/www/mprov_control_center/db/.initialized ]
        then
               /var/www/mprov_control_center/install_scripts/load_default_scripts.sh
-              touch /var/www/mprov_control_center/static/.initialized
+              touch /var/www/mprov_control_center/db/.initialized
        fi
 fi
 
