@@ -1,6 +1,6 @@
 
 # mProv Control Center
-![Buidl Status](https://img.shields.io/github/actions/workflow/status/mprov-ng/mprov_control_center/dockerimage-dev.yml?style=plastic)
+![Buidl Status](https://img.shields.io/github/actions/workflow/status/mprov-ng/mprov_control_center/dockerimages-dev.yml?style=plastic)
 ![Latest Version](https://img.shields.io/github/v/tag/mprov-ng/mprov_control_center?style=plastic)
 ![License](https://img.shields.io/github/license/mprov-ng/mprov_control_center?style=plastic)
 
