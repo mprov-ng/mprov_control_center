@@ -4,9 +4,7 @@ cd /var/www/mprov_control_center
 
 
 python manage.py migrate
-python manage.py createsuperuser --noinput
 
-python manage.py loaddata */fixtures/*
 # set up the secret key
 SECRET_KEY=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())') 
 echo "SECRET_KEY=$SECRET_KEY" >> /var/www/mprov_control_center/.env
@@ -25,7 +23,9 @@ then
 else
        if [ ! -e /var/www/mprov_control_center/db/.initialized ]
        then
+              python manage.py createsuperuser --noinput
 
+              python manage.py loaddata */fixtures/*
               # try to generate some interface commands based on ENV vars.
               IFACE_CMDS=""
               counter="0"
