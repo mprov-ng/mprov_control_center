@@ -11,20 +11,25 @@ services:
 
   mpcc:
     image: ghcr.io/mprov-ng/mprov-control-center:dev
+    # image: localhost/mprov-control-center:dev
     restart: unless-stopped
+    tty: true
     depends_on:
       db:
     volumes: 
       - mpcc-media:/var/www/mprov_control_center/media
+      - mprov-conf:/etc/mprov/
     env_file:
      - stack.env
     ports:
      - 80:80
      - 443:443
+    hostname: ${MPROV_MPCC_HOSTNAME}
     command: sh -c '/wait-for-it.sh -t 0 db:3306 -- /var/www/mprov_control_center/install_scripts/init_mpcc.sh -d'
-
+ 
 
 volumes:
   db:
   mpcc-media:
+  mprov-conf:
 
