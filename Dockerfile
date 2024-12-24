@@ -47,8 +47,11 @@ RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/localhost.k
 
 # Set up application environment
 WORKDIR /var/www/
-RUN git clone https://github.com/mprov-ng/mprov_control_center.git && \
-    cd mprov_control_center && \
+
+RUN mkdir -p mprov_control_center
+COPY ./ /var/www/mprov_control_center
+
+RUN cd mprov_control_center && \
     chmod 755 install_scripts/init_mpcc.sh && \
     python3 -m venv . && \
     . bin/activate && \
@@ -58,7 +61,7 @@ RUN git clone https://github.com/mprov-ng/mprov_control_center.git && \
 WORKDIR /var/www/mprov_control_center
 
 # Prepare environment file
-RUN echo "DJANGO_SUPERUSER_USERNAME=admin" >> /var/www/mprov_control_center/.env && \
+RUN echo "DJANGO_SUPERUSER_USERNAME=admin" > /var/www/mprov_control_center/.env && \
     echo "DJANGO_SUPERUSER_PASSWORD=admin" >> /var/www/mprov_control_center/.env && \
     echo "DJANGO_SUPERUSER_EMAIL=root@localhost" >> /var/www/mprov_control_center/.env 
     #echo "ALLOWED_HOSTS=$(hostname),127.0.0.1" >> /var/www/mprov_control_center/.env
