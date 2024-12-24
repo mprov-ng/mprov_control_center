@@ -62,6 +62,21 @@ ${IFACE_CMDS}
 
 EOF
 
+# generate an api key
+              cat << EOF > /tmp/genAPIKey.py
+import rest_framework_api_key
+apikey = rest_framework_api_key.models.APIKey()
+key = rest_framework_api_key.models.APIKey.objects.assign_key(apikey)
+apikey.name="mProv Jobserver Key"
+apikey.save()
+print(key)
+EOF
+
+              apikey=`cat /tmp/genAPIKey.py | python3 manage.py shell`
+
+              # echo this out to a file in /etc/mprov/
+              echo "export MPROV_APIKEY=$apikey" > /etc/mprov/apikey
+              chmod 600 /etc/mprov/apikey
 
               /var/www/mprov_control_center/install_scripts/load_default_scripts.sh
               touch /var/www/mprov_control_center/db/.initialized
