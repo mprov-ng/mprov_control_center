@@ -90,7 +90,10 @@ chmod u+w db/ -R
 # if we are running in docker, just start apache
 if [ "$1" == "-d" ]
 then
-  # trap SIGWINCH from apache
-  trap "" SIGWINCH
-  /usr/sbin/apachectl -D FOREGROUND
+  # start apache in a new PG, filters out signals to the
+  # container, ie. SIGWINCH
+  setsid --wait /usr/sbin/apachectl -D FOREGROUND &
+  child_pid=$!
+  trap "kill -SIGINT $child_pid" SIGINT
+  wait $child_pid
 fi
