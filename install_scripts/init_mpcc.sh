@@ -90,5 +90,7 @@ chmod u+w db/ -R
 # if we are running in docker, just start apache
 if [ "$1" == "-d" ]
 then
+  # trap SIGWINCH from apache
+  trap "" SIGWINCH
   /usr/sbin/apachectl -D FOREGROUND
 fi
