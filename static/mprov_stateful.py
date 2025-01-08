@@ -254,7 +254,12 @@ class mProvStatefulInstaller():
         if dev == self.bootdisk:
           # boot disk, we are going to add 2 more to partOffset
           partOffset += 2
-        member_part = f"{dev}{member['partnum'] + partOffset}"
+        if dev.startswith("/dev/nvme"):
+            part_prefix="p"
+        else:
+            part_prefix=""
+
+        member_part = f"{dev}{part_prefix}{member['partnum'] + partOffset}"
         mdadm_cmd += f"{member_part} "
         # zero the superblock
         sh.mdadm(['--zero-superblock', f"{member_part}"])
