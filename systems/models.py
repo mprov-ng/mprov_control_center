@@ -220,6 +220,7 @@ class SystemBMC(models.Model):
   switch_port=models.ForeignKey(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
   network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Network")
   ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address ", blank=True, null=True)
+  vlan=models.IntegerField(verbose_name='VLAN ID', default=0)
   class Meta:
     verbose_name = 'Power Management'
     verbose_name_plural = 'Power Management'

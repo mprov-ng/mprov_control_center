@@ -38,7 +38,7 @@ class Network(models.Model):
     
   )
   
-  vlan=models.CharField(max_length=100,default='default')
+  vlan=models.IntegerField(default=1)
   subnet=models.GenericIPAddressField(default='0.0.0.0')
   masks = []
   for mask in range(1,32):
