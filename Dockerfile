@@ -17,6 +17,7 @@ RUN dnf clean all && dnf update -y && \
         python38-pip \
         openssh-server \
         openssl \
+	ipmitool \
         jq \
         iproute \
         openldap-devel \
