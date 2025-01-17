@@ -61,8 +61,8 @@ RUN cd mprov_control_center && \
 
 # grab a copy of memtest.
 WORKDIR /var/www/mprov_control_center/static
-RUN wget https://memtest.org/download/nightly/memtest86plus-nightly-64.iso.zip && \
-    unzip memtest86plus-nightly-64.iso.zip && \
+RUN wget https://memtest.org/download/v7.20/mt86plus_7.20.binaries.zip && \
+    unzip mt86plus_7.20.binaries.zip && \
     rm memtest32*
 
     
