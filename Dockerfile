@@ -58,6 +58,13 @@ RUN cd mprov_control_center && \
     . bin/activate && \
     pip3 install -r requirements.txt && \
     pip3 install mysqlclient
+
+# grab a copy of memtest.
+WORKDIR /var/www/mprov_control_center/static
+RUN wget https://memtest.org/download/nightly/memtest86plus-nightly-64.iso.zip && \
+    unzip memtest86plus-nightly-64.iso.zip && \
+    rm memtest32*
+
     
 WORKDIR /var/www/mprov_control_center
 
