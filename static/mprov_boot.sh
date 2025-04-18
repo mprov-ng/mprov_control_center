@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export PATH=$PATH:/sbin
+
 # if this works, it would be great...
 err_handler() {
   echo "Error: SOMETHING HAS GONE TERRIBLY WRONG! DROPPING TO SERIAL SHELL!"
@@ -36,6 +38,8 @@ ln -s /bin/busybox /bin/awk
 ln -s /bin/busybox /bin/chmod
 ln -s /bin/busybox /bin/seq
 ln -s /bin/busybox /bin/dirname
+ln -s /bin/busybox /bin/cut
+
 
 
 mount -t proc proc /proc
@@ -67,17 +71,52 @@ export MPROV_STATEFUL=`get_kcmdline_opt mprov_stateful`
 export MPROV_BOOTDISK=`get_kcmdline_opt mprov_bootdisk`
 export MPROV_RESCUE=`get_kcmdline_opt mprov_rescue`
 # load our initial modules
-oldIFS=$IFS
-IFS=,
-for mod in $MPROV_INITIAL_MODS
+#oldIFS=$IFS
+#IFS=,
+#for mod in $MPROV_INITIAL_MODS
+#do
+#  if [ "$mod" != "" ]
+#  then
+#    echo "Loading Module $mod ..."
+#    /sbin/modprobe $mod
+#  fi
+#done
+#IFS=$oldIFS
+
+echo -n "Loading network drivers... "
+for i in `ls -1 /sys/bus/pci/devices/`
 do
-  if [ "$mod" != "" ]
-  then
-    echo "Loading Module $mod ..."
-    /sbin/modprobe $mod
-  fi
+	if [ -e /sys/bus/pci/devices/$i/class ]
+	then
+		class=`cat /sys/bus/pci/devices/$i/class | cut -c -4`
+		if [ "$class" == "0x02" ]
+		then
+			# if we are class 0x02, it's a network device.
+			# let's see if we can find a driver.
+			modalias=`cat /sys/bus/pci/devices/$i/modalias`
+			echo -n `modprobe -R $modalias`
+			modprobe $modalias
+	fi	fi
 done
-IFS=$oldIFS
+echo "  DONE!"
+echo -n "Loading storage drivers... "
+for i in `ls -1 /sys/bus/pci/devices/`
+do
+	if [ -e /sys/bus/pci/devices/$i/class ]
+	then
+		class=`cat /sys/bus/pci/devices/$i/class | cut -c -4`
+		if [ "$class" == "0x01" ]
+		then
+			# if we are class 0x01, it's a storage device.
+			# let's see if we can find a driver.
+			modalias=`cat /sys/bus/pci/devices/$i/modalias`
+			echo -n `modprobe -R $modalias`
+			modprobe $modalias
+	fi	fi
+done
+echo "  DONE!"
+
+
 
 
 export PATH=$PATH:/sbin:/usr/sbin
@@ -88,16 +127,14 @@ ip link set $MPROV_PROV_INTF down
 ip link set $MPROV_PROV_INTF up
 # wait a couple of seconds for the link
 sleep 5
-for intf in `ip link | grep state | awk '{print $2}' | tr -d : | grep -v ^lo$`
-do
-  udhcpc -s /bin/default.script -b -i $intf
-done
+udhcpc -s /bin/default.script -b -B -i $MPROV_PROV_INTF
 
 echo "Network up."
 echo; 
 echo;
 
 ip addr show dev $MPROV_PROV_INTF
+ip add
 
 
 
