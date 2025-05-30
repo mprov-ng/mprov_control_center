@@ -320,6 +320,21 @@ class IPXEAPIView(MProvView):
         if "rescue" in request.query_params:
             rescue_param = " mprov_rescue=1"
 
+        template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
+        # print(nic)
+        context = Context(dict(nic=nic))
+        if not nic.bootable:
+          rendered: str = template.render(context)
+          context= {
+            'nic': nic,
+          }
+          return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
+
+
+        nic.bootserver=platform.node()
+        if "." in nic.bootserver:
+          # remove the domain if one exists
+          nic.bootserver, _ = nic.bootserver.split(".", 1)
         
 
         if not nic.system.systemimage.customIPXE == "" and not nic.system.systemimage.customIPXE == None:
@@ -329,20 +344,10 @@ class IPXEAPIView(MProvView):
            rendered: str = template.render(context)
            return HttpResponse(content=rendered)
         
-        template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
-        # print(nic)
-        nic.bootserver=platform.node()
-        if "." in nic.bootserver:
-          # remove the domain if one exists
-          nic.bootserver, _ = nic.bootserver.split(".", 1)
-        context = Context(dict(nic=nic))
         rendered: str = template.render(context)
         nic.system.systemimage.osdistro.install_kernel_cmdline = rendered + rescue_param
         print(nic.system.systemimage.osdistro.install_kernel_cmdline)
            
-        context= {
-            'nic': nic,
-        }
         print("PXE Request from: " + ip)
         # print(context['nics'])
         return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
