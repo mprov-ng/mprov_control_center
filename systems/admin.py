@@ -1,5 +1,7 @@
 from csv import list_dialects
+import sys
 from tabnanny import verbose
+import traceback
 from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericStackedInline
 from django.forms import BaseInlineFormSet
@@ -20,7 +22,7 @@ from scripts.models import Script
 import pyipmi
 import pyipmi.interfaces
 from func_timeout import func_timeout, FunctionTimedOut
-
+import subprocess
 
 from .models import (
   System,
@@ -114,7 +116,7 @@ class BMCInLine(admin.StackedInline):
 
 
 class SystemAdmin(admin.ModelAdmin):
-  actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', ]
+  actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe']
   
   inlines = [ NetworkInterfaceInline, BMCInLine]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort']
@@ -210,9 +212,24 @@ class SystemAdmin(admin.ModelAdmin):
           func_timeout(1, self._doPowerCmd, [mybmc, "off"])
         except FunctionTimedOut:
            print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
+  @admin.action(description="Boot to PXE")
+  def sys_pxe(self, request, queryset):
+     for system in queryset: 
+        mybmc = SystemBMC.objects.all().filter(system=system.id)
+        if len(mybmc) != 1:
+           print(f"Error: Unable to find bmc for {system.name}")
+           continue
+        mybmc = mybmc[0]
+        try:
+          func_timeout(5, self._doPowerCmd, [mybmc, "pxe"])
+        except FunctionTimedOut:
+           print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
+  
   
   def _doPowerCmd(self, bmc, action="on"):
     print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, pass: {bmc.password}, action: {action}")
+
+       
     interface = pyipmi.interfaces.create_interface('rmcp', slave_address=0x81,
                                             host_target_address=0x20,
                                             keep_alive_interval=0)
@@ -224,6 +241,17 @@ class SystemAdmin(admin.ModelAdmin):
     try:
         ipmi.session.establish()
         ipmi.target = pyipmi.Target(ipmb_address=0x20)
+        if action == "pxe":
+          # XXX: bootdev is not implemented in python-ipmi(pyipmi)
+          # so we will need to issue a raw ipmitool command.
+          ipmitool_cmd = f"/usr/bin/ipmitool -Ilanplus -U{bmc.username} -P{bmc.password} -H{bmc.ipaddress} chassis bootdev pxe"
+          subprocess.run(args=ipmitool_cmd.split())
+          # force a reset
+          action = "reset"
+          # make sure we are powered on
+          ipmi.chassis_control_power_up()
+        
+
         if action=="on":
             ipmi.chassis_control_power_up()
         elif action=="off":
@@ -239,6 +267,10 @@ class SystemAdmin(admin.ModelAdmin):
             print({'status': 200, 'chassis_status': chassis.power_on})
     except Exception as e:
         print({'details': f"Exception {e}", "status": "400", 'chassis_status': 'unknown'})
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        traceback.print_tb(exc_traceback)
+        
   
   @admin.action(description="Update fields on multiple systems")
   def bulk_update(self, request, queryset):

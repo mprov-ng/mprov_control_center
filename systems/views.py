@@ -1,4 +1,5 @@
 from http.client import NETWORK_AUTHENTICATION_REQUIRED
+import subprocess
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect
 from re import template
@@ -872,6 +873,16 @@ class SystemPowerAPIView(MProvView):
         try:
             ipmi.session.establish()
             ipmi.target = pyipmi.Target(ipmb_address=0x20)
+            if action == "pxe":
+                # XXX: bootdev is not implemented in python-ipmi(pyipmi)
+                # so we will need to issue a raw ipmitool command.
+                ipmitool_cmd = f"/usr/bin/ipmitool -Ilanplus -U{bmc.username} -P{bmc.password} -H{bmc.ipaddress} chassis bootdev pxe"
+                subprocess.run(args=ipmitool_cmd.split())
+                # force a reset
+                action = "reset"
+                # make sure we are powered on
+                ipmi.chassis_control_power_up()
+                
             if action=="on":
                 ipmi.chassis_control_power_up()
             elif action=="off":
@@ -880,7 +891,7 @@ class SystemPowerAPIView(MProvView):
                 ipmi.chassis_control_hard_reset()
             elif action=="cycle":
                 ipmi.chassis_control_power_cycle()
-            elif action=="status":
+            elif action=="status": 
                 
                 chassis = ipmi.get_chassis_status()
              
