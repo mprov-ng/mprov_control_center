@@ -116,7 +116,7 @@ do
 done
 echo "  DONE!"
 
-
+modprobe sd_mod
 
 
 export PATH=$PATH:/sbin:/usr/sbin
