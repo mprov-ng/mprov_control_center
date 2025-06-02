@@ -122,7 +122,7 @@ modprobe sd_mod
 export PATH=$PATH:/sbin:/usr/sbin
 # get the interface name
 MAC=$MPROV_PROV_INTF
-MPROV_PROV_INTF=`ip link show | grep -B1 "$MAC"| grep -v link | awk -F": " '{print $2}'`
+MPROV_PROV_INTF=`ip link show | grep -i -B1 "$MAC"| grep -v link | awk -F": " '{print $2}'`
 if [ "$MPROV_PROV_INTF" == "" ]
 then
   echo
