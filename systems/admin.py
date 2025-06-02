@@ -257,7 +257,11 @@ class SystemAdmin(admin.ModelAdmin):
         elif action=="off":
             ipmi.chassis_control_power_down()
         elif action=="reset":
-            ipmi.chassis_control_hard_reset()
+            try:
+              ipmi.chassis_control_hard_reset()
+            except:
+              ipmi.chassis_control_power_cycle()
+              
         elif action=="cycle":
             ipmi.chassis_control_power_cycle()
         elif action=="status":
