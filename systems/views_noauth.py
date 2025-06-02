@@ -350,5 +350,8 @@ class IPXEAPIView(MProvView):
            
         print("PXE Request from: " + ip)
         # print(context['nics'])
+        context= {
+          'nic': nic,
+        }
         return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
         pass
