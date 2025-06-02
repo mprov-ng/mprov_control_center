@@ -120,6 +120,18 @@ modprobe sd_mod
 
 
 export PATH=$PATH:/sbin:/usr/sbin
+# get the interface name
+MAC=$MPROV_PROV_INTF
+MPROV_PROV_INTF=`ip link show | grep -B1 "$MAC"| grep -v link | awk -F": " '{print $2}'`
+if [ "$MPROV_PROV_INTF" == "" ]
+then
+  echo
+  echo "Error: Unable to find interface matching MAC: $MAC"
+  echo
+  err_handler
+  exit 1
+fi
+
 echo "Bringing up $MPROV_PROV_INTF if it's available..."
 # reset the network stack
 ip addr flush dev $MPROV_PROV_INTF
