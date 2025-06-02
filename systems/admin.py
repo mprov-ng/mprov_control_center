@@ -249,7 +249,10 @@ class SystemAdmin(admin.ModelAdmin):
           # force a reset
           action = "reset"
           # make sure we are powered on
-          ipmi.chassis_control_power_up()
+          try: 
+             ipmi.chassis_control_power_up()
+          except:
+             pass
         
 
         if action=="on":
