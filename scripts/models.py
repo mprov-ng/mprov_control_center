@@ -50,6 +50,31 @@ class Script(models.Model):
     if os.path.exists(os.path.join(settings.MEDIA_ROOT, self.filename.name)):
       print("Converting file")
       os.system("dos2unix " + os.path.join(settings.MEDIA_ROOT, self.filename.name))
+class File(models.Model):
+  """
+  Files are uploaded to the system and able to be served via the link provided.
+  """
+  endpoint="/files/"
+  name=models.CharField(max_length=120, verbose_name=("File Name"))
+  slug=models.SlugField(unique=True, primary_key=True)
+  filename = models.FileField(upload_to='')
+  version = models.BigIntegerField(default=1)
+  
+  
+  def save(self, *args, **kwargs):
+    if not self.slug:
+      self.slug = slugify(self.filename.name)
+    if not os.path.exists(settings.MEDIA_ROOT + '/files/'): 
+      # make the dir
+      try:
+        os.makedirs(settings.MEDIA_ROOT + '/files/', exist_ok=True)
+      except: 
+        print(f"Error: Unable to make files dir: {settings.MEDIA_ROOT + '/files/'}")
+        return
+
+    self.filename.name = 'files/' + self.slug + "-v" + str(self.version)
+    super(File, self).save(*args, **kwargs)
+    print(os.path.join(settings.MEDIA_ROOT, self.filename.name))
 
 class AnsiblePlaybook(models.Model):
   """

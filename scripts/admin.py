@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.dispatch import receiver
-from .models import Script, ScriptType, AnsiblePlaybook, AnsibleRole, AnsibleCollection
+from .models import Script, ScriptType, AnsiblePlaybook, AnsibleRole, AnsibleCollection, File
 
 class ScriptAdmin(admin.ModelAdmin):
   model = Script
@@ -8,6 +8,11 @@ class ScriptAdmin(admin.ModelAdmin):
   list_display = ['name', 'filename', 'scriptType']
   exclude = ('slug',)
 
+class FileAdmin(admin.ModelAdmin):
+  model = File
+  readonly_fields = ['slug']
+  list_display = ['name', 'filename']
+  exclude = ('slug',)
 
 class AnsiblePlaybookAdmin(admin.ModelAdmin):
   model = AnsiblePlaybook
@@ -33,6 +38,8 @@ class ScriptTypeAdmin(admin.ModelAdmin):
   model = ScriptType
   list_display = ['name']
 
+
+admin.site.register(File, FileAdmin)
 admin.site.register(AnsiblePlaybook, AnsiblePlaybookAdmin)
 admin.site.register(AnsibleRole, AnsibleRoleAdmin)
 admin.site.register(AnsibleCollection, AnsibleCollectionAdmin)
