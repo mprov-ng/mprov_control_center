@@ -452,8 +452,6 @@ def UpdateSystemImages(sender, instance, **kwargs):
           instance.created_by = User.objects.get(pk=1)
       else:
         instance.created_by = request.user
-  if not instance.needs_rebuild: 
-    return
   instance.slug = slugify(instance.name)
   if not instance.needs_rebuild:
     return
