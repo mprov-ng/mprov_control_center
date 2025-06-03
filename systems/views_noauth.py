@@ -16,6 +16,7 @@ import requests
 import dns.resolver
 import platform
 from ipaddress import ip_address, IPv4Address
+from osmanagement.models import OSDistro
 
 class ImagesAPIView(MProvView, generics.ListAPIView):
     '''
@@ -319,10 +320,21 @@ class IPXEAPIView(MProvView):
         rescue_param = " mprov_rescue=0"
         if "rescue" in request.query_params:
             rescue_param = " mprov_rescue=1"
+            
+        class GenericObject:
+          pass    
+        if not hasattr(nic.system.systemimage.osdistro, "install_kernel_cmdline"):
 
-        template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
+           nic.system.systemimage.osdistro = OSDistro()
+
+           setattr(nic.system.systemimage.osdistro, "install_kernel_cmdline", "")
+        else: 
+          template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
         # print(nic)
         context = Context(dict(nic=nic))
+        if not hasattr(nic, "bootable") :
+           print(f"Error: System definition has no bootable NIC.  Cannot boot")
+           raise NotFound(detail=f"Error: System definition has no bootable NIC.  Cannot boot")
         if not nic.bootable:
           rendered: str = template.render(context)
           context= {
