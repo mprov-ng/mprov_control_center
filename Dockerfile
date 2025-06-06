@@ -85,13 +85,22 @@ RUN wget -q -O static/busybox https://busybox.net/downloads/binaries/1.35.0-x86_
     ln -s media db && \
     chown apache media/ -R && \
     chmod u+sw media/ -R
-    
-COPY static/mprov_control_center.conf /etc/httpd/conf.d/mprov_control_center.conf
+
+# copy in the mprov_control_center apache config    
+COPY static/configs/mprov_control_center.conf /etc/httpd/conf.d/mprov_control_center.conf
+
+# change default logging to /dev/stdout
+RUN sed -i 's/^ErrorLog.*$/ErrorLog \/dev\/stdout/' /etc/httpd/conf/httpd.conf
+RUN sed -i 's/^TransferLog.*$/TransferLog \/dev\/stdout/' /etc/httpd/conf/httpd.conf
+RUN sed -i 's/^ErrorLog.*$/ErrorLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.conf
+RUN sed -i 's/^TransferLog.*$/TransferLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.conf
+
 COPY wait-for-it.sh /
 RUN chmod 755 /wait-for-it.sh
 
 # Expose HTTP port
 EXPOSE 80
+EXPOSE 443
 
 # Run initialization script
 CMD ["/var/www/mprov_control_center/install_scripts/init_mpcc.sh","-d"]
