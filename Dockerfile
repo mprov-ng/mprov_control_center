@@ -107,6 +107,7 @@ RUN ln -s /dev/stdout /etc/httpd/logs/error_log
 
 COPY wait-for-it.sh /
 RUN chmod 755 /wait-for-it.sh
+RUN chown apache:apache /var/www/mprov_control_center/.env
 
 # Expose HTTP port
 EXPOSE 80
