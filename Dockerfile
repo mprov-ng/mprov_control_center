@@ -100,7 +100,7 @@ RUN echo 'LogFormat "%h %l %u %t \"%r\" %>s %b" common' > /etc/httpd/conf.d/cont
 RUN echo "CustomLog /dev/stdout common" >> /etc/httpd/conf.d/containerlog.conf
 RUN rm -f /etc/httpd/logs /etc/httpd/run /etc/httpd/state
 RUN mkdir -p /etc/httpd/logs /etc/httpd/run /etc/httpd/state
-RUN chown apache:apache /etc/httpd/logs
+RUN chown apache:apache /etc/httpd/logs /etc/httpd/run /etc/httpd/state
 RUN ln -s /dev/stdout /etc/httpd/logs/access_log
 RUN ln -s /dev/stdout /etc/httpd/logs/error_log
 
