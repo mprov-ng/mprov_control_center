@@ -44,7 +44,7 @@ RUN alternatives --set python3 /usr/bin/python3.8 || true && \
 
 # gen ssl
 RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/localhost.key -x509 -days 365 -out /etc/pki/tls/certs/localhost.crt -nodes -subj "/C=US/ST=Maryland/L=Baltimore/O=Johns Hopkins/OU=ARCH/CN=localhost"
-
+RUN chown apache:apache /etc/pki/tls/private/localhost.key /etc/pki/tls/certs/localhost.crt
 
 # Set up application environment
 WORKDIR /var/www/
