@@ -100,7 +100,7 @@ RUN echo 'LogFormat "%h %l %u %t \"%r\" %>s %b" common' > /etc/httpd/conf.d/cont
 RUN echo "CustomLog /dev/stdout common" >> /etc/httpd/conf.d/containerlog.conf
 RUN ln -s /dev/stdout /etc/httpd/logs/access_log
 RUN ln -s /dev/stdout /etc/httpd/logs/error_log
-RUN dnf -y install coreutils
+
 
 COPY wait-for-it.sh /
 RUN chmod 755 /wait-for-it.sh
