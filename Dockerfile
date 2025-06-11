@@ -98,8 +98,8 @@ RUN sed -i 's/^TransferLog.*$/TransferLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.
 RUN sed -i 's/^CustomLog (.*) /CustomLog \/dev\/stdout/ ' /etc/httpd/conf.d/ssl.conf
 RUN echo 'LogFormat "%h %l %u %t \"%r\" %>s %b" common' > /etc/httpd/conf.d/containerlog.conf
 RUN echo "CustomLog /dev/stdout common" >> /etc/httpd/conf.d/containerlog.conf
-RUN rm -f /etc/httpd/logs
-RUN mkdir -p /etc/httpd/logs
+RUN rm -f /etc/httpd/logs /etc/httpd/run /etc/httpd/state
+RUN mkdir -p /etc/httpd/logs /etc/httpd/run /etc/httpd/state
 RUN chown apache:apache /etc/httpd/logs
 RUN ln -s /dev/stdout /etc/httpd/logs/access_log
 RUN ln -s /dev/stdout /etc/httpd/logs/error_log
