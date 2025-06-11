@@ -98,6 +98,8 @@ RUN sed -i 's/^TransferLog.*$/TransferLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.
 RUN sed -i 's/^CustomLog (.*) /CustomLog \/dev\/stdout/ ' /etc/httpd/conf.d/ssl.conf
 RUN echo 'LogFormat "%h %l %u %t \"%r\" %>s %b" common' > /etc/httpd/conf.d/containerlog.conf
 RUN echo "CustomLog /dev/stdout common" >> /etc/httpd/conf.d/containerlog.conf
+RUN ln -s /dev/stdout /etc/httpd/logs/access_log
+RUN ln -s /dev/stdout /etc/httpd/logs/error_log
 
 
 COPY wait-for-it.sh /
