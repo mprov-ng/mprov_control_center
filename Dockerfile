@@ -91,11 +91,11 @@ COPY static/configs/mprov_control_center.conf /etc/httpd/conf.d/mprov_control_ce
 
 # change default logging to /dev/stdout
 RUN sed -i 's/^ErrorLog.*$/ErrorLog \/dev\/stdout/' /etc/httpd/conf/httpd.conf
-RUN sed -i 's/^CustomLog.*$/CustomLog \/dev\/stdout/' /etc/httpd/conf/httpd.conf
+RUN sed -i 's/^CustomLog (.*) /CustomLog \/dev\/stdout/ ' /etc/httpd/conf/httpd.conf
 RUN sed -i 's/^TransferLog.*$/TransferLog \/dev\/stdout/' /etc/httpd/conf/httpd.conf
 RUN sed -i 's/^ErrorLog.*$/ErrorLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.conf
 RUN sed -i 's/^TransferLog.*$/TransferLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.conf
-RUN sed -i 's/^CustomLog.*$/CustomLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.conf
+RUN sed -i 's/^CustomLog (.*) /CustomLog \/dev\/stdout/ ' /etc/httpd/conf.d/ssl.conf
 RUN echo 'LogFormat "%h %l %u %t \"%r\" %>s %b" common' > /etc/httpd/conf.d/containerlog.conf
 RUN echo "CustomLog /dev/stdout common" >> /etc/httpd/conf.d/containerlog.conf
 
