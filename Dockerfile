@@ -44,7 +44,7 @@ RUN alternatives --set python3 /usr/bin/python3.8 || true && \
 
 # gen ssl
 RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/localhost.key -x509 -days 365 -out /etc/pki/tls/certs/localhost.crt -nodes -subj "/C=US/ST=Maryland/L=Baltimore/O=Johns Hopkins/OU=ARCH/CN=localhost"
-
+RUN chown apache:apache /etc/pki/tls/private/localhost.key /etc/pki/tls/certs/localhost.crt
 
 # Set up application environment
 WORKDIR /var/www/
@@ -85,13 +85,33 @@ RUN wget -q -O static/busybox https://busybox.net/downloads/binaries/1.35.0-x86_
     ln -s media db && \
     chown apache media/ -R && \
     chmod u+sw media/ -R
-    
-COPY static/mprov_control_center.conf /etc/httpd/conf.d/mprov_control_center.conf
+
+# copy in the mprov_control_center apache config    
+COPY static/configs/mprov_control_center.conf /etc/httpd/conf.d/mprov_control_center.conf
+
+# change default logging to /dev/stdout
+RUN sed -i 's/^ErrorLog.*$/ErrorLog \/dev\/stdout/' /etc/httpd/conf/httpd.conf
+RUN sed -i 's/^CustomLog (.*) /CustomLog \/dev\/stdout/ ' /etc/httpd/conf/httpd.conf
+RUN sed -i 's/^TransferLog.*$/TransferLog \/dev\/stdout/' /etc/httpd/conf/httpd.conf
+RUN sed -i 's/^ErrorLog.*$/ErrorLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.conf
+RUN sed -i 's/^TransferLog.*$/TransferLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.conf
+RUN sed -i 's/^CustomLog (.*) /CustomLog \/dev\/stdout/ ' /etc/httpd/conf.d/ssl.conf
+RUN echo 'LogFormat "%h %l %u %t \"%r\" %>s %b" common' > /etc/httpd/conf.d/containerlog.conf
+RUN echo "CustomLog /dev/stdout common" >> /etc/httpd/conf.d/containerlog.conf
+RUN rm -f /etc/httpd/logs /etc/httpd/run /etc/httpd/state
+RUN mkdir -p /etc/httpd/logs /etc/httpd/run /etc/httpd/state
+RUN chown apache:apache /etc/httpd/logs /etc/httpd/run /etc/httpd/state
+RUN ln -s /dev/stdout /etc/httpd/logs/access_log
+RUN ln -s /dev/stdout /etc/httpd/logs/error_log
+
+
 COPY wait-for-it.sh /
 RUN chmod 755 /wait-for-it.sh
+RUN chown apache:apache /var/www/mprov_control_center/.env
 
 # Expose HTTP port
 EXPOSE 80
+EXPOSE 443
 
 # Run initialization script
 CMD ["/var/www/mprov_control_center/install_scripts/init_mpcc.sh","-d"]
