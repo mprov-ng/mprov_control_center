@@ -226,7 +226,11 @@ then
   /bin/mv /tmp/mprov_stateful.py /image/tmp/mprov_stateful.py
   /bin/cp /tmp/mprov_stateful.sh /image/tmp/mprov_stateful.sh
   /bin/chmod 755 /image/tmp/mprov_stateful.py /image/tmp/mprov_stateful.sh 
-  /bin/cp /etc/resolv.conf /image/etc/resolv.conf
+  
+  if [ ! -f /image/etc/resolv.conf ]
+  then
+    /bin/cp /etc/resolv.conf /image/etc/resolv.conf
+  fi
 
   # mount devpts
   mkdir -p /image/dev/pts
