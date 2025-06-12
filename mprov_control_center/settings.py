@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'dbbackup',
     'utils',
     'authcustom',
+#    'mprov_esxiprovisioner',
 ]
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE_OPTIONS = {'location': '/var/www/mprov_control_center/backups/'}
@@ -86,6 +87,7 @@ JAZZMIN_SETTINGS={
         'rest_framework_api_key': 'fas fa-key',
         'scripts.script': 'fas fa-scroll',
         'scripts': 'fas fa-scroll',
+        'scripts.file': 'fas fa-file-alt',
         'systems.systemmodel': 'far fa-object-group',
         'disklayouts.disklayout': 'fas fa-chart-pie',
         'disklayouts.raidlayout': 'fas fa-database',
@@ -135,6 +137,7 @@ JAZZMIN_UI_TWEAKS = {
 }
 
 MIDDLEWARE = [
+    #'mprov_esxiprovisioner.middleware.ESXiProvisionerMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django_session_timeout.middleware.SessionTimeoutMiddleware',   
