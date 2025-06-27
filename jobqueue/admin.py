@@ -5,7 +5,10 @@ class JobAdmin(admin.ModelAdmin):
     model = Job
     readonly_fields = ('return_code', 'params', 'module','jobserver',)#'status', ) 
     list_display = ['name', 'status','create_time', 'start_time', 'end_time', 'last_update','jobserver']
-
+    class Media:
+        js = (
+            "admin/js/auto_reload.js",
+        )
     def has_add_permission(self, request):
         return ("add" in request.path or "change" in request.path)
 class JobModuleAdmin(admin.ModelAdmin):
