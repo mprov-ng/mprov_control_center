@@ -291,7 +291,10 @@ Format returned:
             if obj is not None:
                 for i in request.data['jobmodules']:
                     # look up the jobmodule
-                    obj.jobmodules.add(JobModule.objects.get(pk=i))
+                    try:
+                        obj.jobmodules.add(JobModule.objects.get(pk=i))
+                    except :
+                        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
             obj.save()
         data['pk'] = obj.pk
         return Response(status=status.HTTP_200_OK,data=json.dumps(data))
