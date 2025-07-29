@@ -39,7 +39,7 @@ ln -s /bin/busybox /bin/chmod
 ln -s /bin/busybox /bin/seq
 ln -s /bin/busybox /bin/dirname
 ln -s /bin/busybox /bin/cut
-
+ln -s /bin/busybox /bin/tee
 
 
 mount -t proc proc /proc
@@ -83,6 +83,8 @@ export MPROV_RESCUE=`get_kcmdline_opt mprov_rescue`
 #done
 #IFS=$oldIFS
 
+echo -n "" > /tmp/init_mods
+
 echo -n "Loading network drivers... "
 for i in `ls -1 /sys/bus/pci/devices/`
 do
@@ -94,7 +96,7 @@ do
 			# if we are class 0x02, it's a network device.
 			# let's see if we can find a driver.
 			modalias=`cat /sys/bus/pci/devices/$i/modalias`
-			echo -n `modprobe -R $modalias`
+			echo -n "`modprobe -R $modalias`," | tee -a /tmp/init_mods
 			modprobe $modalias
 	fi	fi
 done
@@ -109,17 +111,18 @@ do
 		then
 			# if we are class 0x01, it's a storage device.
 			# let's see if we can find a driver.
-			modalias=`cat /sys/bus/pci/devices/$i/modalias`
-			echo -n `modprobe -R $modalias`
+			modalias=`cat /sys/bus/pci/devices/$i/modalias `
+			echo -n "`modprobe -R $modalias  | tail -n1`," | tee -a /tmp/init_mods
 			modprobe $modalias
 	fi	fi
 done
-echo "  DONE!"
+
 
 modprobe sd_mod
+echo -n "sd_mod" | tee -a /tmp/init_mods
+echo "  DONE!"
 
-
-export PATH=$PATH:/sbin:/usr/sbin
+export PATH=$PATH:/sbin:/usr/sbinwg
 # get the interface name
 MAC=$MPROV_PROV_INTF
 MPROV_PROV_INTF=`ip link show | grep -i -B1 "$MAC"| grep -v link | awk -F": " '{print $2}'`
@@ -168,11 +171,14 @@ fi
 
 echo
 echo -n "Creating image directory at /image... "
-mkdir -p /image/tmp 
-date > /image/tmp/boot_timing
+mkdir -p /image
 mount -t tmpfs -o size=$MPROV_TMPFS_SIZE tmpfs /image
-mkdir /image/tmp
+mkdir -p /image/tmp
 date > /image/tmp/boot_timing
+mkdir -p /image/etc/dracut.conf.d/
+echo -n "add_drivers+=\" " >/image/etc/dracut.conf.d/mprov_mods.conf
+cat /tmp/init_mods | sed -e 's/,/ /g' >> /image/etc/dracut.conf.d/mprov_mods.conf
+echo -n " \"" >> /image/etc/dracut.conf.d/mprov_mods.conf
 echo "Image directory setup."
 chmod 755 /image
 cd /image
@@ -217,6 +223,7 @@ then
   chroot /image/ /usr/bin/python3 /tmp/mprov_genNetworkInterfaces.py
 fi
 
+
 echo -n "Starting mProv for: "
 if [ "$MPROV_STATEFUL" == "1" ] && [ ! -e /image/etc/mprov/nads.yaml ]
 then
@@ -236,7 +243,9 @@ then
   mkdir -p /image/dev/pts
   mount -t devpts devpts /image/dev/pts
   ln -s /proc/self/fd /image/dev/fd 
-  
+  #   export -f get_kcmdline_opt
+  # # /bin/sh 
+  # /bin/setsid /bin/bash -m  <> /dev/tty1 >&0 2>&1
   if [ "$mprov_rescue" != "1" ]
   then 
     # note we are not expecting to return from this.

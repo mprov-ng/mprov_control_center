@@ -387,6 +387,13 @@ class mProvStatefulInstaller():
       except:
         pass
 
+    # check for auto-detected modules
+    if os.path.exists("/tmp/init_mods") :
+      with open("/tmp/init_mods") as mods:
+        for mod in mods:
+          self.modules += mod.replace(",", " ")
+
+
 
     # if we have RAID stuffs, append the following stuff to the commandline and tell grub to do the right thing.
     newcmdline.append("rd.md=1")
@@ -411,7 +418,11 @@ class mProvStatefulInstaller():
       grubfileout.writelines(grubfileNew)
 
     print(f"Regenerating initial ramdisk... ")
-    sh.chroot([f"/newroot", f"dracut", "--regenerate-all", "-f", "--mdadmconf", "--force-add", "mdraid", "--add-drivers", f"{self.modules}"])
+    sh.chroot(["/newroot", "mount", "-t", "proc", "none", "/proc"])
+    print([f"/newroot", f"dracut", "--regenerate-all", "-f", "--mdadmconf", "--force-add", "mdraid"])
+    result = sh.chroot([f"/newroot", f"dracut", "--regenerate-all", "-f", "-vvv", "--mdadmconf", "--force-add", "mdraid"], _err_to_out=True)
+    with open("/newroot/tmp/dracut.out", "w") as out:
+      out.writelines(result)
 
     print(f"Installing boot loader...")
 
@@ -477,7 +488,10 @@ class mProvStatefulInstaller():
     #   sh.umount([mount])
 
     # shutdown the net.
-    sh.pkill(['udhcp'])
+    try:
+      sh.pkill(['udhcp'])
+    except:
+      pass
 
     # autorelabel
     sh.touch("/newroot/.autorelabel")
