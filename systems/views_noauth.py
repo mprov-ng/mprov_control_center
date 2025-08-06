@@ -279,7 +279,7 @@ class IPXEAPIView(MProvView):
             ip = x_forwarded_for.split(',')[0]
         else:
             ip = request.META.get('REMOTE_ADDR')
-        #ip="172.20.10.1"
+        #ip="172.16.10.1"
         # print(ip)
         # now try to grab the nic for this IP
         queryset = self.model.objects.all()
@@ -301,22 +301,31 @@ class IPXEAPIView(MProvView):
                 # setattr(system, 'systemima?ge', imgQs)
                 nic = Obj()
                 nic.system = system
+                nic.bootable = False
                 # setattr(nic, 'system', system)
 
                 nics = [ nic ]
                 queryset = nics
-        # here we should have a system, so let's check it has a distro
+        else:
+          # here we should have a system, so let's check it has a distro
 
-        # print(queryset)
-        # the following lines allow recurive templating to be done on the kernel cmdline.
-        if qscnt > 1:
-           print(f"WARN: More than 1 NIC for IP {ip}.  Only using the first one!")
-        
-        nic = queryset[0]
-        
-        if nic.system.systemimage == None:
-          print(f"Error: System has no image assigned, netbooting not possible.")
-          raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
+          # print(queryset)
+          # the following lines allow recurive templating to be done on the kernel cmdline.
+          if qscnt > 1:
+            print(f"WARN: More than 1 NIC for IP {ip}.  Only using the first one!")
+          
+          nic = queryset[0]
+          
+          if nic.system.systemimage == None:
+            print(f"Error: System has no image assigned, netbooting not possible.")
+            raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
+          if not hasattr(nic, "bootable"):
+            print(f"Error: System definition has no bootable NIC.  Cannot boot")
+            raise NotFound(detail=f"Error: System definition has no bootable NIC.  Cannot boot")
+          nic.bootserver=platform.node()
+          if "." in nic.bootserver:
+            # remove the domain if one exists
+            nic.bootserver, _ = nic.bootserver.split(".", 1)
         rescue_param = " mprov_rescue=0"
         if "rescue" in request.query_params:
             rescue_param = " mprov_rescue=1"
@@ -332,9 +341,7 @@ class IPXEAPIView(MProvView):
           template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
         # print(nic)
         context = Context(dict(nic=nic))
-        if not hasattr(nic, "bootable") :
-           print(f"Error: System definition has no bootable NIC.  Cannot boot")
-           raise NotFound(detail=f"Error: System definition has no bootable NIC.  Cannot boot")
+
         if not nic.bootable:
           rendered: str = template.render(context)
           context= {
@@ -343,10 +350,7 @@ class IPXEAPIView(MProvView):
           return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
 
 
-        nic.bootserver=platform.node()
-        if "." in nic.bootserver:
-          # remove the domain if one exists
-          nic.bootserver, _ = nic.bootserver.split(".", 1)
+
         
 
         if not nic.system.systemimage.customIPXE == "" and not nic.system.systemimage.customIPXE == None:
