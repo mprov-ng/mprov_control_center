@@ -119,7 +119,7 @@ class SystemAdmin(admin.ModelAdmin):
   actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe']
   
   inlines = [ NetworkInterfaceInline, BMCInLine]
-  list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort']
+  list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
   readonly_fields = ['timestamp', 'updated', 'created_by']
   list_display_links = ['id', 'hostname']
   list_per_page = 25
@@ -155,6 +155,12 @@ class SystemAdmin(admin.ModelAdmin):
     }
     ),
   )
+  def getBMClink(self,obj):
+    bmcq = SystemBMC.objects.filter(system=obj)
+    bmcq = bmcq[0]
+    if bmcq is not None:
+      return mark_safe(f"<a href=\"http://{bmcq.ipaddress}\" target=\"_blank\">http://{bmcq.ipaddress}</a>")
+    return mark_safe("N/A")
   def getPower(self, obj):
      return mark_safe(f"<img src=\"/systems/{obj.id}/?powerstate\" width=\"32\" height=\"32\" />")
   def getMacs(self, obj):
@@ -175,6 +181,7 @@ class SystemAdmin(admin.ModelAdmin):
   getSwitchPort.short_description = "Switch Ports"
   getMacs.short_description = 'Network\nInterfaces'
   getPower.short_description = "Status"
+  getBMClink.short_description = "BMC Link"
 
   @admin.action(description="Power Cycle")
   def sys_cycle(self, request, queryset):
