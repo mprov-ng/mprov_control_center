@@ -159,3 +159,4 @@ install_scripts/env.db
 static/bootx64.efi
 static/mlnx
 *.code-workspace
+.vscode/settings.json
