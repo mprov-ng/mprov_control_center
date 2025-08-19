@@ -322,10 +322,10 @@ class IPXEAPIView(MProvView):
           if not hasattr(nic, "bootable"):
             print(f"Error: System definition has no bootable NIC.  Cannot boot")
             raise NotFound(detail=f"Error: System definition has no bootable NIC.  Cannot boot")
-          nic.bootserver=platform.node()
-          if "." in nic.bootserver:
-            # remove the domain if one exists
-            nic.bootserver, _ = nic.bootserver.split(".", 1)
+        nic.bootserver=platform.node()
+        if "." in nic.bootserver:
+          # remove the domain if one exists
+          nic.bootserver, _ = nic.bootserver.split(".", 1)
         rescue_param = " mprov_rescue=0"
         if "rescue" in request.query_params:
             rescue_param = " mprov_rescue=1"
@@ -342,6 +342,11 @@ class IPXEAPIView(MProvView):
         # print(nic)
         context = Context(dict(nic=nic))
 
+        # check for a blank mac on the nic, probably means N.A.D.S. boot.
+        if nic.system.systemimage.name == "__nads__":
+          # set the mac to the provisioning interface.
+          nic.mac = nic.system.systemimage.osdistro.prov_interface
+        # not bootable, we just return and let the template handle it.
         if not nic.bootable:
           rendered: str = template.render(context)
           context= {
@@ -363,7 +368,6 @@ class IPXEAPIView(MProvView):
         rendered: str = template.render(context)
         nic.system.systemimage.osdistro.install_kernel_cmdline = rendered + rescue_param
         print(nic.system.systemimage.osdistro.install_kernel_cmdline)
-           
         print("PXE Request from: " + ip)
         # print(context['nics'])
         context= {
