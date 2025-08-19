@@ -157,10 +157,11 @@ class SystemAdmin(admin.ModelAdmin):
   )
   def getBMClink(self,obj):
     bmcq = SystemBMC.objects.filter(system=obj)
-    
+    print(bmcq)
     if bmcq is not None:
-      bmcq = bmcq[0]
-      return mark_safe(f"<a href=\"http://{bmcq.ipaddress}\" target=\"_blank\">http://{bmcq.ipaddress}</a>")
+      if type(bmcq) is list and len(bmcq) != 0:
+        bmcq = bmcq[0]
+        return mark_safe(f"<a href=\"http://{bmcq.ipaddress}\" target=\"_blank\">http://{bmcq.ipaddress}</a>")
     return mark_safe("N/A")
   def getPower(self, obj):
      return mark_safe(f"<img src=\"/systems/{obj.id}/?powerstate\" width=\"32\" height=\"32\" />")
