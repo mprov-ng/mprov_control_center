@@ -17,29 +17,8 @@ echo "mProv boot setup..."
 set +e
 set -o pipefail
 cd /bin
-ln -s /bin/busybox ip
-ln -s /bin/busybox /sbin/ifconfig
-ln -s /bin/busybox udhcpc
-ln -s /bin/busybox udhcpc6
-ln -s /bin/busybox df
-ln -s /bin/busybox wget
-ln -s /bin/busybox tar
-ln -s /bin/busybox gunzip
-ln -s /bin/busybox /sbin/route
-ln -s /bin/busybox resolvconf
-ln -s /bin/busybox /bin/cpio
-ln -s /bin/busybox /sbin/switch_root 
-ln -s /bin/busybox /bin/date
-ln -s /bin/busybox /bin/pkill
-ln -s /bin/busybox /bin/clear
-ln -s /bin/busybox /bin/chvt
-ln -s /bin/busybox /bin/env
-ln -s /bin/busybox /bin/awk
-ln -s /bin/busybox /bin/chmod
-ln -s /bin/busybox /bin/seq
-ln -s /bin/busybox /bin/dirname
-ln -s /bin/busybox /bin/cut
-ln -s /bin/busybox /bin/tee
+# install all the enabled busybox links
+/bin/busybox --install
 
 
 mount -t proc proc /proc
@@ -122,7 +101,7 @@ modprobe sd_mod
 echo -n "sd_mod" | tee -a /tmp/init_mods
 echo "  DONE!"
 
-export PATH=$PATH:/sbin:/usr/sbinwg
+export PATH=$PATH:/sbin:/usr/sbin
 # get the interface name
 MAC=$MPROV_PROV_INTF
 MPROV_PROV_INTF=`ip link show | grep -i -B1 "$MAC"| grep -v link | awk -F": " '{print $2}'`
@@ -153,7 +132,7 @@ ip add
 
 
 
-if [ "$mprov_rescue" == "1" ]
+if [ "$MPROV_RESCUE" == "1" ]
 then
   read -p "Would you like an early shell? (y/Y)" -t 10 early_shell
 
