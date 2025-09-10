@@ -27,6 +27,14 @@ echo "Attempting to unload modules:"
 for mod in $MPROV_INITIAL_MODS
 do  
   ret=1
+  if [ "$mod" == "nvme" ]
+  then
+    echo -en "\t*** $mod"
+    echo "Skipping nvme unload, as it will may break disks."
+    ret=0
+    echo "SKIPPED"
+    continue
+  fi
   # retry=0
   # while [ $ret != 0 ] && [ $retry -lt 5 ]
   # do
