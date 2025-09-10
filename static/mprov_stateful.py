@@ -418,7 +418,11 @@ class mProvStatefulInstaller():
       grubfileout.writelines(grubfileNew)
 
     print(f"Regenerating initial ramdisk... ")
-    sh.chroot(["/newroot", "mount", "-t", "proc", "none", "/proc"])
+    try:
+      sh.chroot(["/newroot", "mount", "-t", "proc", "none", "/proc"])
+    except:
+      pass
+    
     print([f"/newroot", f"dracut", "--regenerate-all", "-f", "--mdadmconf", "--force-add", "mdraid"])
     result = sh.chroot([f"/newroot", f"dracut", "--regenerate-all", "-f", "-vvv", "--mdadmconf", "--force-add", "mdraid"], _err_to_out=True)
     with open("/newroot/tmp/dracut.out", "w") as out:
