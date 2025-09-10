@@ -10,6 +10,7 @@ from networks.models import SwitchPort
 from django.utils.text import slugify
 from jobqueue.models import JobModule, JobStatus, Job
 from django import forms
+from django.db.models.query import QuerySet
 
 from django.template.response import TemplateResponse
 from django.contrib.admin.utils import model_ngettext
@@ -159,7 +160,7 @@ class SystemAdmin(admin.ModelAdmin):
     bmcq = SystemBMC.objects.filter(system=obj)
     print(bmcq)
     if bmcq is not None:
-      if type(bmcq) is list and len(bmcq) != 0:
+      if type(bmcq) is QuerySet and len(bmcq) != 0:
         bmcq = bmcq[0]
         return mark_safe(f"<a href=\"http://{bmcq.ipaddress}\" target=\"_blank\">http://{bmcq.ipaddress}</a>")
     return mark_safe("N/A")
