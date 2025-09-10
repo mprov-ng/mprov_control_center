@@ -26,7 +26,11 @@
       </div>
       <div class="form-group">
         
-        <button type="button" onclick="jQuery.ajax('/power/pxe/?id={{original.id}}');" class="btn btn-success form-control"><i class="fas fa-angle-double-up"></i>&nbsp;&nbsp;{% trans 'PXE Boot' %}</button>
+        <button type="button" onclick="jQuery.ajax('/power/pxe/?id={{original.id}}');" class="btn btn-success form-control"><i class="fas fa-angle-double-up"></i>&nbsp;&nbsp;{% trans 'Legacy PXE Boot' %}</button>
+      </div>
+            <div class="form-group">
+        
+        <button type="button" onclick="jQuery.ajax('/power/pxeefi/?id={{original.id}}');" class="btn btn-success form-control"><i class="fas fa-angle-double-up"></i>&nbsp;&nbsp;{% trans 'EFI PXE Boot' %}</button>
       </div>
     </div>
   </div>

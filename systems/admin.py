@@ -117,7 +117,7 @@ class BMCInLine(admin.StackedInline):
 
 
 class SystemAdmin(admin.ModelAdmin):
-  actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe']
+  actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
   
   inlines = [ NetworkInterfaceInline, BMCInLine]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
@@ -222,7 +222,7 @@ class SystemAdmin(admin.ModelAdmin):
           func_timeout(1, self._doPowerCmd, [mybmc, "off"])
         except FunctionTimedOut:
            print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
-  @admin.action(description="Boot to PXE")
+  @admin.action(description="Boot to PXE (Legacy)")
   def sys_pxe(self, request, queryset):
      for system in queryset: 
         mybmc = SystemBMC.objects.all().filter(system=system.id)
@@ -234,7 +234,18 @@ class SystemAdmin(admin.ModelAdmin):
           func_timeout(5, self._doPowerCmd, [mybmc, "pxe"])
         except FunctionTimedOut:
            print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
-  
+  @admin.action(description="Boot to PXE(EFI)")
+  def sys_pxe_efi(self, request, queryset):
+     for system in queryset: 
+        mybmc = SystemBMC.objects.all().filter(system=system.id)
+        if len(mybmc) != 1:
+           print(f"Error: Unable to find bmc for {system.name}")
+           continue
+        mybmc = mybmc[0]
+        try:
+          func_timeout(5, self._doPowerCmd, [mybmc, "pxeefi"])
+        except FunctionTimedOut:
+           print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
   
   def _doPowerCmd(self, bmc, action="on"):
     print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, pass: {bmc.password}, action: {action}")
@@ -251,31 +262,46 @@ class SystemAdmin(admin.ModelAdmin):
     try:
         ipmi.session.establish()
         ipmi.target = pyipmi.Target(ipmb_address=0x20)
-        if action == "pxe":
+        if action == "pxe" or  action == "pxeefi":
+          efiopt=""
+          if action == "pxeefi":
+             efiopt = "options=efiboot"
+          
           # XXX: bootdev is not implemented in python-ipmi(pyipmi)
           # so we will need to issue a raw ipmitool command.
-          ipmitool_cmd = f"/usr/bin/ipmitool -Ilanplus -U{bmc.username} -P{bmc.password} -H{bmc.ipaddress} chassis bootdev pxe"
-          subprocess.run(args=ipmitool_cmd.split())
+          ipmitool_cmd = f"/usr/bin/ipmitool -Ilanplus -U{bmc.username} -P{bmc.password} -H{bmc.ipaddress} chassis bootdev pxe {efiopt}"
+          try:
+            subprocess.run(args=ipmitool_cmd.split())
+          except: 
+            print("Error Setting PXE.")
+            return
           # force a reset
           action = "reset"
           # make sure we are powered on
           try: 
+             print("Issue power up... ")
              ipmi.chassis_control_power_up()
           except:
              pass
         
-
+        print(f"IPMI Power Action{action}")     
         if action=="on":
+            print("Issue power up... ")
             ipmi.chassis_control_power_up()
         elif action=="off":
+            print("Issue power off... ")
             ipmi.chassis_control_power_down()
         elif action=="reset":
             try:
+              print("Issue hard_reset ... ")
               ipmi.chassis_control_hard_reset()
             except:
+              print("Issue power cyccle ... ")
+              
               ipmi.chassis_control_power_cycle()
               
         elif action=="cycle":
+            print("Issue power cyccle ... ")
             ipmi.chassis_control_power_cycle()
         elif action=="status":
             

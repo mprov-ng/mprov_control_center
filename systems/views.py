@@ -870,26 +870,51 @@ class SystemPowerAPIView(MProvView):
         ipmi.session.set_session_type_rmcp(bmc.ipaddress, 623)
         ipmi.session.set_auth_type_user(bmc.username, bmc.password)
         
+        
+        if action == "pxe" or  action == "pxeefi":
+            efiopt=""
+            if action == "pxeefi":
+                efiopt = "options=efiboot"
+        
+            # XXX: bootdev is not implemented in python-ipmi(pyipmi)
+            # so we will need to issue a raw ipmitool command.
+            ipmitool_cmd = f"/usr/bin/ipmitool -Ilanplus -U{bmc.username} -P{bmc.password} -H{bmc.ipaddress} chassis bootdev pxe {efiopt}"
+            print(ipmitool_cmd)
+            try:
+                subprocess.run(args=ipmitool_cmd.split())
+            except: 
+                print("Error Setting PXE.")
+                return
+            # force a reset
+            action = "reset"
+            # make sure we are powered on
+            try:
+                ipmi.session.establish()
+                ipmi.target = pyipmi.Target(ipmb_address=0x20)
+                ipmi.chassis_control_power_up()
+            except:
+                print("Host Already Up")
         try:
             ipmi.session.establish()
-            ipmi.target = pyipmi.Target(ipmb_address=0x20)
-            if action == "pxe":
-                # XXX: bootdev is not implemented in python-ipmi(pyipmi)
-                # so we will need to issue a raw ipmitool command.
-                ipmitool_cmd = f"/usr/bin/ipmitool -Ilanplus -U{bmc.username} -P{bmc.password} -H{bmc.ipaddress} chassis bootdev pxe"
-                subprocess.run(args=ipmitool_cmd.split())
-                # force a reset
-                action = "reset"
-                # make sure we are powered on
-                ipmi.chassis_control_power_up()
-                
+            ipmi.target = pyipmi.Target(ipmb_address=0x20)    
+            print(f"IPMI Power Action{action}")     
             if action=="on":
+                print("Issue power up... ")
                 ipmi.chassis_control_power_up()
             elif action=="off":
+                print("Issue power off... ")
                 ipmi.chassis_control_power_down()
             elif action=="reset":
-                ipmi.chassis_control_hard_reset()
+                try:
+                    print("Issue hard_reset ... ")
+                    ipmi.chassis_control_hard_reset()
+                except:
+                    print("Issue power cyccle ... ")
+                
+                ipmi.chassis_control_power_cycle()
+                
             elif action=="cycle":
+                print("Issue power cyccle ... ")
                 ipmi.chassis_control_power_cycle()
             elif action=="status": 
                 
