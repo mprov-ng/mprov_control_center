@@ -3,6 +3,19 @@
  
 {% block submit_buttons_bottom  %} 
 {% block system-power-buttons %}
+
+<script type="text/javascript">
+
+  function successfulAjax(data){
+    alert("Power Command Sent Successfully!");
+  }
+
+  function errorAjax(jqXHR, textStatus, errorThrown){
+    alert("Power Command Failed! " + textStatus);
+  }
+
+</script>
+
   <div class="card card-primary card-outline">
     <div class="card-header">
         <h3 class="card-title">
@@ -12,25 +25,25 @@
     </div>
     <div class="card-body">
       <div class="form-group">
-        <button type="button" onclick="jQuery.ajax('/power/on/?id={{original.id}}');" class="btn btn-success form-control"><i class="fas fa-angle-double-up"></i>&nbsp;&nbsp;{% trans 'Power On' %}</button>
+        <button type="button" onclick="jQuery.ajax({url: '/power/on/?id={{original.id}}', success: successfulAjax, error: errorAjax });" class="btn btn-success form-control"><i class="fas fa-angle-double-up"></i>&nbsp;&nbsp;{% trans 'Power On' %}</button>
       </div>
       <div class="form-group">
-        <button type="button" onclick="jQuery.ajax('/power/off/?id={{original.id}}');" class="btn btn-danger form-control"><i class="fas fa-angle-double-down"></i>&nbsp;&nbsp;{% trans 'Power Off' %}</button>
+        <button type="button" onclick="jQuery.ajax({url: '/power/off/?id={{original.id}}', success: successfulAjax, error: errorAjax });" class="btn btn-danger form-control"><i class="fas fa-angle-double-down"></i>&nbsp;&nbsp;{% trans 'Power Off' %}</button>
       </div>
       <div class="form-group">
-        <button type="button" onclick="jQuery.ajax('/power/cycle/?id={{original.id}}');" class="btn btn-info form-control"><i class="fas fa-retweet"></i>&nbsp;&nbsp;{% trans 'Power Cycle' %}</button>
-      </div>
-      <div class="form-group">
-        
-        <button type="button" onclick="jQuery.ajax('/power/reset/?id={{original.id}}');" class="btn btn-info form-control"><i class="fas fa-redo"></i>&nbsp;&nbsp;{% trans 'Reset' %}</button>
+        <button type="button" onclick="jQuery.ajax({url: '/power/cycle/?id={{original.id}}', success: successfulAjax, error: errorAjax });" class="btn btn-info form-control"><i class="fas fa-retweet"></i>&nbsp;&nbsp;{% trans 'Power Cycle' %}</button>
       </div>
       <div class="form-group">
         
-        <button type="button" onclick="jQuery.ajax('/power/pxe/?id={{original.id}}');" class="btn btn-success form-control"><i class="fas fa-angle-double-up"></i>&nbsp;&nbsp;{% trans 'Legacy PXE Boot' %}</button>
+        <button type="button" onclick="jQuery.ajax({url: '/power/reset/?id={{original.id}}', success: successfulAjax, error: errorAjax });" class="btn btn-info form-control"><i class="fas fa-redo"></i>&nbsp;&nbsp;{% trans 'Reset' %}</button>
+      </div>
+      <div class="form-group">
+        
+        <button type="button" onclick="jQuery.ajax({url: '/power/pxe/?id={{original.id}}', success: successfulAjax, error: errorAjax });" class="btn btn-success form-control"><i class="fas fa-angle-double-up"></i>&nbsp;&nbsp;{% trans 'Legacy PXE Boot' %}</button>
       </div>
             <div class="form-group">
         
-        <button type="button" onclick="jQuery.ajax('/power/pxeefi/?id={{original.id}}');" class="btn btn-success form-control"><i class="fas fa-angle-double-up"></i>&nbsp;&nbsp;{% trans 'EFI PXE Boot' %}</button>
+        <button type="button" onclick="jQuery.ajax({url: '/power/pxeefi/?id={{original.id}}', success: successfulAjax, error: errorAjax });" class="btn btn-success form-control"><i class="fas fa-angle-double-up"></i>&nbsp;&nbsp;{% trans 'EFI PXE Boot' %}</button>
       </div>
     </div>
   </div>
