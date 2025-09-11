@@ -135,7 +135,7 @@ ip add
 if [ "$MPROV_RESCUE" == "1" ]
 then
   read -p "Would you like an early shell? (y/Y)" -t 10 early_shell
-
+  early_shell=${early_shell:0:1}
   if [ "$early_shell" == "y" ] || [ "$early_shell" == "Y" ] 
   then
   
