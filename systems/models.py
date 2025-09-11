@@ -247,7 +247,7 @@ class NetworkInterface(models.Model):
   endpoint="/networkinterfaces/"
   system = models.ForeignKey(System, on_delete=models.CASCADE)
   name=models.CharField(max_length=50, verbose_name="Iface. Name",)
-  hostname=models.CharField(max_length=255, )
+  hostname=models.CharField(max_length=255, blank=True, null=True)
   hostaliases=models.CharField(max_length=4096, help_text="A space separated list of alternate hostnames.", null=True, blank=True)
   ipaddress=models.GenericIPAddressField(verbose_name="IP Address ", blank=True, null=True)
   isgateway=models.BooleanField(verbose_name="Gateway Nic?", default=True)
@@ -261,6 +261,9 @@ class NetworkInterface(models.Model):
 
   def __str__(self):
     return self.name
+  def save(self, *args, **kwargs):
+    self.hostname = self.system.hostname
+    super(NetworkInterface, self).save(*args, **kwargs)
 
 class SystemImage(models.Model):
   """ System Images are filesystems that are managed by the mPCC's configuration management, built into .img files, and synced out to Systems."""
