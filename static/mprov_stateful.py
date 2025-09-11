@@ -457,24 +457,24 @@ class mProvStatefulInstaller():
     # disable netboot
     
     # XXX: Removed for the moment, needs more testing.
-    # mprovUrl = self.mprovURL
-    # apiKey = self.apikey
+    mprovUrl = self.mprovURL
+    apiKey = self.apikey
 
-    # reqHeaders = {
-    #   'Content-Type': 'application/json',
-    #   'Authorization': f'Api-Key {apiKey}'
-    # }
-    # try: 
-    #   req = requests.post(f"{mprovUrl}/systems/?self", headers=reqHeaders, data='{"netboot": false}')
-    # except:
-    #   print("Error: There was an issue trying to disable netboot.  You should look into this.")
+    reqHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': f'Api-Key {apiKey}'
+    }
+    try: 
+      req = requests.post(f"{mprovUrl}/systems/?self", headers=reqHeaders, data='{"netboot": false}')
+    except:
+      print("Error: There was an issue trying to disable netboot.  You should look into this.")
 
-    # if req.status_code != 200:
-    #   print("Error: There was an issue trying to disable netboot.  You should look into this.")
-    #   print(f"Error: {req.text}")
+    if req.status_code != 200:
+      print("Error: There was an issue trying to disable netboot.  You should look into this.")
+      print(f"Error: {req.text}")
     
     
-      # print(f"Error: {req.status}")
+      print(f"Error: {req.status}")
 
     # # Unmount all mounts in /newroot
     # mounts = []
