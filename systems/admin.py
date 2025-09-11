@@ -75,6 +75,7 @@ class NetworkInterfaceInline(admin.StackedInline):
   verbose_name="Network Interfaces"
   verbose_name_plural="Network Interfaces"
   readonly_fields = ['ipv6ll', 'ipv6gua']
+  exclude = ('hostname',)
 
   def get_formset(self, request, obj, **kwargs):
     formset =  super().get_formset(request, obj, **kwargs)
