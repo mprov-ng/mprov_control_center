@@ -314,8 +314,13 @@ class IPXEAPIView(MProvView):
           if qscnt > 1:
             print(f"WARN: More than 1 NIC for IP {ip}.  Only using the first one!")
           
-          nic = queryset[0]
-          
+          # first let's find a bootable nic if one exists.
+          nic=None
+          for s_nic in queryset:
+             if s_nic.bootable:
+                nic = s_nic
+                break
+             
           if nic.system.systemimage == None:
             print(f"Error: System has no image assigned, netbooting not possible.")
             raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
