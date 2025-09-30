@@ -443,6 +443,8 @@ class mProvStatefulInstaller():
       sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/grub2/grub2-efi.cfg"])
     else:
       print("Configuring GRUB2 BIOS Setup...")
+      with open("/etc/default/grub", "a") as gd:
+        gd.write("GRUB_ENABLE_BLSCFG=false")
       sh.chroot([
         f"/newroot", 
         "grub2-install", 
