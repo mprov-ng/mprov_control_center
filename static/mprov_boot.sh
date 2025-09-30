@@ -75,8 +75,10 @@ do
 			# if we are class 0x02, it's a network device.
 			# let's see if we can find a driver.
 			modalias=`cat /sys/bus/pci/devices/$i/modalias`
+      trap ERR
 			echo -n "`modprobe -R $modalias`," | tee -a /tmp/init_mods
 			modprobe $modalias
+      trap err_handler ERR
 	fi	fi
 done
 echo "  DONE!"
@@ -91,8 +93,10 @@ do
 			# if we are class 0x01, it's a storage device.
 			# let's see if we can find a driver.
 			modalias=`cat /sys/bus/pci/devices/$i/modalias `
+      trap ERR
 			echo -n "`modprobe -R $modalias  | tail -n1`," | tee -a /tmp/init_mods
 			modprobe $modalias
+      trap err_handler ERR
 	fi	fi
 done
 
