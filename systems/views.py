@@ -315,6 +315,7 @@ Format returned:
                 try:
                     bmcStatus = func_timeout(1, SystemPowerAPIView()._doPowerCmd, [bmcObj[0], "status"])
                 except FunctionTimedOut:
+                    print("IPMI Command Timed Out")
                     return redirect(f"/static/images/power_unknown.svg")
 
                 # TODO: Serve the image file based on status
@@ -897,7 +898,7 @@ class SystemPowerAPIView(MProvView):
         try:
             ipmi.session.establish()
             ipmi.target = pyipmi.Target(ipmb_address=0x20)    
-            print(f"IPMI Power Action{action}")     
+            print(f"IPMI Power Action {action}")     
             if action=="on":
                 print("Issue power up... ")
                 ipmi.chassis_control_power_up()
@@ -909,12 +910,12 @@ class SystemPowerAPIView(MProvView):
                     print("Issue hard_reset ... ")
                     ipmi.chassis_control_hard_reset()
                 except:
-                    print("Issue power cyccle ... ")
+                    print("Issue power cycle ... ")
                 
                 ipmi.chassis_control_power_cycle()
                 
             elif action=="cycle":
-                print("Issue power cyccle ... ")
+                print("Issue power cycle ... ")
                 ipmi.chassis_control_power_cycle()
             elif action=="status": 
                 
