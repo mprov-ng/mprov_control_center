@@ -444,7 +444,7 @@ class mProvStatefulInstaller():
     else:
       print("Configuring GRUB2 BIOS Setup...")
       with open("/newroot/etc/default/grub", "a") as gd:
-        gd.write("GRUB_ENABLE_BLSCFG=false")
+        gd.write("\nGRUB_ENABLE_BLSCFG=false")
       sh.chroot([
         f"/newroot", 
         "grub2-install", 
