@@ -1,17 +1,18 @@
 from csv import list_dialects
+import common
 import sys
 from tabnanny import verbose
 import traceback
 from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericStackedInline
-from django.forms import BaseInlineFormSet
+from django.forms import BaseInlineFormSet, BaseModelFormSet, formset_factory, modelformset_factory
 from django.utils.html import mark_safe
 from networks.models import SwitchPort
 from django.utils.text import slugify
 from jobqueue.models import JobModule, JobStatus, Job
 from django import forms
 from django.db.models.query import QuerySet
-
+from django.contrib.admin.checks import InlineModelAdminChecks
 from django.template.response import TemplateResponse
 from django.contrib.admin.utils import model_ngettext
 from django.contrib.admin import helpers
@@ -24,6 +25,7 @@ import pyipmi
 import pyipmi.interfaces
 from func_timeout import func_timeout, FunctionTimedOut
 import subprocess
+from django.template.loader import render_to_string
 
 from .models import (
   System,
@@ -120,9 +122,9 @@ class BMCInLine(admin.StackedInline):
 class SystemAdmin(admin.ModelAdmin):
   actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
   
-  inlines = [ NetworkInterfaceInline, BMCInLine]
+  inlines = [ NetworkInterfaceInline, BMCInLine, ]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
-  readonly_fields = ['timestamp', 'updated', 'created_by']
+  readonly_fields = ['timestamp', 'updated', 'created_by', 'renderedConfig']
   list_display_links = ['id', 'hostname']
   list_per_page = 25
   search_fields = ['hostname']
@@ -153,10 +155,20 @@ class SystemAdmin(admin.ModelAdmin):
         'tmpfs_root_size',
         'initial_mods',
         'prov_interface',
+       'renderedConfig',
         ]
     }
     ),
   )
+  def renderedConfig(self, obj):
+    context = {
+      "config": common.render_config(obj)
+    }
+    
+    # Render the template to a string
+    return render_to_string('admin/rendered_config.html', context)
+
+     
   def getBMClink(self,obj):
     bmcq = SystemBMC.objects.filter(system=obj)
     print(bmcq)
@@ -186,6 +198,7 @@ class SystemAdmin(admin.ModelAdmin):
   getMacs.short_description = 'Network\nInterfaces'
   getPower.short_description = "Status"
   getBMClink.short_description = "BMC Link"
+  renderedConfig.short_description = "Rendered Configuration"
 
   @admin.action(description="Power Cycle")
   def sys_cycle(self, request, queryset):

@@ -1,0 +1,14 @@
+
+<ul>
+{% for key, value in config.items %}
+
+  <li>
+  {% spaceless %}
+    <label>{{key}}</label><blockquote><label>Source:</label> {{ value.source }}<br />
+    {% if key != '' %}
+                <label>Value:</label> {{ value.value }}
+    {% endif %}</li>
+  </blockquote>
+  {% endspaceless %}
+{% endfor %}
+</ul>
