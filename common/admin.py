@@ -1,7 +1,6 @@
 
 from copy import deepcopy
 from copyreg import dispatch_table
-from socketserver import ThreadingUnixDatagramServer
 from django.contrib import admin
 from django import forms
 from django.contrib.admin.helpers import AdminForm
