@@ -1,7 +1,6 @@
-import ipaddress, time, datetime
-from tabnanny import verbose
+import time
+import datetime
 from django.db import models
-from django.apps import apps
 from django.utils.timezone import make_aware, is_aware
 from django.utils import timezone
 from django.dispatch import receiver
@@ -110,4 +109,3 @@ class JobServer(models.Model):
 def convertJobServerTS(sender, instance, **kwarg):
     if not is_aware(instance.heartbeat_time):
         instance.heartbeat_time = make_aware(instance.heartbeat_time)
-    pass

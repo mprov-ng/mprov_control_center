@@ -1,21 +1,18 @@
 
 import os
-from urllib import response
 from .models import SystemImage, NetworkInterface
 from django.shortcuts import redirect
 from rest_framework.exceptions import NotFound
-import random
 from common.views import MProvView
 from systems.serializers import SystemImageSerializer, NetworkInterfaceDetailsSerializer
 from rest_framework import generics
 from django.http import HttpResponseNotAllowed, HttpResponse
-from rest_framework.response import Response
 from django.template import Template, Context
 from django.shortcuts import render
 import requests
 import dns.resolver
 import platform
-from ipaddress import ip_address, IPv4Address
+from ipaddress import ip_address
 from osmanagement.models import OSDistro
 
 class ImagesAPIView(MProvView, generics.ListAPIView):
@@ -379,4 +376,3 @@ class IPXEAPIView(MProvView):
           'nic': nic,
         }
         return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
-        pass

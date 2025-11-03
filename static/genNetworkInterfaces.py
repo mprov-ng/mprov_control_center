@@ -1,13 +1,13 @@
 #!/usr/bin/pyton3.8
 
 
-import json
 import socket
-import uuid
-import yaml, os, sys, glob, time
+import yaml
+import os
+import sys
+import time
 import traceback
 import requests
-import sh
 from ipaddress import IPv4Network
 
 
@@ -77,7 +77,6 @@ class mProvNetworkScriptGenerator():
       except:
         # ignore unused keys
         pass
-    pass
 
   def startSession(self):
     
@@ -149,7 +148,6 @@ class mProvNetworkScriptGenerator():
             netDetails['gateway'] = ""
             netDetails['netmask'] = "255.0.0.0"
             netDetails['subnet'] = "10.0.0.0"
-            pass
           intf['gateway']=netDetails['gateway']
           if netDetails['netmask'] is not None:
             intf['netmask'] = IPv4Network(f"{netDetails['subnet']}/{netDetails['netmask']}").netmask
@@ -191,7 +189,6 @@ class mProvNetworkScriptGenerator():
         hostfile.write(self.details['hostname'])
       print(f"Name: {intf['name']}; MAC: {intf['mac']}; Gateway: {intf['gateway']};  IP: {intf['ipaddress']};, Netmask:{intf['netmask']}")
 
-    pass
 def main():
   netGen = mProvNetworkScriptGenerator()
   netGen.generateNetworkInterfaceFiles()

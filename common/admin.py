@@ -1,14 +1,10 @@
 
 from copy import deepcopy
-from copyreg import dispatch_table
 from django.contrib import admin
 from django import forms
-from django.contrib.admin.helpers import AdminForm
-from django.views.generic import CreateView
 from django.core.exceptions import ImproperlyConfigured
-from django.forms.fields import IntegerField, CharField, Field, HiddenInput
+from django.forms.fields import IntegerField, Field, HiddenInput
 from django.forms import Media
-from django.contrib.contenttypes.models import ContentType
 
 
 # wizard on first step has 'wizard_step' unset
@@ -165,4 +161,3 @@ class AdminWizardModel(admin.ModelAdmin):
 
       return form
       
-  pass

@@ -1,5 +1,3 @@
-from statistics import mode
-from django.utils.text import slugify
 from jobqueue.models import JobModule, JobStatus, Job
 from django.contrib import admin
 from .forms import OSDistro_form

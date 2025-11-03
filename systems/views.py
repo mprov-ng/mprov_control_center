@@ -1,9 +1,6 @@
-from http.client import NETWORK_AUTHENTICATION_REQUIRED
 import subprocess
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect
-from re import template
-from unicodedata import name
 from .serializers import (
     NetworkInterfaceDetailsSerializer,
     NetworkInterfaceSerializer,
@@ -16,10 +13,9 @@ from .serializers import (
     SystemImageSerializer,
 )
 from rest_framework.response import Response
-from rest_framework.serializers import ListSerializer
 
 from common.views import MProvView
-from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, SystemModel, NADSSystem
+from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, NADSSystem
 from rest_framework.response import Response
 from networks.models import SwitchPort, Network, Switch
 from rest_framework import generics

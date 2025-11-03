@@ -1,9 +1,7 @@
 
-from dataclasses import field
 from rest_framework import serializers
 
 from .models import DiskLayout, DiskPartition, RaidLayout
-from systems.models import *
 
 class DiskPartitionAPISerializer(serializers.ModelSerializer):
   disklayout = serializers.PrimaryKeyRelatedField(queryset=DiskLayout.objects.all())

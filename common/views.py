@@ -1,11 +1,7 @@
-import json
-from django.conf import settings
 from django.http import HttpResponse, HttpResponseNotAllowed
-from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_api_key.permissions import HasAPIKey
-from rest_framework.views import APIView
 from rest_framework import mixins, generics
 from django.db.models import *
 from django_filters.rest_framework import DjangoFilterBackend
