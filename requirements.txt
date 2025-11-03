@@ -6,16 +6,16 @@ requests # https://pypi.org/project/requests/ - Apache Software License (Apache 
 django-cors-headers # https://pypi.org/project/django-cors-headers/ - MIT
 django-jazzmin # https://pypi.org/project/django-jazzmin/ - MIT
 django-autocomplete-light # https://pypi.org/project/django-autocomplete-light/ - MIT
-django-ckeditor # https://pypi.org/project/django-ckeditor/ - BSD
 djangorestframework-api-key # https://pypi.org/project/djangorestframework-api-key/ - MIT
 django-session-timeout # https://pypi.org/project/django-session-timeout/ - MIT
 django-filter # https://pypi.org/project/django-filter/ - BSD
 markdown # https://pypi.org/project/Markdown/ - BSD
 bs4 # https://pypi.org/project/beautifulsoup4/ - MIT
 pymemcache
-django-auth-ldap
 python-ipmi
 func_timeout
 dnspython
 django-dbbackup
+djangocodemirror
 netifaces
+django-auth-ldap
