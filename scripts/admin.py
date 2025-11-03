@@ -7,6 +7,13 @@ class ScriptAdmin(admin.ModelAdmin):
   readonly_fields = ['slug']
   list_display = ['name', 'filename', 'scriptType']
   exclude = ('slug',)
+  fields = ('name', 'filename', 'content', 'scriptType', 'version', 'dependsOn')
+
+  def get_form(self, request, obj=None, **kwargs):
+    form = super().get_form(request, obj, **kwargs)
+    if obj and not obj.content:  # If editing an existing object and content is empty
+      obj.content = obj.get_content_from_file()
+    return form
 
 class FileAdmin(admin.ModelAdmin):
   model = File

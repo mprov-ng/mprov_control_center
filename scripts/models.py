@@ -5,6 +5,7 @@ from django.db.models.signals import pre_save, post_delete
 from django.dispatch import receiver
 from django.utils.text import slugify
 from django.conf import settings
+from ckeditor.fields import RichTextField
 import os
 
 
@@ -26,6 +27,7 @@ class Script(models.Model):
   name=models.CharField(max_length=120, verbose_name=("Script Name"))
   slug=models.SlugField(unique=True, primary_key=True)
   filename = models.FileField(upload_to='')
+  content = RichTextField(blank=True, null=True)
   scriptType = models.ForeignKey(ScriptType, on_delete=models.SET_NULL, null=True)
   version = models.BigIntegerField(default=1)
   dependsOn = models.ManyToManyField('self',blank=True,symmetrical=False)
@@ -35,7 +37,7 @@ class Script(models.Model):
 
   def save(self, *args, **kwargs):
     if not self.slug:
-      self.slug = slugify(self.filename.name)
+      self.slug = slugify(self.filename.name) if self.filename.name else slugify(self.name)
     if not os.path.exists(settings.MEDIA_ROOT + '/' + self.scriptType.slug): 
       # make the dir
       try:
@@ -46,10 +48,35 @@ class Script(models.Model):
 
     self.filename.name = self.scriptType.slug + '/' + self.slug + "-v" + str(self.version)
     super(Script, self).save(*args, **kwargs)
-    print(os.path.join(settings.MEDIA_ROOT, self.filename.name))
-    if os.path.exists(os.path.join(settings.MEDIA_ROOT, self.filename.name)):
-      print("Converting file")
-      os.system("dos2unix " + os.path.join(settings.MEDIA_ROOT, self.filename.name))
+    
+    # Save content to file if content exists
+    if self.content:
+      file_path = os.path.join(settings.MEDIA_ROOT, self.filename.name)
+      try:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        # Write content to file
+        with open(file_path, 'w', encoding='utf-8') as f:
+          f.write(self.content)
+        print(f"Content saved to {file_path}")
+        # Convert line endings if file exists
+        if os.path.exists(file_path):
+          print("Converting file")
+          os.system("dos2unix " + file_path)
+      except Exception as e:
+        print(f"Error saving content to file: {e}")
+
+  def get_content_from_file(self):
+    """Read content from the file and return it"""
+    if self.filename.name:
+      file_path = os.path.join(settings.MEDIA_ROOT, self.filename.name)
+      try:
+        if os.path.exists(file_path):
+          with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+      except Exception as e:
+        print(f"Error reading content from file: {e}")
+    return ""
 class File(models.Model):
   """
   Files are uploaded to the system and able to be served via the link provided.

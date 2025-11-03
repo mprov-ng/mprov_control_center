@@ -19,3 +19,4 @@ func_timeout
 dnspython
 django-dbbackup
 netifaces
+django-ckeditor

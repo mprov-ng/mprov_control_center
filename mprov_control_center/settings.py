@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'dbbackup',
     'utils',
     'authcustom',
+    'ckeditor',
 #    'mprov_esxiprovisioner',
 ]
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
