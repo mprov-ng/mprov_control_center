@@ -58,7 +58,7 @@ INSTALLED_APPS = [
     'dbbackup',
     'utils',
     'authcustom',
-#    'mprov_esxiprovisioner',
+    'mprov_esxiprovisioner',
 ]
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE_OPTIONS = {'location': '/var/www/mprov_control_center/backups/'}
