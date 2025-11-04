@@ -47,11 +47,16 @@ class Script(models.Model):
     self.filename.name = self.scriptType.slug + '/' + self.slug + "-v" + str(self.version)
     file_path = os.path.join(settings.MEDIA_ROOT, self.filename.name)
     
-    # Populate content field with file contents if it exists and content is empty or None
-    if (not self.content or self.content == '') and os.path.exists(file_path):
+    # Check if this is a new file upload (file exists but content field may not match)
+    # If a file is uploaded, always override the content field with the file contents
+    if os.path.exists(file_path):
       try:
         with open(file_path, 'r', encoding='utf-8') as f:
-          self.content = f.read()
+          file_content = f.read()
+          # If we have file content, always use it to override the content field
+          # This ensures uploaded files override the content field
+          if file_content:
+            self.content = file_content
       except Exception as e:
         print(f"Error reading file {file_path}: {e}")
     
