@@ -59,7 +59,8 @@ class Script(models.Model):
             self.content = file_content
       except Exception as e:
         print(f"Error reading file {file_path}: {e}")
-    
+    # don't save the content to the db.
+    self.content=""
     super(Script, self).save(*args, **kwargs)
     
     # Write content field back to file if it has content
