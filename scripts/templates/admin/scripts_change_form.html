@@ -5,4 +5,47 @@
 {{ block.super }}
 {% endblock %}
 
-{% block extrajs %}{% codemirror_instance 'shell' 'code_codemirror' 'id_content' True %}{{ block.super }}{% endblock %}
+{% block extrajs %}
+<script>
+  // Function to read file content and populate the content field
+  function readFileContent(fileInput) {
+    const file = fileInput.files[0];
+    console.log("Attempting to read file content");
+    if (!file) {
+      console.log("No file selected");
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const contentField = document.getElementById('id_content');
+      if (contentField) {
+        contentField.value = e.target.result;
+        // If CodeMirror is being used, we also need to update it
+        // var editor = CodeMirror.fromTextArea(contentField);
+        if (typeof code_codemirror !== 'undefined') {
+          code_codemirror.setValue(e.target.result);
+        } else {
+          console.log("CodeMirror instance not found for id_content");
+        }
+
+
+      }
+
+    };
+    reader.readAsText(file);
+
+    console.log("file read");
+  }
+
+  // Add event listener when the page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('id_filename');
+    if (fileInput) {
+      fileInput.addEventListener('change', function() {
+        readFileContent(this);
+      });
+    }
+  });
+</script>
+{% codemirror_instance 'shell' 'code_codemirror' 'id_content' True %}{{ block.super }}{% endblock %}
