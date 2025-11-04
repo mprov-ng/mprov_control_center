@@ -36,17 +36,9 @@ ALLOWED_HOSTS += os.environ.get('ALLOWED_HOSTS', '').split(',')
 # Application definition
 
 INSTALLED_APPS = [
-    'jazzmin',
+
     'django_filters',
     'djangocodemirror',
-    
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    
     'networks',
     'osmanagement',
     'systems',
@@ -59,6 +51,15 @@ INSTALLED_APPS = [
     'utils',
     'authcustom',
     'mprov_esxiprovisioner',
+    'jazzmin',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    
+
 ]
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE_OPTIONS = {'location': '/var/www/mprov_control_center/backups/'}

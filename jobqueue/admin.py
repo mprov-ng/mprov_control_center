@@ -5,6 +5,12 @@ class JobAdmin(admin.ModelAdmin):
     model = Job
     readonly_fields = ('return_code', 'params', 'module','jobserver',)#'status', ) 
     list_display = ['name', 'status','create_time', 'start_time', 'end_time', 'last_update','jobserver']
+    
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['job_status_changes_url'] = '/jobqueue/status-changes/'
+        return super().changelist_view(request, extra_context=extra_context)
+    
     class Media:
         js = (
             "admin/js/auto_reload.js",

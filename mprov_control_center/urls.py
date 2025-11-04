@@ -85,6 +85,7 @@ urlpatterns = [
     path('jobmodules/', include('jobqueue.jobmodules_urls')),    
     path('jobservers/', include('jobqueue.jobservers_urls')),
     path('jobs/', include('jobqueue.jobs_urls')),
+    path('jobqueue/', include('jobqueue.urls')),
     path('scripts/', include('scripts.scripts_urls')),
     # path('kernels/', include('systems.kernels_urls')),
 
@@ -94,4 +95,4 @@ urlpatterns = [
     path('power/<str:action>/', SystemPowerAPIView.as_view()),
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
     
-] 
+]
