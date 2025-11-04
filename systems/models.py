@@ -100,6 +100,7 @@ class System(models.Model):
   disks = models.ManyToManyField('disklayouts.Disklayout', blank=True, through=DiskLayout.systems.through)
   # bootdisk = models.ForeignKey(DiskLayout, blank=True, null=True, on_delete=models.SET_NULL, verbose_name="Boot Disk Layout", help_text="Boot disk layout for stateful installs")
   stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system use images to disk?")
+  provision = models.BooleanField(default=True, verbose_name="Provision?", help_text="Should this system be provisioned?")
   config = {}
   class Meta:
     ordering = ['hostname']
