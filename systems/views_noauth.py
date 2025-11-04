@@ -217,7 +217,7 @@ class IPXEAPIView(MProvView):
                 nic.system = system
                 nic.bootable = False
                 # setattr(nic, 'system', system)
-
+                setattr(nic.system, 'provision', False)
                 nics = [ nic ]
                 queryset = nics
         else:
@@ -267,10 +267,10 @@ class IPXEAPIView(MProvView):
         if is_nads:
           # set the mac to the provisioning interface.
           nic.mac = nic.system.systemimage.osdistro.prov_interface
-        # not bootable, we just return and let the template handle it.
+        # not provisioned, we just return and let the template handle it.
         # A N.A.D.S. boot always netboots, so it carries on to get the
         # templated cmdline, the rescue parameter and any custom iPXE script.
-        if not nic.bootable and not is_nads:
+        if not nic.system.provision and not is_nads:
           context= {
             'nic': nic,
           }

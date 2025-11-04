@@ -131,6 +131,7 @@ class SystemAdmin(admin.ModelAdmin):
     ('System Parameters', {
       'fields': [
         'stateful',
+        'provision',
         'disks',
         'systemimage',
         'systemmodel',
@@ -333,7 +334,7 @@ class SystemAdmin(admin.ModelAdmin):
   @admin.action(description="Update fields on multiple systems")
   def bulk_update(self, request, queryset):
     # fields to allow multiple updates to.
-    fields = ['systemimage','systemmodel','stateful','prov_interface','initial_mods', 'systemgroups', 'disks', 'location']
+    fields = ['systemimage','systemmodel','stateful','provision','prov_interface','initial_mods', 'systemgroups', 'disks', 'location']
     class BulkUpdateForm(self.get_form(request)):
         set_bootable = forms.BooleanField(required=False, label="Set bootable interface")
 

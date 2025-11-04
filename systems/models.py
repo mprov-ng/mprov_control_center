@@ -106,6 +106,7 @@ class System(models.Model):
   # bootdisk = models.ForeignKey(DiskLayout, blank=True, null=True, on_delete=models.SET_NULL, verbose_name="Boot Disk Layout", help_text="Boot disk layout for stateful installs")
   stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system install its image to disk?")
   location = models.ForeignKey('SystemLocation', blank=True, null=True, on_delete=models.SET_NULL,  )
+  provision = models.BooleanField(default=True, verbose_name="Provision?", help_text="Should this system be provisioned?")
   class Meta:
     ordering = ['hostname']
     verbose_name = 'System'
