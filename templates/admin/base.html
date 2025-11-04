@@ -49,6 +49,11 @@
 
     {% block extrastyle %} {% endblock %}
     {% block extrahead %}
+        <script>
+        // Define the URL for job status changes endpoint
+        const JOB_STATUS_CHANGES_URL = "/jobqueue/status-changes/";
+    </script>
+    <script src="{% static "admin/js/job_notifications.js" %}"></script>
     <script src="/static/textarea_tab.js"></script>
     <link rel="stylesheet" href="/static/css/mprov.css">
     {% endblock %}</head>
