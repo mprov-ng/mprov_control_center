@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     'dbbackup',
     'utils',
     'authcustom',
-    'mprov_esxiprovisioner',
+    #'mprov_esxiprovisioner',
     'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
