@@ -35,6 +35,10 @@ from networks.views import (
     SwitchPortAPIView
 
 )
+from networks.api_views import (
+    update_network_with_confirmation,
+    preview_subnet_changes
+)
 
 from osmanagement.views_noath import OSRepoURLAPIView
 
@@ -51,6 +55,8 @@ urlpatterns = [
     path('', IndexAPIView.as_view()),
     path('networks/', NetworkAPIView.as_view()),
     path('networks/<str:pk>/', NetworkAPIView.as_view()),
+    path('networks/<str:pk>/update-with-confirmation/', update_network_with_confirmation),
+    path('networks/<str:pk>/preview-subnet-changes/', preview_subnet_changes),
     
     path('networktypes/', NetworkTypeAPIView.as_view()),
     path('networktypes/<str:pk>/', NetworkTypeAPIView.as_view()),
