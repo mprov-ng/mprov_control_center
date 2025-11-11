@@ -69,7 +69,7 @@ fi
 cd /var/www/mprov_control_center
 . bin/activate
 
-
+python manage.py createcachetable
 python manage.py migrate
 
 # set up the secret key
