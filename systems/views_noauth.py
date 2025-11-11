@@ -300,7 +300,7 @@ class IPXEAPIView(MProvView):
                 nic.system = system
                 nic.bootable = False
                 # setattr(nic, 'system', system)
-
+                setattr(nic.system, 'provision', False)
                 nics = [ nic ]
                 queryset = nics
         else:
@@ -317,13 +317,19 @@ class IPXEAPIView(MProvView):
              if s_nic.bootable:
                 nic = s_nic
                 break
-             
+          if nic is None:
+            print(f"Error: System definition has no bootable NIC.  Cannot boot")
+            nic.system.provision = False # prevent provisioning if no bootable nic. 
           if nic.system.systemimage == None:
             print(f"Error: System has no image assigned, netbooting not possible.")
             raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
           if not hasattr(nic, "bootable"):
             print(f"Error: System definition has no bootable NIC.  Cannot boot")
             raise NotFound(detail=f"Error: System definition has no bootable NIC.  Cannot boot")
+          
+        # TODO: This needs to be a jobserver that hosts DHCP instead of 
+        # just platform.node().  You will need to check if it is a jobserver
+        # on the same network as the nic or better yet, the same network as the client IP.
         nic.bootserver=platform.node()
         if "." in nic.bootserver:
           # remove the domain if one exists
@@ -348,8 +354,8 @@ class IPXEAPIView(MProvView):
         if nic.system.systemimage.name == "__nads__":
           # set the mac to the provisioning interface.
           nic.mac = nic.system.systemimage.osdistro.prov_interface
-        # not bootable, we just return and let the template handle it.
-        if not nic.bootable:
+        # not provisioned, we just return and let the template handle it.
+        if not nic.system.provision:
           rendered: str = template.render(context)
           context= {
             'nic': nic,

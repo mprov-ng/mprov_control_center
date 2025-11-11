@@ -1,6 +1,6 @@
 #!ipxe
 
-{% if nic.bootable or nic.system.systemimage.slug == "nads" %}
+{% if nic.system.provision or nic.system.systemimage.slug == "nads" %}
 
 # static commandline stuff
 set kernel-cmdline console=tty0 rdinit=/linuxrc
@@ -38,7 +38,7 @@ boot
 {% else %}
 echo
 echo 
-echo ***** System not set to bootable in the mProv Control Center.  
+echo ***** System not set to provision in the mProv Control Center.  
 echo ***** Attempting local boot.
 sleep 3
 exit
