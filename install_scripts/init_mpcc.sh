@@ -93,7 +93,7 @@ else
     # If it doesn't exist, append it to the file
     echo "ALLOWED_HOSTS=${NEW_VALUE}" >> /var/www/mprov_control_center/.env
 fi
-
+mkdir -p /var/www/mprov_control_center/db/
 if [ "$1" != "-d" ] 
 then
 

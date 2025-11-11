@@ -161,3 +161,4 @@ static/mlnx
 *.code-workspace
 .vscode/settings.json
 .dev.init
+db/.initialized
