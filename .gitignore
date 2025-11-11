@@ -160,3 +160,4 @@ static/bootx64.efi
 static/mlnx
 *.code-workspace
 .vscode/settings.json
+.dev.init
