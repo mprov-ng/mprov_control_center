@@ -36,6 +36,8 @@ RUN dnf -y install epel-release && \
     dnf -y groupinstall "Development Tools" && \
     dnf clean all
 
+RUN dnf -y install openldap-devel && dnf clean all
+
 # Configure Python 3.8 if necessary
 RUN alternatives --set python3 /usr/bin/python3.8 || true && \
     dnf config-manager --enable powertools  && \
@@ -56,6 +58,7 @@ RUN cd mprov_control_center && \
     chmod 755 install_scripts/init_mpcc.sh && \
     python3 -m venv . && \
     . bin/activate && \
+	pip install --upgrade pip && \
     pip3 install -r requirements.txt && \
     pip3 install mysqlclient
 
