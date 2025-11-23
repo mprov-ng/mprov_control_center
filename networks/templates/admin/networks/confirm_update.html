@@ -1,0 +1,212 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+    .confirmation-container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .change-info {
+        background: #e7f3ff;
+        padding: 15px;
+        margin: 20px 0;
+        border-left: 4px solid #007cba;
+        border-radius: 4px;
+    }
+    .changes-table {
+        width: 100%;
+        margin: 20px 0;
+        border-collapse: collapse;
+    }
+    .changes-table th,
+    .changes-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    .changes-table th {
+        background-color: #f5f5f5;
+        font-weight: bold;
+    }
+    .changes-table tr:hover {
+        background-color: #f9f9f9;
+    }
+    .old-ip {
+        color: #d63638;
+        font-weight: bold;
+    }
+    .new-ip {
+        color: #00a32a;
+        font-weight: bold;
+    }
+    .no-changes {
+        background: #fff3cd;
+        padding: 15px;
+        margin: 20px 0;
+        border-left: 4px solid #ffc107;
+        border-radius: 4px;
+    }
+    .form-buttons {
+        margin-top: 30px;
+        text-align: center;
+    }
+    .form-buttons input {
+        margin: 0 10px;
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+    .confirm-btn {
+        background-color: #007cba;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .confirm-btn:hover {
+        background-color: #005a87;
+    }
+    .cancel-btn {
+        background-color: #d63638;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .cancel-btn:hover {
+        background-color: #a32a2a;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label='networks' %}">Networks</a>
+&rsaquo; <a href="{% url 'admin:networks_network_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; <a href="{% url 'admin:networks_network_change' network.pk %}">{{ network.name }}</a>
+&rsaquo; {% trans 'Confirm Update' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="confirmation-container">
+        <h1>{% trans 'Confirm Network Update' %}</h1>
+        
+        <div class="change-info">
+            <h3>{% trans 'Network Subnet Change' %}</h3>
+            <p><strong>{% trans 'Network:' %}</strong> {{ network.name }}</p>
+            <p><strong>{% trans 'Old Subnet:' %}</strong> <span class="old-ip">{{ old_subnet }}</span></p>
+            <p><strong>{% trans 'New Subnet:' %}</strong> <span class="new-ip">{{ new_subnet }}</span></p>
+        </div>
+
+        {% if has_changes %}
+            <div class="change-info">
+                <h3>{% trans 'Associated Objects That Will Be Updated' %}</h3>
+                <p>{% trans 'The following network interfaces and BMCs will have their IP addresses updated to maintain their relative position in the new subnet:' %}</p>
+            </div>
+
+            {% if proposed_interfaces %}
+                <h3>{% trans 'Network Interfaces' %}</h3>
+                <table class="changes-table">
+                    <thead>
+                        <tr>
+                            <th>{% trans 'System' %}</th>
+                            <th>{% trans 'Interface' %}</th>
+                            <th>{% trans 'Current IP' %}</th>
+                            <th>{% trans 'New IP' %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for interface in proposed_interfaces %}
+                        <tr>
+                            <td>{{ interface.system }}</td>
+                            <td>{{ interface.name }}</td>
+                            <td class="old-ip">{{ interface.current_ip }}</td>
+                            <td class="new-ip">{{ interface.proposed_ip }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if proposed_bmcs %}
+                <h3>{% trans 'BMCs (Baseboard Management Controllers)' %}</h3>
+                <table class="changes-table">
+                    <thead>
+                        <tr>
+                            <th>{% trans 'System' %}</th>
+                            <th>{% trans 'Current IP' %}</th>
+                            <th>{% trans 'New IP' %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bmc in proposed_bmcs %}
+                        <tr>
+                            <td>{{ bmc.system }}</td>
+                            <td class="old-ip">{{ bmc.current_ip }}</td>
+                            <td class="new-ip">{{ bmc.proposed_ip }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            <div class="form-buttons">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="submit" name="confirm_update" value="{% trans 'Confirm Update' %}" class="confirm-btn">
+                    <input type="submit" name="cancel_update" value="{% trans 'Cancel' %}" class="cancel-btn">
+                </form>
+            </div>
+
+        {% else %}
+            <div class="no-changes">
+                <h3>{% trans 'No Associated Objects Found' %}</h3>
+                <p>{% trans 'There are no network interfaces or BMCs associated with this network that have IP addresses to update.' %}</p>
+                <p>{% trans 'The network subnet will still be updated.' %}</p>
+            </div>
+
+            <div class="form-buttons">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="submit" name="confirm_update" value="{% trans 'Update Network Anyway' %}" class="confirm-btn">
+                    <input type="submit" name="cancel_update" value="{% trans 'Cancel' %}" class="cancel-btn">
+                </form>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script>
+// Add some interactivity
+document.addEventListener('DOMContentLoaded', function() {
+    // Add confirmation dialog for confirm button
+    const confirmBtn = document.querySelector('input[name="confirm_update"]');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function(e) {
+            {% if has_changes %}
+            if (!confirm('Are you sure you want to update the network and all associated IP addresses? This action cannot be undone.')) {
+                e.preventDefault();
+                return false;
+            }
+            {% else %}
+            if (!confirm('Are you sure you want to update the network subnet?')) {
+                e.preventDefault();
+                return false;
+            }
+            {% endif %}
+        });
+    }
+});
+</script>
+{% endblock %}
