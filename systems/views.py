@@ -1,3 +1,4 @@
+import json
 import subprocess
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect
@@ -277,22 +278,22 @@ Format returned:
             nicQueryset = NetworkInterface.objects.all()
             nicQueryset = nicQueryset.filter(ipaddress=ip)
             if nicQueryset.count() == 0:
-                return Response(None, status=404)
+                return Response(json.dumps({"ipaddr": ip}), status=404)
             system = nicQueryset[0].system
             # print(system)
             for arg in request.data:
                 if arg == "netboot":
                     # we should only be working on disabling netboot.
-                    nicQueryset = NetworkInterface.objects.all()
-                    nicQueryset = nicQueryset.filter(system=system)
-                    for nic in nicQueryset:
-                        nic.bootable = False
-                        nic.save()
+                    # Instead of changing the NIC's bootable property, 
+                    # set the system's provision field to False
+                    
+                    system.provision = False
+                    system.save()
                 else:
                     # Unsupported, return 403 forbidden
                     return Response(None, status=403)
             # done with the for loop, return status 200
-            return Response(None, status=200)
+            return Response(json.dumps(f"IP: {ip} updated to provsion=False"), status=200)
 
         self.serializer_class = SystemSerializer
         return super().post(request, *args, **kwargs)
