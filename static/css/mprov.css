@@ -97,3 +97,37 @@ td.delete input {
 .font-weight-light {
  font-weight: 400 !important;
 }
+
+@media (prefers-color-scheme: dark) {
+  li.nav-item.has-treeview {
+      color: #fff !important;
+  }
+  .nav-sidebar .nav-item>.nav-link:hover {
+      color: #fff !important;
+  }
+  aside {
+          background-color: #303030 !important;
+
+  }
+  .h1,
+  .h2,
+  .h3,
+  .h4,
+  .h5,
+  .h6,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .card-body {
+    color: #fff !important;
+  }
+  .card{
+    border: 1px solid rgba(255, 255, 255, .125);
+  }
+  .content-wrapper {
+      background-color: #303030;
+  }
+}
