@@ -77,8 +77,6 @@
         const toast = document.createElement('div');
         toast.id = toastId;
         toast.style.cssText = `
-            background: #fff;
-            border-left: 4px solid #007bff;
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             margin-bottom: 10px;
@@ -96,7 +94,7 @@
                 ${oldStatus} → ${newStatus}
             </div>
             <button style="
-                background: none;
+
                 border: none;
                 color: #999;
                 cursor: pointer;
