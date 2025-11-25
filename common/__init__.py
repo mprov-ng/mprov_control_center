@@ -70,6 +70,8 @@ def render_config(obj):
     configDict['osdistro']['tmpfs_root_size'] = obj.osdistro.tmpfs_root_size
     configDict['osdistro']['initial_mods'] = obj.osdistro.initial_mods
     configDict['osdistro']['prov_interface'] = obj.osdistro.prov_interface
+    configDict['osdistro']['scripts'] = obj.osdistro.scripts
+
   
   # collect all system group configs
   if hasattr(obj, 'systemgroups'):
@@ -79,6 +81,7 @@ def render_config(obj):
       configDict[group.name]['ansibleplaybooks'] = group.ansibleplaybooks
       configDict[group.name]['ansibleroles'] = group.ansibleroles
       configDict[group.name]['ansiblecollections'] = group.ansiblecollections
+      configDict[group.name]['scripts'] = group.scripts
       configDict[group.name]['install_kernel_cmdline'] = group.install_kernel_cmdline
       configDict[group.name]['tmpfs_root_size'] = group.tmpfs_root_size
       configDict[group.name]['initial_mods'] = group.initial_mods
@@ -90,6 +93,7 @@ def render_config(obj):
   configDict['object']['ansibleplaybooks'] = obj.ansibleplaybooks
   configDict['object']['ansibleroles'] = obj.ansibleroles
   configDict['object']['ansiblecollections'] = obj.ansiblecollections
+  configDict['object']['scripts'] = obj.scripts
   configDict['object']['install_kernel_cmdline'] = obj.install_kernel_cmdline
   configDict['object']['tmpfs_root_size'] = obj.tmpfs_root_size
   configDict['object']['initial_mods'] = obj.initial_mods
@@ -108,23 +112,41 @@ def render_config(obj):
   tmpDict['prov_interface'] = dict()
 
   # first, merge distro
+  tmpDict['ansibleplaybooks'] = {
+    'source': list(),
+    'value': list()
+  }
+  tmpDict['ansibleroles'] = {
+    'source': list(),
+    'value': list()
+  }
+  tmpDict['ansiblecollections'] = {
+    'source': list(),
+    'value': list()
+  }
+  tmpDict['scripts'] = {
+    'source': list(),
+    'value': list()
+  }
   if 'osdistro' in configDict.keys():
     tmpDict['params']['source'] = 'osdistro'
     tmpDict['params']['value'] = configDict['osdistro']['params']
     
-    
-    tmpDict['ansibleplaybooks']['source'] = 'osdistro'
-    tmpDict['ansibleplaybooks']['value'] = configDict['osdistro']['ansibleplaybooks']
+    if not configDict['osdistro']['ansibleplaybooks'].all():
+      tmpDict['ansibleplaybooks']['source'].append('osdistro')
+      tmpDict['ansibleplaybooks']['value'].append(configDict['osdistro']['ansibleplaybooks'])
 
     
-    tmpDict['ansibleroles']['source'] = 'osdistro'
-    tmpDict['ansibleroles']['value'] = configDict['osdistro']['ansibleroles']
+    tmpDict['ansibleroles']['source'].append('osdistro')
+    tmpDict['ansibleroles']['value'].append(configDict['osdistro']['ansibleroles'])
 
     
-    tmpDict['ansiblecollections']['source'] = 'osdistro'
-    tmpDict['ansiblecollections']['value'] = configDict['osdistro']['ansiblecollections']
+    tmpDict['ansiblecollections']['source'].append('osdistro')
+    tmpDict['ansiblecollections']['value'].append(configDict['osdistro']['ansiblecollections'])
 
-    
+    tmpDict['scripts']['source'].append('osdistro')
+    tmpDict['scripts']['value'].append(configDict['osdistro']['scripts'])
+
     tmpDict['install_kernel_cmdline']['source'] = 'osdistro'
     tmpDict['install_kernel_cmdline']['value'] = configDict['osdistro']['install_kernel_cmdline']
 
@@ -146,17 +168,21 @@ def render_config(obj):
       tmpDict['params']['source'] = group.name
       tmpDict['params']['value'] = configDict[group.name]['params']
 
-    if configDict[group.name]['ansibleplaybooks'] != "" and configDict[group.name]['ansibleplaybooks'] is not None:
-      tmpDict['ansibleplaybooks']['source'] = group.name
-      tmpDict['ansibleplaybooks']['value'] = configDict[group.name]['ansibleplaybooks']
+    if configDict[group.name]['ansibleplaybooks'] is not None:
+      tmpDict['ansibleplaybooks']['source'].append(group.name)
+      tmpDict['ansibleplaybooks']['value'].append(configDict[group.name]['ansibleplaybooks'])
 
     if configDict[group.name]['ansibleroles'] != "" and configDict[group.name]['ansibleroles'] is not None:
-      tmpDict['ansibleroles']['source'] = group.name
-      tmpDict['ansibleroles']['value'] = configDict[group.name]['ansibleroles']
+      tmpDict['ansibleroles']['source'].append(group.name)
+      tmpDict['ansibleroles']['value'].append(configDict[group.name]['ansibleroles'])
 
     if configDict[group.name]['ansiblecollections'] != "" and configDict[group.name]['ansiblecollections'] is not None:
-      tmpDict['ansiblecollections']['source'] = group.name
-      tmpDict['ansiblecollections']['value'] = configDict[group.name]['ansiblecollections']
+      tmpDict['ansiblecollections']['source'].append(group.name)
+      tmpDict['ansiblecollections']['value'].append(configDict[group.name]['ansiblecollections'])
+      
+    if configDict[group.name]['scripts'] != "" and configDict[group.name]['scripts'] is not None:
+      tmpDict['scripts']['source'].append(group.name)
+      tmpDict['scripts']['value'].append(configDict[group.name]['scripts'])
 
     if configDict[group.name]['install_kernel_cmdline'] != "" and configDict[group.name]['install_kernel_cmdline'] is not None:
       tmpDict['install_kernel_cmdline']['source'] = group.name
@@ -180,18 +206,22 @@ def render_config(obj):
     tmpDict['params']['source'] = 'self'
     tmpDict['params']['value'] = configDict['object']['params']
 
-  if configDict['object']['ansibleplaybooks'] != "" and configDict['object']['ansibleplaybooks'] is not None:
-    tmpDict['ansibleplaybooks']['source'] = 'self'
-    tmpDict['ansibleplaybooks']['value'] = configDict['object']['ansibleplaybooks']
+  if configDict['object']['ansibleplaybooks'] is not None :
+    tmpDict['ansibleplaybooks']['source'].append('self')
+    tmpDict['ansibleplaybooks']['value'].append(configDict['object']['ansibleplaybooks'])
 
   if configDict['object']['ansibleroles'] != "" and configDict['object']['ansibleroles'] is not None:
-    tmpDict['ansibleroles']['source'] = 'self'
-    tmpDict['ansibleroles']['value'] = configDict['object']['ansibleroles']
+    tmpDict['ansibleroles']['source'].append('self')
+    tmpDict['ansibleroles']['value'].append(configDict['object']['ansibleroles'])
 
   if configDict['object']['ansiblecollections'] != "" and configDict['object']['ansiblecollections'] is not None:
-    tmpDict['ansiblecollections']['source'] = 'self'
-    tmpDict['ansiblecollections']['value'] = configDict['object']['ansiblecollections']
+    tmpDict['ansiblecollections']['source'].append('self')
+    tmpDict['ansiblecollections']['value'].append(configDict['object']['ansiblecollections'])
 
+  if configDict['object']['scripts'] != "" and configDict['object']['scripts'] is not None:
+    tmpDict['scripts']['source'].append('self')
+    tmpDict['scripts']['value'].append(configDict['object']['scripts'])
+                                       
   if configDict['object']['install_kernel_cmdline'] != "" and configDict['object']['install_kernel_cmdline'] is not None:
     tmpDict['install_kernel_cmdline']['source'] = 'self'
     tmpDict['install_kernel_cmdline']['value'] = configDict['object']['install_kernel_cmdline']
@@ -208,5 +238,7 @@ def render_config(obj):
     tmpDict['prov_interface']['source'] = 'self'
     tmpDict['prov_interface']['value'] = configDict['object']['prov_interface']
  
+
+  print(tmpDict)
   return tmpDict
 

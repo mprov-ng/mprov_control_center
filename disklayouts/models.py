@@ -1,6 +1,3 @@
-from curses.ascii import FF
-from email.policy import default
-from urllib import request
 from django.db import models
 from django.utils.text import slugify
 from django.core.validators import MinValueValidator

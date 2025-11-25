@@ -7,6 +7,9 @@ from rest_framework.response import Response
 import json
 
 from rest_framework.generics import GenericAPIView
+from django.core.cache import cache
+from django.http import JsonResponse
+from django.views import View
 
 class JobAPIView(MProvView,
                       GenericAPIView):
@@ -53,19 +56,6 @@ Format returned:
         "module": "repo-update",
         "status": 1,
         "jobserver": null
-    },
-    {
-        "id": 2,
-        "name": "Update OS Images",
-        "create_time": "2022-05-10T11:54:31.610972-05:00",
-        "start_time": "2022-05-13T06:30:38-05:00",
-        "end_time": "2022-05-13T06:30:38-05:00",
-        "last_update": "2022-05-21T19:45:24.461349-05:00",
-        "return_code": null,
-        "params": {},
-        "module": "os-image-update",
-        "status": 1,
-        "jobserver": 3
     }
     ]
 
@@ -298,3 +288,31 @@ Format returned:
             obj.save()
         data['pk'] = obj.pk
         return Response(status=status.HTTP_200_OK,data=json.dumps(data))
+
+
+class JobStatusChangesView(View):
+    """
+    View to retrieve recent job status changes for toast notifications.
+    """
+    def get(self, request):
+        # Get recent job status changes from cache
+        from django.core.cache import cache
+        
+        recent_changes_key = "recent_job_status_changes"
+        recent_changes = cache.get(recent_changes_key, [])
+        
+        # Retrieve the actual change data for each key
+        changes = []
+        processed_keys = []
+        
+        for change_key in recent_changes:
+            change_data = cache.get(change_key)
+            if change_data:
+                changes.append(change_data)
+                processed_keys.append(change_key)
+        
+        # Update the recent changes list to only include keys we still have data for
+        if len(processed_keys) < len(recent_changes):
+            cache.set(recent_changes_key, processed_keys, 300)
+        
+        return JsonResponse({'changes': changes})

@@ -97,3 +97,59 @@ td.delete input {
 .font-weight-light {
  font-weight: 400 !important;
 }
+
+@media (prefers-color-scheme: dark) {
+  li.nav-item.has-treeview {
+      color: #fff !important;
+  }
+  .nav-sidebar .nav-item>.nav-link:hover {
+      color: #fff !important;
+  }
+  aside {
+          background-color: #303030 !important;
+
+  }
+  .h1,
+  .h2,
+  .h3,
+  .h4,
+  .h5,
+  .h6,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .card-body {
+    color: #fff !important;
+  }
+  .card{
+    border: 1px solid rgba(255, 255, 255, .125);
+  }
+  .content-wrapper {
+      background-color: #303030;
+  }
+  .time {
+    color: #fff !important; 
+  }
+  .timeline>div>.timeline-item {
+    background-color: #303030 !important;
+    box-shadow: 0 0 1px rgba(255,255,255,.125),0 1px 3px rgba(255,255,255,.2) !important;
+    color: #fff;
+  } 
+
+  .timeline>div>.timeline-item>.timeline-header {
+    border-bottom: 1px solid rgba(255,255,255,.125);
+  }
+
+  #job-toast-container{
+    background-color: #303030 !important;
+    color: #fff !important;
+  }
+}
+
+#job-toast-container {
+  background: #fff;
+  border-left: 4px solid #007bff;
+}

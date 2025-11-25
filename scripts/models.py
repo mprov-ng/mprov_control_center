@@ -1,7 +1,5 @@
-from enum import unique
-from pyexpat import model
 from django.db import models
-from django.db.models.signals import pre_save, post_delete
+from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils.text import slugify
 from django.conf import settings
@@ -26,6 +24,7 @@ class Script(models.Model):
   name=models.CharField(max_length=120, verbose_name=("Script Name"))
   slug=models.SlugField(unique=True, primary_key=True)
   filename = models.FileField(upload_to='')
+  content = models.TextField(blank=True, null=True)
   scriptType = models.ForeignKey(ScriptType, on_delete=models.SET_NULL, null=True)
   version = models.BigIntegerField(default=1)
   dependsOn = models.ManyToManyField('self',blank=True,symmetrical=False)
@@ -44,12 +43,40 @@ class Script(models.Model):
         print(f"Error: Unable to make script type dir: {settings.MEDIA_ROOT + '/' + self.scriptType.slug}")
         return
 
+    # Set the filename path before saving
     self.filename.name = self.scriptType.slug + '/' + self.slug + "-v" + str(self.version)
+    file_path = os.path.join(settings.MEDIA_ROOT, self.filename.name)
+    
+    # Check if this is a new file upload (file exists but content field may not match)
+    # If a file is uploaded, always override the content field with the file contents
+    if os.path.exists(file_path):
+      try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+          file_content = f.read()
+          # If we have file content, always use it to override the content field
+          # This ensures uploaded files override the content field
+          if file_content:
+            self.content = file_content
+      except Exception as e:
+        print(f"Error reading file {file_path}: {e}")
+    # don't save the content to the db.
+    self.content=""
     super(Script, self).save(*args, **kwargs)
-    print(os.path.join(settings.MEDIA_ROOT, self.filename.name))
-    if os.path.exists(os.path.join(settings.MEDIA_ROOT, self.filename.name)):
+    
+    # Write content field back to file if it has content
+    if self.content:
+      try:
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, 'w', encoding='utf-8') as f:
+          f.write(self.content)
+      except Exception as e:
+        print(f"Error writing content to file {file_path}: {e}")
+    
+    print(file_path)
+    if os.path.exists(file_path):
       print("Converting file")
-      os.system("dos2unix " + os.path.join(settings.MEDIA_ROOT, self.filename.name))
+      os.system("dos2unix " + file_path)
 class File(models.Model):
   """
   Files are uploaded to the system and able to be served via the link provided.

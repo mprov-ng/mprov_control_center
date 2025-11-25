@@ -36,16 +36,9 @@ ALLOWED_HOSTS += os.environ.get('ALLOWED_HOSTS', '').split(',')
 # Application definition
 
 INSTALLED_APPS = [
-    'jazzmin',
+
     'django_filters',
-    
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    
+    'djangocodemirror',
     'networks',
     'osmanagement',
     'systems',
@@ -57,10 +50,59 @@ INSTALLED_APPS = [
     'dbbackup',
     'utils',
     'authcustom',
-#    'mprov_esxiprovisioner',
+    #'mprov_esxiprovisioner',
+    'jazzmin',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    
+
 ]
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE_OPTIONS = {'location': '/var/www/mprov_control_center/backups/'}
+
+# Django CodeMirror settings
+CODEMIRROR_SETTINGS = {
+    'shell': {
+        'modes': ['shell'],
+        'themes': ['ambiance'],
+        'lineNumbers': True,
+        'indentUnit': 4,
+        'smartIndent': True,
+        'autofocus': True,
+    }
+}
+
+# Provide a simple initialization template
+CODEMIRROR_FIELD_INIT_JS = '<script>var {varname} = CodeMirror.fromTextArea(document.getElementById("{inputid}"),{settings});</script>'#'<script>CodeMirror.fromTextArea(document.getElementById("{{ id }}"),{settings}});</script>'
+
+
+CODEMIRROR_BUNDLE_CSS_NAME = 'dcm-{settings_name}_css'
+CODEMIRROR_BUNDLE_JS_NAME = 'dcm-{settings_name}_js'
+CODEMIRROR_BASE_CSS = ['CodeMirror/lib/codemirror.css']
+CODEMIRROR_BASE_JS = ['CodeMirror/lib/codemirror.js', 'CodeMirror/addon/edit/matchbrackets.js']
+CODEMIRROR_MODES = {
+    'css': 'CodeMirror/mode/css/css.js', 
+    'django': 'CodeMirror/mode/django/django.js', 
+    'htmlmixed': 'CodeMirror/mode/htmlmixed/htmlmixed.js', 
+    'javascript': 'CodeMirror/mode/javascript/javascript.js', 
+    'python': 'CodeMirror/mode/python/python.js', 
+    'rst': 'CodeMirror/mode/rst/rst.js', 
+    'stex': 'CodeMirror/mode/stex/stex.js', 
+    'vbscript': 'CodeMirror/mode/vbscript/vbscript.js', 
+    'xml': 'CodeMirror/mode/xml/xml.js',
+    'shell': 'CodeMirror/mode/shell/shell.js'
+}
+CODEMIRROR_THEMES = {
+    'ambiance': 'CodeMirror/theme/ambiance.css'
+}
+CODEMIRROR_CSS_ASSET_TAG = '<link rel="stylesheet" href="{url}">'
+CODEMIRROR_JS_ASSET_TAG = '<script type="text/javascript" src="{url}"></script>'
+CODEMIRROR_ADDITIONAL_CSS = []
+CODEMIRROR_ADDITIONAL_JS = []
 JAZZMIN_SETTINGS={
     'show_ui_builder': True,
     'site_logo': 'mProvLogo.png',
@@ -124,7 +166,7 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
     "theme": "minty",
-    "dark_mode_theme": None,
+    "dark_mode_theme": "darkly",
     "button_classes": {
         "primary": "btn-primary",
         "secondary": "btn-secondary",
@@ -247,9 +289,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_URL = "media/"
 
 CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
-        'LOCATION': '127.0.0.1:11211',
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "mprov_cache",  # Name of your cache table
     }
 }
 

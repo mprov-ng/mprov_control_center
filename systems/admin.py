@@ -1,13 +1,11 @@
 from csv import list_dialects
 import common
 import sys
-from tabnanny import verbose
 import traceback
 from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericStackedInline
 from django.forms import BaseInlineFormSet, BaseModelFormSet, formset_factory, modelformset_factory
 from django.utils.html import mark_safe
-from networks.models import SwitchPort
 from django.utils.text import slugify
 from jobqueue.models import JobModule, JobStatus, Job
 from django import forms
@@ -19,7 +17,6 @@ from django.contrib.admin import helpers
 from django.shortcuts import render
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
-from django.db.models import ManyToManyField
 from scripts.models import Script
 import pyipmi
 import pyipmi.interfaces

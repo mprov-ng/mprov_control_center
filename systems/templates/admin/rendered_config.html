@@ -1,4 +1,4 @@
-
+{% load custom_filters %}
 <ul>
 {% for key, value in config.items %}
 
@@ -6,7 +6,13 @@
   {% spaceless %}
     <label>{{key}}</label><blockquote><label>Source:</label> {{ value.source }}<br />
     {% if key != '' %}
+      {% if value.value|is_list %}
+        {% for param in value.value %}
+          <label>Value:</label> {{ param }}<br />
+        {% endfor %}
+      {% else %}
                 <label>Value:</label> {{ value.value }}
+      {% endif %}    
     {% endif %}</li>
   </blockquote>
   {% endspaceless %}

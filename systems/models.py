@@ -1,4 +1,3 @@
-from operator import mod
 from django.db import models
 from django.conf import settings
 from django.dispatch import receiver
@@ -10,10 +9,8 @@ from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, JobStatus, Job, JobServer
 from django.utils.text import slugify
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
-from disklayouts.models import *
 from django.contrib.auth.models import AnonymousUser, User
 from django.utils import timezone
-import yaml
 
 class SystemGroup(models.Model):
   """ System Groups are ways to group systems and system images together to manage configuration better.   You can specify configuration
@@ -438,7 +435,6 @@ def DeleteSystemImage(sender, instance, **kwargs):
       )
   else:
     print("JobType was none.  HuH?")
-  pass
 
 # emits an image-update job everytime an image is modified.
 @receiver(pre_save, sender=SystemImage)
