@@ -106,28 +106,31 @@ class OSRepo(models.Model):
     verbose_name='OS Repository'
     verbose_name_plural='OS Repositories'
 
-
-@receiver(pre_save, sender=OSDistro)
-def OSDistroUpdateJob(sender, **kwargs):
-  OSImageJobType = None
-  # get or create the OSIMAGE_UPDATE job module in the DB
-  # TODO get the jobtype, do nothing if it's not defined.
-  try:
-      OSImageJobType = JobModule.objects.get(slug='os-image-update')
-  except:
-      OSImageJobType = None
-  print(OSImageJobType)
-  if OSImageJobType is not None:
-      # save a new job, if one doesn't already exist.
-      Job.objects.update_or_create(
-        name="Update OS Images", module=OSImageJobType,
-        defaults={'status': JobStatus.objects.get(pk=1)}
-      )
+# remove unused code.
+# @receiver(pre_save, sender=OSDistro)
+# def OSDistroUpdateJob(sender, **kwargs):
+#   OSImageJobType = None
+#   # get or create the OSIMAGE_UPDATE job module in the DB
+#   # TODO get the jobtype, do nothing if it's not defined.
+#   try:
+#       OSImageJobType = JobModule.objects.get(slug='os-image-update')
+#   except:
+#       OSImageJobType = None
+#   print(OSImageJobType)
+#   if OSImageJobType is not None:
+#       # save a new job, if one doesn't already exist.
+#       Job.objects.update_or_create(
+#         name="Update OS Images", module=OSImageJobType,
+#         defaults={'status': JobStatus.objects.get(pk=1)}
+#       )
     
 @receiver(post_save, sender=OSDistro)
 def OSDistroCreateRepos(sender, instance, **kwargs):
   if hasattr(instance, "_post_save"):
     # if we are fired off from a previous post save clal, skip.
+    return
+  if instance.update == False:
+    # if we are not set to update, skip.
     return
   baseURL=instance.baseurl
   # remov trailing slash
@@ -188,22 +191,23 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
   finally:
       del instance._post_save
 
-@receiver(pre_delete, sender=OSDistro)
-def OSDistroDeleteJob(sender, **kwargs):
-  OSImageJobType = None
-  try:
-      OSImageJobType = JobModule.objects.get(slug='os-image-delete')
-  except:
-      OSImageJobType = None
-  print(OSImageJobType)
-  # get or create the OSIMAGE_UPDATE job module in the DB
-  # TODO get the jobtype, do nothing if it's not defined.
-  if OSImageJobType is not None:
-      # save a new job, if one doesn't already exist.
-      Job.objects.update_or_create(
-        name="Delete OS Images", module=OSImageJobType,
-        defaults={'status': JobStatus.objects.get(pk=1)}
-      )
+# remove unused code.
+# @receiver(pre_delete, sender=OSDistro)
+# def OSDistroDeleteJob(sender, **kwargs):
+#   OSImageJobType = None
+#   try:
+#       OSImageJobType = JobModule.objects.get(slug='os-image-delete')
+#   except:
+#       OSImageJobType = None
+#   print(OSImageJobType)
+#   # get or create the OSIMAGE_UPDATE job module in the DB
+#   # TODO get the jobtype, do nothing if it's not defined.
+#   if OSImageJobType is not None:
+#       # save a new job, if one doesn't already exist.
+#       Job.objects.update_or_create(
+#         name="Delete OS Images", module=OSImageJobType,
+#         defaults={'status': JobStatus.objects.get(pk=1)}
+#       )
         
 @receiver(post_save, sender=OSRepo)
 def RepoUpdateJob(sender, instance, **kwargs):
