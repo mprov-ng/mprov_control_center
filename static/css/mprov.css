@@ -130,4 +130,17 @@ td.delete input {
   .content-wrapper {
       background-color: #303030;
   }
+  .time {
+    color: #fff !important; 
+  }
+  .timeline>div>.timeline-item {
+    background-color: #303030 !important;
+    box-shadow: 0 0 1px rgba(255,255,255,.125),0 1px 3px rgba(255,255,255,.2) !important;
+    color: #fff;
+  } 
+
+  .timeline>div>.timeline-item>.timeline-header {
+    border-bottom: 1px solid rgba(255,255,255,.125);
+  }
 }
+
