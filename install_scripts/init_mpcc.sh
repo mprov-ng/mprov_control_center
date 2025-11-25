@@ -40,8 +40,6 @@ then
               if [ -e "${RUNDIR}/env.db" ]
               then
                      cat ${RUNDIR}/env.db >> .env
-              else
-                     echo "No env.db, continuing with Sqlite"
               fi
 
               # other variables can be set directly in the ENV (for containers)

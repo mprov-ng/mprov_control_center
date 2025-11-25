@@ -52,16 +52,6 @@
     name: DHCP Delete
     slug: dhcp-delete  
 - model: jobqueue.jobmodule
-  pk: os-image-update
-  fields: 
-    name: OS Image Update
-    slug: os-image-update
-- model: jobqueue.jobmodule
-  pk: os-image-delete
-  fields:
-    name: OS Image Delete
-    slug: os-image-delete
-- model: jobqueue.jobmodule
   pk: repo-update
   fields: 
     name: Repo Update

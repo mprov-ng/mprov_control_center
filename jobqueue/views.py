@@ -56,19 +56,6 @@ Format returned:
         "module": "repo-update",
         "status": 1,
         "jobserver": null
-    },
-    {
-        "id": 2,
-        "name": "Update OS Images",
-        "create_time": "2022-05-10T11:54:31.610972-05:00",
-        "start_time": "2022-05-13T06:30:38-05:00",
-        "end_time": "2022-05-13T06:30:38-05:00",
-        "last_update": "2022-05-21T19:45:24.461349-05:00",
-        "return_code": null,
-        "params": {},
-        "module": "os-image-update",
-        "status": 1,
-        "jobserver": 3
     }
     ]
 
