@@ -142,5 +142,14 @@ td.delete input {
   .timeline>div>.timeline-item>.timeline-header {
     border-bottom: 1px solid rgba(255,255,255,.125);
   }
+
+  #job-toast-container{
+    background-color: #303030 !important;
+    color: #fff !important;
+  }
 }
 
+#job-toast-container {
+  background: #fff;
+  border-left: 4px solid #007bff;
+}
