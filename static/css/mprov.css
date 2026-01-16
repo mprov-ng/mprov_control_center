@@ -147,6 +147,10 @@ td.delete input {
     background-color: #303030 !important;
     color: #fff !important;
   }
+  .change-info, .change-info h1, .change-info h3, .changes-table th, .confirmation-container{
+    background: #555555;
+    /* color: #000; */
+  }
 }
 
 #job-toast-container {
