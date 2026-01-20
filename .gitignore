@@ -162,3 +162,11 @@ static/mlnx
 .vscode/settings.json
 .dev.init
 db/.initialized
+static/*.img
+static/*.bin
+static/*.efi
+static/*.zip
+static/*.cpio
+static/*linux*
+static/*.iso
+db
