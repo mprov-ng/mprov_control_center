@@ -317,6 +317,15 @@ class IPXEAPIView(MProvView):
              if s_nic.bootable:
                 nic = s_nic
                 break
+          if nic==None:
+            # not bootable, we just return and let the template handle it.
+            if not nic.bootable:
+              rendered: str = template.render(context)
+              context= {
+              'nic': nic,
+            }
+            return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
+            
              
           if nic.system.systemimage == None:
             print(f"Error: System has no image assigned, netbooting not possible.")
