@@ -43,25 +43,25 @@ class Script(models.Model):
         print(f"Error: Unable to make script type dir: {settings.MEDIA_ROOT + '/' + self.scriptType.slug}")
         return
 
-    # Set the filename path before saving
-    self.filename.name = self.scriptType.slug + '/' + self.slug + "-v" + str(self.version)
-    file_path = os.path.join(settings.MEDIA_ROOT, self.filename.name)
+    print(self.filename)
+    if self.filename:
+
+      # Set the filename path before saving
+      self.filename.name = self.scriptType.slug + '/' + self.slug + "-v" + str(self.version)
+      file_path = os.path.join(settings.MEDIA_ROOT, self.filename.name)
     
-    # Check if this is a new file upload (file exists but content field may not match)
-    # If a file is uploaded, always override the content field with the file contents
-    if os.path.exists(file_path):
-      try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-          file_content = f.read()
-          # If we have file content, always use it to override the content field
-          # This ensures uploaded files override the content field
-          if file_content:
-            self.content = file_content
-      except Exception as e:
-        print(f"Error reading file {file_path}: {e}")
-    # don't save the content to the db.
-    self.content=""
-    super(Script, self).save(*args, **kwargs)
+      # Check if this is a new file upload (file exists but content field may not match)
+      # If a file is uploaded, always override the content field with the file contents
+      if os.path.exists(file_path):
+        try:
+          with open(file_path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+            # If we have file content, always use it to override the content field
+            # This ensures uploaded files override the content field
+            if file_content:
+              self.content = file_content
+        except Exception as e:
+          print(f"Error reading file {file_path}: {e}")
     
     # Write content field back to file if it has content
     if self.content:
@@ -76,7 +76,12 @@ class Script(models.Model):
     print(file_path)
     if os.path.exists(file_path):
       print("Converting file")
-      os.system("dos2unix " + file_path)
+      os.system(f"dos2unix -n {file_path} {file_path}.new")
+      os.system(f"/bin/mv -v {file_path}.new {file_path}")
+
+    # don't save the content to the db.
+    self.content=""
+    super(Script, self).save(*args, **kwargs)
 class File(models.Model):
   """
   Files are uploaded to the system and able to be served via the link provided.
