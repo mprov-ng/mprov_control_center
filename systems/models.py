@@ -323,6 +323,7 @@ class NADSSystem(models.Model):
   port=models.CharField(max_length=1024, verbose_name="Detected Port", null=True, blank=True,)
   vendor=models.CharField(max_length=1024, verbose_name="Detected Vendor", null=True, blank=True,)
   model=models.CharField(max_length=1024, verbose_name="Detected Model",  null=True, blank=True,)
+  serial=models.CharField(max_length=1024, verbose_name="Serial Number", null=True, blank=True,)
   def __str__(self):
     return self.mac
 

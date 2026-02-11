@@ -51,6 +51,7 @@ NADS Packet:
             "switch": "some-switch-host-name", must match what mPCC knows.
             "port": "someport-number", must match what mPCC knows.
             "mac": mac of the machine being registered
+            "serial": the serial number from dmidecode
         }
 
     '''
@@ -174,7 +175,8 @@ NADS Packet:
                 switch=request.data['switch'],
                 port=request.data['port'],
                 vendor=request.data['vendor'],
-                model=request.data['model']
+                model=request.data['model'],
+                serial=request.data['serial']
                 )
         print(sysnic)
    
