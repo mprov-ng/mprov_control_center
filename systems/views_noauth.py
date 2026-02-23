@@ -333,10 +333,11 @@ class IPXEAPIView(MProvView):
           if not hasattr(nic, "bootable"):
             print(f"Error: System definition has no bootable NIC.  Cannot boot")
             raise NotFound(detail=f"Error: System definition has no bootable NIC.  Cannot boot")
-        nic.bootserver=platform.node()
-        if "." in nic.bootserver:
-          # remove the domain if one exists
-          nic.bootserver, _ = nic.bootserver.split(".", 1)
+        nic.bootserver=f"{request.scheme}://{request.META.get('SERVER_NAME')}:{request.META.get('SERVER_PORT')}"
+        
+        # if "." in nic.bootserver:
+        #   # remove the domain if one exists
+        #   nic.bootserver, _ = nic.bootserver.split(".", 1)
         rescue_param = " mprov_rescue=0"
         if "rescue" in request.query_params:
             rescue_param = " mprov_rescue=1"
