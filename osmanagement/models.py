@@ -222,16 +222,17 @@ def RepoUpdateJob(sender, instance, **kwargs):
   except:
       RepoJobType = None
   if RepoJobType is not None and instance.update and instance.id is not None:
-      instance.version = instance.version +1 
-      # save a new job, if one doesn't already exist.
-      params = { 'repo_id': instance.id}
+      if instance.managed:
+        instance.version = instance.version +1 
+        # save a new job, if one doesn't already exist.
+        params = { 'repo_id': instance.id}
 
-      Job.objects.create( name=RepoJobType.name, 
-          module=RepoJobType, 
-          status=JobStatus.objects.get(pk=1), 
-          params=params,          
-      )
-      instance.hosted_by.clear()
+        Job.objects.create( name=RepoJobType.name, 
+            module=RepoJobType, 
+            status=JobStatus.objects.get(pk=1), 
+            params=params,          
+        )
+        instance.hosted_by.clear()
       try: 
         instance._post_save = True
         instance.save()
