@@ -184,61 +184,61 @@ class SystemAdmin(admin.ModelAdmin):
      for system in queryset:
         mybmc = SystemBMC.objects.all().filter(system=system.id)
         if len(mybmc) != 1:
-           print(f"Error: Unable to find bmc for {system.name}")
+           print(f"Error: Unable to find bmc for {system.hostname}")
            continue
         mybmc = mybmc[0]
         try:
           func_timeout(1, self._doPowerCmd, [mybmc, "cycle"])
         except FunctionTimedOut:
-           print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
+           print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
   @admin.action(description="Power On")
   def sys_on(self, request, queryset):
      for system in queryset:
         mybmc = SystemBMC.objects.all().filter(system=system.id)
         if len(mybmc) != 1:
-           print(f"Error: Unable to find bmc for {system.name}")
+           print(f"Error: Unable to find bmc for {system.hostname}")
            continue
         mybmc = mybmc[0]
         try:
           func_timeout(1, self._doPowerCmd, [mybmc, "on"])
         except FunctionTimedOut:
-           print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
+           print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
   @admin.action(description="Power Off")
   def sys_off(self, request, queryset):
      for system in queryset:
         mybmc = SystemBMC.objects.all().filter(system=system.id)
         if len(mybmc) != 1:
-           print(f"Error: Unable to find bmc for {system.name}")
+           print(f"Error: Unable to find bmc for {system.hostname}")
            continue
         mybmc = mybmc[0]
         try:
           func_timeout(1, self._doPowerCmd, [mybmc, "off"])
         except FunctionTimedOut:
-           print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
+           print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
   @admin.action(description="Boot to PXE (Legacy)")
   def sys_pxe(self, request, queryset):
      for system in queryset: 
         mybmc = SystemBMC.objects.all().filter(system=system.id)
         if len(mybmc) != 1:
-           print(f"Error: Unable to find bmc for {system.name}")
+           print(f"Error: Unable to find bmc for {system.hostname}")
            continue
         mybmc = mybmc[0]
         try:
           func_timeout(5, self._doPowerCmd, [mybmc, "pxe"])
         except FunctionTimedOut:
-           print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
+           print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
   @admin.action(description="Boot to PXE(EFI)")
   def sys_pxe_efi(self, request, queryset):
      for system in queryset: 
         mybmc = SystemBMC.objects.all().filter(system=system.id)
         if len(mybmc) != 1:
-           print(f"Error: Unable to find bmc for {system.name}")
+           print(f"Error: Unable to find bmc for {system.hostname}")
            continue
         mybmc = mybmc[0]
         try:
           func_timeout(5, self._doPowerCmd, [mybmc, "pxeefi"])
         except FunctionTimedOut:
-           print(f"Error: {system.name} bmc timeout (ip: {mybmc.ipaddress})")
+           print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
   
   def _doPowerCmd(self, bmc, action="on"):
     print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, pass: {bmc.password}, action: {action}")
