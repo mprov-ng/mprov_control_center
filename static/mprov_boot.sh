@@ -65,6 +65,8 @@ export MPROV_RESCUE=`get_kcmdline_opt mprov_rescue`
 echo -n "" > /tmp/init_mods
 
 echo -n "Loading network drivers... "
+echo "virtio_net"
+modprobe virtio_net
 for i in `ls -1 /sys/bus/pci/devices/`
 do
 	if [ -e /sys/bus/pci/devices/$i/class ]
@@ -83,6 +85,10 @@ do
 done
 echo "  DONE!"
 echo -n "Loading storage drivers... "
+echo "virtio_scsi"
+modprobe virtio_scsi
+echo "virtio_blk"
+modprobe virtio_blk
 for i in `ls -1 /sys/bus/pci/devices/`
 do
 	if [ -e /sys/bus/pci/devices/$i/class ]
