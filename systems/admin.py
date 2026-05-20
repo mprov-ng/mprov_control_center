@@ -314,11 +314,14 @@ class SystemAdmin(admin.ModelAdmin):
     fields = ['systemimage','systemmodel','stateful','prov_interface','initial_mods', 'systemgroups', 'disks']
     def remove_fields(form):
         for field in list(form.base_fields.keys()):
-            if field  not in fields:
+            if field not in fields and field != 'set_bootable':
                 del form.base_fields[field]
         return form
 
-    form_class = remove_fields(self.get_form(request))
+    class BulkUpdateForm(self.get_form(request)):
+        set_bootable = forms.BooleanField(required=False, label="Set bootable interface")
+
+    form_class = remove_fields(BulkUpdateForm)
 
     if request.method == 'POST':
         form = form_class()
@@ -388,6 +391,37 @@ class SystemAdmin(admin.ModelAdmin):
                           }
                       )
                   fieldsUpdated=True
+            # Handle set_bootable: mark the NIC matching each system's prov_interface as bootable
+            if 'update_set_bootable' in request.POST:
+              if not form.cleaned_data.get('set_bootable'):
+                self.message_user(request, "Set bootable interface was selected but not checked.")
+                return render(
+                   request,
+                   'admin/system_bulk_change_form.html',
+                    context={
+                        **self.admin_site.each_context(request),
+                        'adminform': form,
+                        'items': queryset,
+                        'media': self.media,
+                        'opts': self.model._meta,
+                    }
+                )
+              bootable_updated = 0
+              for item in queryset.all():
+                  prov_iface = item.prov_interface.strip() if item.prov_interface else ''
+                  if not prov_iface:
+                      continue
+                  nics = NetworkInterface.objects.filter(system=item)
+                  for nic in nics:
+                      if nic.name == prov_iface:
+                          nic.bootable = True
+                          bootable_updated += 1
+                      else:
+                          nic.bootable = False
+                      nic.save()
+              self.message_user(request, f"Bootable NIC set on {bootable_updated} system(s).")
+              fieldsUpdated = True
+
             if fieldsUpdated is False:
               self.message_user(request, "No fields selected to update.")
               return render(
