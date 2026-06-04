@@ -392,33 +392,37 @@ class SystemAdmin(admin.ModelAdmin):
                       )
                   fieldsUpdated=True
             # Handle set_bootable: mark the NIC matching each system's prov_interface as bootable
+            bootable_updated = 0
             if 'update_set_bootable' in request.POST:
               if not form.cleaned_data.get('set_bootable'):
-                self.message_user(request, "Set bootable interface was selected but not checked.")
-                return render(
-                   request,
-                   'admin/system_bulk_change_form.html',
-                    context={
-                        **self.admin_site.each_context(request),
-                        'adminform': form,
-                        'items': queryset,
-                        'media': self.media,
-                        'opts': self.model._meta,
-                    }
-                )
-              bootable_updated = 0
-              for item in queryset.all():
-                  prov_iface = item.prov_interface.strip() if item.prov_interface else ''
-                  if not prov_iface:
-                      continue
+                # if the checkbox is not checked, update bootable to false for all nics on the selected systems.
+                for item in queryset.all():
                   nics = NetworkInterface.objects.filter(system=item)
                   for nic in nics:
-                      if nic.name == prov_iface:
-                          nic.bootable = True
-                          bootable_updated += 1
-                      else:
-                          nic.bootable = False
-                      nic.save()
+                    nic.bootable = False
+                    nic.save()
+                  bootable_updated += 1
+                self.message_user(request, f"Bootable NIC cleared on {queryset.count()} system(s).")
+                fieldsUpdated = True 
+              else:
+                for item in queryset.all():
+                    prov_iface = item.prov_interface.strip() if item.prov_interface else ''
+                    if not prov_iface:
+                      # no prov_interface specified for this system, enable all interfaces.
+                      nics = NetworkInterface.objects.filter(system=item)
+                      for nic in nics:
+                        nic.bootable = True
+                        nic.save()
+                      bootable_updated += 1
+                    else:
+                      nics = NetworkInterface.objects.filter(system=item)
+                      for nic in nics:
+                          if nic.name == prov_iface:
+                              nic.bootable = True
+                              bootable_updated += 1
+                          else:
+                              nic.bootable = False
+                          nic.save()
               self.message_user(request, f"Bootable NIC set on {bootable_updated} system(s).")
               fieldsUpdated = True
 
