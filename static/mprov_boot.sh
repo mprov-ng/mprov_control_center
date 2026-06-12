@@ -33,9 +33,13 @@ cd /bin
  
 
 rm -f /bin/init /init /sbin/init
-
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mount -t tmpfs tmpfs /run
 /bin/busybox --install
-echo "::sysinit:/mprov_boot_init.sh" > /etc/inittab
+echo "::sysinit:/bin/true" > /etc/inittab
+echo "tty1::once:/mprov_boot_init.sh" >> /etc/inittab
 echo "tty2::askfirst:-/bin/sh" >> /etc/inittab
 # add a restart to re-exec init
 echo "::restart:/sbin/switch_root -c /dev/console /image /sbin/init" >> /etc/inittab
