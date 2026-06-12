@@ -176,7 +176,7 @@ NADS Packet:
                 port=request.data['port'],
                 vendor=request.data['vendor'],
                 model=request.data['model'],
-                serial=request.data['serial']
+                # XXX Future: serial=request.data['serial']
                 )
         print(sysnic)
    

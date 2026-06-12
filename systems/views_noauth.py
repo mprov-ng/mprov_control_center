@@ -89,7 +89,8 @@ If no primary key is specified, 404 is returned.
       try: 
         response = requests.head(imageURL,timeout=1)
         statCode = response.status_code
-      except:
+      except Exception as e:
+        print(f"Error occurred while fetching image: {e}")
         statCode = 0
       while ( statCode <= 199 or statCode >=400):
         # jobsever gave a bad response, remove it and retry.
