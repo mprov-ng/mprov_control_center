@@ -4,13 +4,15 @@ export PATH=$PATH:/sbin
 
 # if this works, it would be great...
 err_handler() {
-  echo "Error: SOMETHING HAS GONE TERRIBLY WRONG! DROPPING TO SERIAL SHELL!"
+  echo
+  echo
+  echo "Error: SOMETHING HAS GONE TERRIBLY WRONG! Press Alt-F2 for a shell!"
   # redirect stdio to tty1 and start a new process group, enables bash
   # job control... hopefully
-  export -f get_kcmdline_opt
-  mount -t devtmpfs devtmpfs /dev 
-
-  /bin/setsid /bin/bash -m  <> /dev/tty0 >&0 2>&1
+  while [ 1 ]
+  do
+    sleep 10
+  done
 }
 export -f err_handler
 echo "mProv boot setup..."
@@ -49,21 +51,6 @@ export MPROV_STATEFUL=`get_kcmdline_opt mprov_stateful`
 export MPROV_BOOTDISK=`get_kcmdline_opt mprov_bootdisk`
 export MPROV_RESCUE=`get_kcmdline_opt mprov_rescue`
 # load our initial modules
-#oldIFS=$IFS
-#IFS=,
-#for mod in $MPROV_INITIAL_MODS
-#do
-#  if [ "$mod" != "" ]
-#  then
-#    echo "Loading Module $mod ..."
-#    /sbin/modprobe $mod
-#  fi
-#done
-#IFS=$oldIFS
-
-# echo "Spawning debug shell on tty2... "
-# setsid cttyhack sh < /dev/tty2 > /dev/tty2 2>&1 &
-
 echo -n "" > /tmp/init_mods
 
 echo -n "Loading network drivers... "
@@ -87,6 +74,8 @@ do
 	fi	fi
 done
 echo "  DONE!"
+
+
 echo -n "Loading storage drivers... "
 echo "virtio_scsi"
 modprobe virtio_scsi
@@ -110,7 +99,7 @@ do
 	fi	fi
 done
 
-
+# force load sd_mod, make sure we are able to hit the disks
 modprobe sd_mod
 echo -n "sd_mod" | tee -a /tmp/init_mods
 echo "  DONE!"
@@ -118,6 +107,7 @@ echo "  DONE!"
 export PATH=$PATH:/sbin:/usr/sbin
 # get the interface name
 MAC=$MPROV_PROV_INTF
+# this works for interface names OR MAC addresses, which is nice.
 MPROV_PROV_INTF=`ip link show | grep -i -B1 "$MAC"| grep -v link | awk -F": " '{print $2}'`
 if [ "$MPROV_PROV_INTF" == "" ]
 then
@@ -144,7 +134,7 @@ then
   echo "Error: Unable to obtain an IP address via DHCP on $MPROV_PROV_INTF"
   echo
   err_handler
-  exit 1
+  # no return
 fi
 echo "Network up."
 echo; 
@@ -167,7 +157,11 @@ then
 
     mount -t devtmpfs devtmpfs /dev
 
-    /bin/setsid /bin/bash -m  <> /dev/tty0 >&0 2>&1
+    echo "Pressing Alt-F2 to access shell."
+    while [ 1 ]
+    do
+      sleep 10
+    done
   fi
 fi
 
@@ -198,6 +192,7 @@ do
     break
   else
     echo "Unable to retreive image.  Retrying..."
+    echo "Pressing Alt-F2 to access shell."
     sleep 5
   fi
 done
@@ -245,20 +240,19 @@ then
   mkdir -p /image/dev/pts
   mount -t devpts devpts /image/dev/pts
   ln -s /proc/self/fd /image/dev/fd 
-  #   export -f get_kcmdline_opt
-  # # /bin/sh 
-  # /bin/setsid /bin/bash -m  <> /dev/tty1 >&0 2>&1
-  if [ "$mprov_rescue" == "1" ]
+
+  if [ "$MPROV_RESCUE" == "1" ]
   then  
+    # enter maintenance mode in the downloaded image.
     echo "Give the root password for maintenance mode"
     chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1  
   fi
-
-  # if we return, something bad has happened...mmmkay...
-  export -f get_kcmdline_opt
-  # /bin/sh 
-  /bin/setsid /bin/bash -m  <> /dev/tty1 >&0 2>&1
-
+  # here, we run the stateful installer, to provision the disks.
+  # Then we can drop out and switch to the new root.
+  # move the mount point for /newroot to /image.
+  chroot /image /bin/bash -c "/tmp/mprov_stateful.sh; exit 0"
+  umount /image
+  mount --move /newroot /image 
 else
   echo "Stateless Installation"
 fi
@@ -277,38 +271,30 @@ echo "Attempting to unload modules:"
 for mod in $MPROV_INITIAL_MODS
 do  
   ret=1
-  # retry=0
-  # while [ $ret != 0 ] && [ $retry -lt 5 ]
-  # do
-    
-    if [ "$mod" != "" ]
+  
+  if [ "$mod" != "" ]
+  then
+    echo -en "\t*** $mod"
+    /sbin/modprobe -r $mod > /dev/null 2>&1
+    ret=$?
+    retry=$((retry+1))
+    if [ $ret == 0 ]
     then
-      echo -en "\t*** $mod"
-      /sbin/modprobe -r $mod > /dev/null 2>&1
-      ret=$?
-      retry=$((retry+1))
-      if [ $ret == 0 ]
-      then
-        echo " ... DONE"
-      else
-        echo " ... FAILED"
-        sleep 1
-      fi
+      echo " ... DONE"
     else
-      ret=0
+      echo " ... FAILED"
+      sleep 1
     fi
-  # done
+  else
+    ret=0
+  fi
+
 done
 IFS=$oldIFS
 
-
-# umount /sys
-# #umount /dev
-# umount /run
-
 # disable trap
 trap EXIT
-if [ "$mprov_rescue" != "1" ]
+if [ "$MPROV_RESCUE" != "1" ]
 then 
   # note we are not expecting to return from this.
   echo "Switching to new root.... LEEEEROY JENKINS!!!....."
@@ -326,17 +312,4 @@ else
   echo "Give the root password for maintenance mode"
   chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1
 fi
-echo "Something's WRONG!!!! Emergency Shell"
-
-mount -t proc proc /proc &
-mount -t sysfs sysfs /sys &
-mount -t devtmpfs devtmpfs /dev &
-mount -t tmpfs tmpfs /run &
-
-# redirect stdio to tty1 and start a new process group, enables bash
-# job control... hopefully
-export -f get_kcmdline_opt
-echo "Give the root password for maintenance mode"
-/bin/setsid /bin/bash -m  <> /dev/tty1 >&0 2>&1
-
-#chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1
+err_handler
