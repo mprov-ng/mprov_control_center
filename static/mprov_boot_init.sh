@@ -15,17 +15,7 @@ err_handler() {
   done
 }
 export -f err_handler
-echo "mProv boot setup..."
-set +e
-set -o pipefail
-cd /bin
-# install all the enabled busybox links
-/bin/busybox --install
 
-mount -t proc proc /proc
-mount -t sysfs sysfs /sys
-mount -t devtmpfs devtmpfs /dev
-mount -t tmpfs tmpfs /run
 
 get_kcmdline_opt(){
   for i in  `cat /proc/cmdline`
@@ -54,7 +44,7 @@ export MPROV_RESCUE=`get_kcmdline_opt mprov_rescue`
 echo -n "" > /tmp/init_mods
 
 echo -n "Loading network drivers... "
-echo "virtio_net"
+echo -n "virtio_net," | tee -a /tmp/init_mods
 modprobe virtio_net
 for i in `ls -1 /sys/bus/pci/devices/`
 do
@@ -77,9 +67,9 @@ echo "  DONE!"
 
 
 echo -n "Loading storage drivers... "
-echo "virtio_scsi"
+echo -n "virtio_scsi," | tee -a /tmp/init_mods
 modprobe virtio_scsi
-echo "virtio_blk"
+echo -n "virtio_blk," | tee -a /tmp/init_mods
 modprobe virtio_blk
 for i in `ls -1 /sys/bus/pci/devices/`
 do
@@ -120,9 +110,9 @@ fi
 
 echo "Bringing up $MPROV_PROV_INTF if it's available..."
 # reset the network stack
-ip addr flush dev $MPROV_PROV_INTF
-ip link set $MPROV_PROV_INTF down
-ip link set $MPROV_PROV_INTF up
+ip addr flush dev $MPROV_PROV_INTF > /dev/null 2>&1
+ip link set $MPROV_PROV_INTF down > /dev/null 2>&1
+ip link set $MPROV_PROV_INTF up > /dev/null 2>&1
 # wait a couple of seconds for the link
 sleep 5
 udhcpc -s /bin/default.script -b -B -i $MPROV_PROV_INTF
@@ -141,8 +131,6 @@ echo;
 echo;
 
 ip addr show dev $MPROV_PROV_INTF
-ip add
-
 
 
 if [ "$MPROV_RESCUE" == "1" ]
