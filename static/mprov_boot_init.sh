@@ -1,18 +1,35 @@
 #!/bin/bash
 
 export PATH=$PATH:/sbin
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mount -t tmpfs tmpfs /run
+respawn() {
+  echo "Press 'r' to restart the mProv Boot System."
+  while [ 1 ]
+  do
+    read -n 1 -s key
+    if [ "$key" == "r" ] || [ "$key" == "R" ]
+    then
+      echo "Restarting..."
+      trap EXIT
+      trap ERR
+      echo "Unmounting filesystems..."
+      umount -al
+      mount -t devtmpfs devtmpfs /dev
+      cd /
+      exit 0
+    fi
+  done
+}
 
-# if this works, it would be great...
+# error handler for the script
 err_handler() {
   echo
   echo
   echo "Error: SOMETHING HAS GONE TERRIBLY WRONG! Press Alt-F2 for a shell!"
-  # redirect stdio to tty1 and start a new process group, enables bash
-  # job control... hopefully
-  while [ 1 ]
-  do
-    sleep 10
-  done
+  respawn
 }
 export -f err_handler
 
@@ -29,8 +46,7 @@ get_kcmdline_opt(){
 
 }
 
-trap err_handler EXIT
-trap err_handler ERR
+
 
 # grab some of our variables from the kernel cmdline.
 export MPROV_TMPFS_SIZE=`get_kcmdline_opt mprov_tmpfs_size`
@@ -42,7 +58,8 @@ export MPROV_BOOTDISK=`get_kcmdline_opt mprov_bootdisk`
 export MPROV_RESCUE=`get_kcmdline_opt mprov_rescue`
 # load our initial modules
 echo -n "" > /tmp/init_mods
-
+trap err_handler EXIT
+trap err_handler ERR
 echo -n "Loading network drivers... "
 echo -n "virtio_net," | tee -a /tmp/init_mods
 modprobe virtio_net
@@ -67,6 +84,14 @@ echo "  DONE!"
 
 
 echo -n "Loading storage drivers... "
+echo -n "ahci," | tee -a /tmp/init_mods
+modprobe ahci
+echo -n "nvme," | tee -a /tmp/init_mods
+modprobe nvme
+echo -n "virtio_pci," | tee -a /tmp/init_mods
+modprobe virtio_pci
+echo -n "virtio_mmio," | tee -a /tmp/init_mods
+modprobe virtio_mmio
 echo -n "virtio_scsi," | tee -a /tmp/init_mods
 modprobe virtio_scsi
 echo -n "virtio_blk," | tee -a /tmp/init_mods
@@ -130,26 +155,23 @@ echo "Network up."
 echo; 
 echo;
 
-ip addr show dev $MPROV_PROV_INTF
-
-
 if [ "$MPROV_RESCUE" == "1" ]
 then
-  read -p "Would you like an early shell? (y/Y)" -t 10 early_shell
-  early_shell=${early_shell:0:1}
+  echo
+  # disable the error trap for the read
+  trap ERR
+  read -p "Would you like an early shell? (y/Y)" -s -n 1 -t 10 early_shell
+  # reenable the error trap
+  trap err_handler ERR
   if [ "$early_shell" == "y" ] || [ "$early_shell" == "Y" ] 
   then
   
-    echo "EMERGENCY SHELL REQUESTED!"
     export -f get_kcmdline_opt
 
-    mount -t devtmpfs devtmpfs /dev
-
+    echo
+    echo
     echo "Pressing Alt-F2 to access shell."
-    while [ 1 ]
-    do
-      sleep 10
-    done
+    respawn
   fi
 fi
 
@@ -165,7 +187,6 @@ cat /tmp/init_mods | sed -e 's/,/ /g' >> /image/etc/dracut.conf.d/mprov_mods.con
 echo -n " \"" >> /image/etc/dracut.conf.d/mprov_mods.conf
 echo "Image directory setup."
 chmod 755 /image
-cd /image
 sleep 5
 
 echo; echo "Downloading and extracting image to image directory... "
@@ -184,10 +205,14 @@ do
     sleep 5
   fi
 done
+cd /
 trap err_handler ERR
 
 # set the address generation mode to not privacy and generate from MAC address, applies to GUA and LL IPv6 addresses.
 echo -e "[connection]\nipv6.addr-gen-mode=0\nipv6.ip6-privacy=0" > /image/etc/NetworkManager/conf.d/99.mprov-ipv6.conf
+
+# copy resolv.conf into the image 
+/bin/cp /etc/resolv.conf /image/etc/resolv.conf
 
 echo "Image Extracted."
 mount -t proc proc /image/proc
@@ -215,9 +240,9 @@ then
   echo "Stateful Installation"
  
   # copy the stateful installer to the /image root
-  /bin/mv /tmp/mprov_stateful.py /image/tmp/mprov_stateful.py
-  /bin/cp /tmp/mprov_stateful.sh /image/tmp/mprov_stateful.sh
-  /bin/chmod 755 /image/tmp/mprov_stateful.py /image/tmp/mprov_stateful.sh 
+  wget -q -O /image/tmp/mprov_stateful.py ${mprovURL}/static/mprov_stateful.py
+  wget -q -O /image/tmp/mprov_stateful.sh ${mprovURL}/static/mprov_stateful.sh
+  /bin/chmod 755 /image/tmp/mprov_stateful.py /image/tmp/mprov_stateful.sh
   
   if [ ! -f /image/etc/resolv.conf ]
   then
@@ -227,7 +252,7 @@ then
   # mount devpts
   mkdir -p /image/dev/pts
   mount -t devpts devpts /image/dev/pts
-  ln -s /proc/self/fd /image/dev/fd 
+
 
   if [ "$MPROV_RESCUE" == "1" ]
   then  
@@ -235,11 +260,18 @@ then
     echo "Give the root password for maintenance mode"
     chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1  
   fi
+  
   # here, we run the stateful installer, to provision the disks.
   # Then we can drop out and switch to the new root.
   # move the mount point for /newroot to /image.
-  chroot /image /bin/bash -c "/tmp/mprov_stateful.sh; exit 0"
-  umount /image
+  chroot /image /bin/bash -c "/tmp/mprov_stateful.sh"
+  # make the /newroot mount point
+  mkdir -p /newroot
+  # move the new root out of /image
+  mount --move /image/newroot /newroot
+  trap ERR  
+  # unmount the old image, we don't need it anymore.
+  umount -f -R -l /image
   mount --move /newroot /image 
 else
   echo "Stateless Installation"
@@ -299,5 +331,8 @@ then
 else  
   echo "Give the root password for maintenance mode"
   chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1
+  echo "You are at theend of the line for rescue mode."
+  echo "To restart the mProv Boot System, press 'r'."
+  respawn
 fi
-err_handler
+exit 0
