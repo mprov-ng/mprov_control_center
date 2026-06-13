@@ -9,7 +9,5 @@ done
 /usr/bin/python3 /tmp/mprov_stateful.py
 if [ "$?" != "0" ]
 then
-  mount -t devtmpfs devtmpfs /dev 
-  /bin/setsid /bin/bash -m  <> /dev/tty1 >&0 2>&1
-  exit 0
+  exit 1
 fi
