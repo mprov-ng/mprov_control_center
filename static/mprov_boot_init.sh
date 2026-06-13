@@ -1,10 +1,10 @@
 #!/bin/bash
 
 export PATH=$PATH:/sbin
-mount -t proc proc /proc
-mount -t sysfs sysfs /sys
-mount -t devtmpfs devtmpfs /dev
-mount -t tmpfs tmpfs /run
+mount -t proc proc /proc >/dev/null 2>&1
+mount -t sysfs sysfs /sys >/dev/null 2>&1
+mount -t devtmpfs devtmpfs /dev >/dev/null 2>&1
+mount -t tmpfs tmpfs /run >/dev/null 2>&1
 respawn() {
   echo "Press 'r' to restart the mProv Boot System."
   while [ 1 ]
@@ -16,7 +16,7 @@ respawn() {
       trap EXIT
       trap ERR
       echo "Unmounting filesystems..."
-      umount -al
+      umount -alf
       mount -t devtmpfs devtmpfs /dev
       cd /
       exit 0
@@ -90,8 +90,6 @@ echo -n "nvme," | tee -a /tmp/init_mods
 modprobe nvme
 echo -n "virtio_pci," | tee -a /tmp/init_mods
 modprobe virtio_pci
-echo -n "virtio_mmio," | tee -a /tmp/init_mods
-modprobe virtio_mmio
 echo -n "virtio_scsi," | tee -a /tmp/init_mods
 modprobe virtio_scsi
 echo -n "virtio_blk," | tee -a /tmp/init_mods
