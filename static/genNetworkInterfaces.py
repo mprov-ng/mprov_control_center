@@ -88,8 +88,8 @@ class mProvNetworkScriptGenerator():
     # connect to the mPCC
     try:
       response = self.session.get(self.mprovURL, stream=True)
-    except:
-      print("Error: Communication error to the server.  Retrying.", file=sys.stderr)
+    except requests.exceptions.RequestException as e:
+      print(f"Error: Communication error to the server. (Status: {response.status_code}, Error: {e})", file=sys.stderr)
       self.sessionOk = False
       time.sleep(self.heartbeatInterval)
       return False
