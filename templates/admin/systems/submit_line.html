@@ -1,0 +1,9 @@
+{% extends "admin/submit_line.html" %}
+{% load i18n admin_urls %}
+
+{% block extra-actions %}    
+    <!-- ─── YOUR CUSTOM COPY BUTTON PLACED NATIVELY INSIDE THE ACTIONS BOX ─── -->
+    {% if original.pk %}
+        <input type="submit" value="{% translate 'Copy to new' %}" name="_copy_to_new" class="btn btn-info btn-sm btn-block mt-2">
+    {% endif %}
+{% endblock %}

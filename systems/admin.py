@@ -6,6 +6,7 @@ from django.utils.html import mark_safe
 from django.utils.text import slugify
 from jobqueue.models import JobModule, JobStatus, Job
 from django import forms
+from django.urls import reverse
 from django.db.models.query import QuerySet
 
 from django.shortcuts import render
@@ -111,7 +112,7 @@ class BMCInLine(admin.StackedInline):
 
 class SystemAdmin(admin.ModelAdmin):
   actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
-  
+
   inlines = [ NetworkInterfaceInline, BMCInLine]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
   readonly_fields = ['timestamp', 'updated', 'created_by']
@@ -149,6 +150,28 @@ class SystemAdmin(admin.ModelAdmin):
     }
     ),
   )
+
+  def response_change(self, request, obj):
+        # Check if our custom button was clicked
+        if "_copy_to_new" in request.POST:
+            # 1. Duplicate the object by clearing its primary key
+            obj.pk = None
+            
+            obj.save()
+            
+            # 3. Notify the user
+            self.message_user(request, "Object copied successfully to a new record.")
+            
+            # 4. Redirect to the newly created object's edit page
+            opts = self.model._meta
+            redirect_url = reverse(
+                f"admin:{opts.app_label}_{opts.model_name}_change", 
+                args=[obj.pk]
+            )
+            return HttpResponseRedirect(redirect_url)
+            
+        # Fall back to default behavior if the button wasn't clicked
+        return super().response_change(request, obj)
   def getBMClink(self,obj):
     bmcq = SystemBMC.objects.filter(system=obj)
     print(bmcq)
