@@ -101,6 +101,7 @@ class System(models.Model):
   # bootdisk = models.ForeignKey(DiskLayout, blank=True, null=True, on_delete=models.SET_NULL, verbose_name="Boot Disk Layout", help_text="Boot disk layout for stateful installs")
   stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system use images to disk?")
   config = {}
+  location = models.ForeignKey('SystemLocation', blank=True, null=True, on_delete=models.SET_NULL,  )
   class Meta:
     ordering = ['hostname']
     verbose_name = 'Systems'
@@ -330,6 +331,22 @@ class NADSSystem(models.Model):
   class Meta:
     verbose_name="N.A.D.S Discovered"
     verbose_name_plural="N.A.D.S Discovered"
+
+class SystemLocation(models.Model):
+  slug=models.SlugField(max_length=255, unique=True, editable=False, verbose_name='Location ID', primary_key=True)
+  name=models.CharField(verbose_name="Name", max_length=1024)
+  address=models.CharField(max_length=1024, null=True, blank=True, )
+  building=models.CharField(max_length=1024, null=True, blank=True, )
+  room=models.CharField(max_length=1024, null=True, blank=True, )
+  rack=models.CharField(max_length=1024, null=True, blank=True, )
+  def __str__(self):
+    return self.name
+  class Meta:
+    verbose_name="System Location"
+  def save(self, *args, **kwargs):
+    if not self.slug:
+      self.slug = slugify(f"{self.name}")
+    super(SystemLocation, self).save(*args, **kwargs)
   
 @receiver(post_save, sender=NADSSystem)
 def AssignSystem(sender, instance, **kwarg):

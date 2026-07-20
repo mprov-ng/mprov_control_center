@@ -27,6 +27,7 @@ from .models import (
   SystemImage,
   SystemModel,
   NADSSystem,
+  SystemLocation,
 )
 
 class NetForm(forms.ModelForm):
@@ -137,6 +138,7 @@ class SystemAdmin(admin.ModelAdmin):
         'systemimage',
         'systemmodel',
         'systemgroups',
+        'location',
         'scripts',
         'ansiblecollections',
         'ansibleplaybooks',
@@ -513,6 +515,10 @@ class NADSAdmin(admin.ModelAdmin):
   def has_add_permission(self,request):
     return False
 
+class SystemLocationAdmin(admin.ModelAdmin):
+   def get_list_display(self, request):
+        return [field.name for field in self.model._meta.concrete_fields]
+
 @admin.action(description="Mark images as needing rebuild.")
 def mark_rebuild(modeladmin, request, queryset):
   queryset.update(needs_rebuild=True)
@@ -588,3 +594,4 @@ admin.site.register(SystemGroup, SystemGroupAdmin)
 admin.site.register(System, SystemAdmin)
 admin.site.register(SystemModel, SystemModelAdmin)
 admin.site.register(NADSSystem, NADSAdmin)
+admin.site.register(SystemLocation, SystemLocationAdmin)
