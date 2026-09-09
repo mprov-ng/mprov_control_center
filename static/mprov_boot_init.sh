@@ -283,32 +283,32 @@ ip link set $MPROV_PROV_INTF down
 
 # disable error trap
 trap ERR
-oldIFS=$IFS
-IFS=,
-echo "Attempting to unload modules:"
-for mod in $MPROV_INITIAL_MODS
-do  
-  ret=1
+# oldIFS=$IFS
+# IFS=,
+# echo "Attempting to unload modules:"
+# for mod in $MPROV_INITIAL_MODS
+# do  
+#   ret=1
   
-  if [ "$mod" != "" ]
-  then
-    echo -en "\t*** $mod"
-    /sbin/modprobe -r $mod > /dev/null 2>&1
-    ret=$?
-    retry=$((retry+1))
-    if [ $ret == 0 ]
-    then
-      echo " ... DONE"
-    else
-      echo " ... FAILED"
-      sleep 1
-    fi
-  else
-    ret=0
-  fi
+#   if [ "$mod" != "" ]
+#   then
+#     echo -en "\t*** $mod"
+#     /sbin/modprobe -r $mod > /dev/null 2>&1
+#     ret=$?
+#     retry=$((retry+1))
+#     if [ $ret == 0 ]
+#     then
+#       echo " ... DONE"
+#     else
+#       echo " ... FAILED"
+#       sleep 1
+#     fi
+#   else
+#     ret=0
+#   fi
 
-done
-IFS=$oldIFS
+# done
+# IFS=$oldIFS
 
 # disable trap
 trap EXIT
