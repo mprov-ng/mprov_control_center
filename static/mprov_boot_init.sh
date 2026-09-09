@@ -158,7 +158,7 @@ then
   echo
   # disable the error trap for the read
   trap ERR
-  read -p "Would you like an early shell? (y/Y)" -s -n 1 -t 10 early_shell
+  read -p "Would you like an early shell? (y/n)" -s -n 1 -t 10 early_shell
   # reenable the error trap
   trap err_handler ERR
   if [ "$early_shell" == "y" ] || [ "$early_shell" == "Y" ] 
@@ -273,13 +273,25 @@ then
   mount --move /newroot /image 
 else
   echo "Stateless Installation"
+  # note we are not expecting to return from this.
+  echo "Switching to new root.... LEEEEROY JENKINS!!!....."
+  date >> /image/tmp/boot_timing
+  trap EXIT
+  trap ERR
+  umount /sys
+  umount /dev
+  umount /run
+  umount /proc
+  ln -sf /sbin/init /image/init
+  ln -sf /sbin/init /init
+  kill -s SIGQUIT 1
+  exit 0
 fi
 
-# Stateful should never get here.
-echo "Shutting down network"
-pkill udhcpc
-ifconfig $MPROV_PROV_INTF down
-ip link set $MPROV_PROV_INTF down
+# echo "Shutting down network"
+# pkill udhcpc
+# ifconfig $MPROV_PROV_INTF down
+# ip link set $MPROV_PROV_INTF down
 
 # disable error trap
 trap ERR
@@ -321,15 +333,19 @@ then
   umount /dev
   umount /run
   umount /proc
-  ln -s /sbin/init /image/init
-  ln -s /sbin/init /init
-  kill -s SIGQUIT 1
-  exit 0
-  
+  ln -sf /sbin/init /image/init
+  ln -sf /sbin/init /init
+  sync; sync; sync
+  # all done, reboot hard
+
+  umount -a -f -l
+  sync; sync; sync
+  echo "Rebooting..."
+  echo b > /proc/sysrq-trigger
 else  
   echo "Give the root password for maintenance mode"
   chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1
-  echo "You are at theend of the line for rescue mode."
+  echo "You are at the end of the line for rescue mode."
   echo "To restart the mProv Boot System, press 'r'."
   respawn
 fi
