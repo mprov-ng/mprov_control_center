@@ -1,7 +1,7 @@
 from django.urls import path, re_path
 from osmanagement.views_noauth import OSRepoURLAPIView
 
-# This file is the no authed, webpage/redirect for the osrepos/ in the mPCC
+# This file holds the unauthenticated web page/redirect endpoints for osrepos/ in the mPCC
 
 urlpatterns = [
     path('<int:pk>/', OSRepoURLAPIView.as_view()),

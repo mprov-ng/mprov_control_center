@@ -6,16 +6,22 @@ from systems.models import SystemBMC, NetworkInterface
 
 def calculate_new_ip(old_ip, old_network, new_network):
     """
-    Calculate the new IP address by replacing only the network portion
-    while keeping the host portion the same.
-    
+    Calculate the new IP address by replacing whole leading octets of the
+    old IP with those of the new network, keeping the remaining octets.
+
+    The number of octets replaced is based on the new netmask: 3 for /24 and
+    longer, 2 for /16-/23, 1 for /8-/15, and none below /8.  If the resulting
+    address is not inside the new network (e.g. for masks that are not on an
+    octet boundary), the first host address of the new network is returned
+    instead.
+
     Args:
         old_ip (str): Original IP address
-        old_network (Network): Original network object
+        old_network (Network): Original network object (currently unused)
         new_network (Network): New network object
-    
+
     Returns:
-        str: New IP address in the new subnet
+        str: New IP address in the new subnet, or None if an error occurred
     """
     try:
         # Parse the old IP address
@@ -69,13 +75,13 @@ def calculate_new_ip(old_ip, old_network, new_network):
 
 def get_associated_objects(network):
     """
-    Get all systems and BMCs associated with a network.
-    
+    Get all network interfaces and BMCs associated with a network.
+
     Args:
         network (Network): Network object
-    
+
     Returns:
-        dict: Dictionary with 'interfaces' and 'bmcs' lists
+        dict: Dictionary with 'interfaces' and 'bmcs' QuerySets
     """
     # Get network interfaces associated with this network
     interfaces = NetworkInterface.objects.filter(network=network).select_related('system')
@@ -91,7 +97,7 @@ def get_associated_objects(network):
 
 def update_associated_ips(network, old_subnet, old_netmask):
     """
-    Update IP addresses of all associated systems and BMCs when network changes.
+    Update IP addresses of all associated network interfaces and BMCs when the network changes.
     
     Args:
         network (Network): Updated network object

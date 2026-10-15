@@ -23,7 +23,7 @@ def mark_update(modeladmin, request, queryset):
     # get the jobtype, do nothing if it's not defined.
     if JobType is not None:
 
-        # save a new job, if one doesn't already exist.
+        # create a new repo-update job.
         params = { 'repo_id': instance.id}
         Job.objects.create( name=JobType.name, 
             module=JobType, 
@@ -31,7 +31,8 @@ def mark_update(modeladmin, request, queryset):
             params = params,
         )
 
-        # Increment version number and clear out jobservers field.
+        # Clear out the hosted_by jobservers and increment the version number
+        # (on this in-memory instance only; it is not saved here).
         instance.hosted_by.clear()
         instance.version = instance.version + 1
 

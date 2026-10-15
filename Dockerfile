@@ -82,7 +82,7 @@ RUN echo "DJANGO_SUPERUSER_USERNAME=admin" > /var/www/mprov_control_center/.env 
 RUN . bin/activate && \
     python3 manage.py collectstatic --noinput
 
-# Configure Apache for mProv Control Center
+# Download busybox and set up the media and db directories
 RUN wget -q -O static/busybox https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox && \
     mkdir -p media && \
     ln -s media db && \

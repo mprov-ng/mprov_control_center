@@ -15,7 +15,7 @@ from django.utils import timezone
 class SystemGroup(models.Model):
   """ System Groups are ways to group systems and system images together to manage configuration better.   You can specify configuration
   options and parameters at the system group level that will override anything set at the OS Distro level and be overridden by anything at
-  the system or system image level.  """
+  the system level.  """
   name=models.CharField(max_length=255)
   scripts = models.ManyToManyField(Script, blank=True, )
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
@@ -66,7 +66,7 @@ class SystemModel(models.Model):
 
 
 class System(models.Model):
-  """ Systems are physical or virtual machines that will run an OS in RAM or have an OS installed on them.  This is the end-point for the mPCC's
+  """ Systems are physical or virtual machines that will run an OS in RAM or have an OS installed on them.  This is the endpoint for the mPCC's
   provisioning system."""
   endpoint="/systems/"
   hostname=models.CharField(max_length=255, verbose_name="Host Name")
@@ -174,7 +174,7 @@ class System(models.Model):
                 if sysgrpfield != 0:
                   self.config[field] = sysgrpfield
           
-    # finally see if the object has it set on it's top-level and overwrite it to the 
+    # finally see if the object has it set on its top level and overwrite it to the
     # config dict.
     for field in self._meta.get_fields():
       field = field.name
@@ -355,7 +355,7 @@ def AssignSystem(sender, instance, **kwarg):
     sysnic = NetworkInterface.objects.all()
     sysnic = sysnic.filter(system=instance.system, bootable=True)
     if sysnic.count() == 0:
-      print("Error: No bootable nic found.")
+      print("Error: No bootable NIC found.")
       return
     sysnic = sysnic[0]
     sysnic.mac=instance.mac
@@ -380,8 +380,8 @@ def UpdateGenders (sender, instance, **kwarg):
       defaults={'status': JobStatus.objects.get(pk=1)}
     )
 
-# emits jobs to update dns, dhcp, and pxe config if a 
-# system or NIC is changed.
+# emits jobs to update dns, dhcp, and pxe config if a
+# system, NIC, or BMC is changed.
 # TODO: add the sender information to the
 # job params? Or should we just rebuild it all.
 
@@ -412,7 +412,7 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
     except:
         JobType = None
     # print(JobType)
-    # get or create the OSIMAGE_UPDATE job module in the DB
+    # look up the pxe/dns/dhcp update job module in the DB
     # get the jobtype, do nothing if it's not defined.
     if JobType is not None:
         # save a new job, if one doesn't already exist.
@@ -454,7 +454,7 @@ def DeleteSystemImage(sender, instance, **kwargs):
   else:
     print("WARN: No image-delete job module found; no job was queued.")
 
-# emits an image-update job everytime an image is modified.
+# emits an image-update job every time an image is saved with needs_rebuild set.
 @receiver(pre_save, sender=SystemImage)
 def UpdateSystemImages(sender, instance, **kwargs):
   import inspect
@@ -482,7 +482,7 @@ def UpdateSystemImages(sender, instance, **kwargs):
   # get the jobtype, do nothing if it's not defined.
   if JobType is not None:
 
-      # save a new job, if one doesn't already exist.
+      # create a new image-update job.
       params = { 'imageId': instance.slug, 'origin': 'pre_save'}
       Job.objects.create( name=JobType.name, 
           module=JobType, 

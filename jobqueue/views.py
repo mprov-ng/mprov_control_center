@@ -17,17 +17,17 @@ class JobAPIView(MProvView,
 # /jobs/
 
 ## Accepted HTTP Methods:
-- GET (no parameters)
-- GET (with Primary Key, ie: /jobs/1/)
-- POST (with primary key, ie: /jobs/1/)
-- PATCH (with primary key, ie: /jobs/1/)
-- DELETE (with primary key, ie: /jobs/1/)
+- GET (no primary key)
+- GET (with Primary Key, e.g. /jobs/1/)
+- POST (no primary key, e.g. /jobs/)
+- PATCH (with primary key, e.g. /jobs/1/)
+- DELETE (with primary key, e.g. /jobs/1/)
 
 ## Documentation
 
 ### Class Attributes
 - id: Internal ID 
-- name: Human readable name for the job
+- name: Human-readable name for the job
 - create_time: (Auto) Time the job was created
 - start_time: (Optional) Time the job is started, set by jobserver
 - end_time: (Optional) Time the job finished, set by the jobserver
@@ -38,8 +38,14 @@ class JobAPIView(MProvView,
 - status: ID of the current status of the job.
 - jobserver: (Optional) ID of the job server currently assigned to this job
 
-### GET method (no parameters)
-Returns a json list of all objects of this type in the MPCC
+### GET method (no primary key)
+Returns a JSON list of all objects of this type in the mPCC.  The list can be
+filtered with these optional query parameters:
+
+- module: A job module ID, or a JSON array of job module IDs (e.g. ?module=["repo-update","pxe-update"])
+- params: Filters with a JSON `contains` lookup of [value] against the job's params
+- jobserver: ID of the assigned job server
+- status: ID of the job's status
 
 Format returned:
 
@@ -59,14 +65,15 @@ Format returned:
     }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST is sent to the base URL (no primary
+    key) and will Create a new entry; it requires ALL required fields.  PATCH
+    will only update the fields passed; fields that are not changing can be omitted.
 
 - GET returns the object specified or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created, or a 400 error if validation fails
 
 - PATCH returns the updated object.
 
@@ -78,13 +85,13 @@ Format returned:
     queryset = Job.objects.all()
     search_fields = ['module__slug']
 
-    # Override the default get func, we need a bit more specialized query here
+    # Override the default get func; we need a bit more specialized query here
     def get(self, request, format=None, **kwargs):
         result = self.checkContentType(request, format=format)
         if result is not None:
             return result
         
-        # if we are 'application/json' return an empty dict if
+        # if we are 'application/json' return null (None) if
         # model is not set.
         if self.model == None:
             return Response(None)
@@ -127,21 +134,23 @@ class JobModulesAPIView(MProvView):
 # /jobmodules/
 
 ## Accepted HTTP Methods:
-- GET (no parameters)
-- GET (with Primary Key, ie: /jobmodules/1/)
-- POST (with primary key, ie: /jobmodules/1/)
-- PATCH (with primary key, ie: /jobmodules/1/)
-- DELETE (with primary key, ie: /jobmodules/1/)
+- GET (no primary key)
+- GET (with Primary Key, e.g. /jobmodules/pxe-update/)
+- POST (no primary key, e.g. /jobmodules/)
+- PATCH (with primary key, e.g. /jobmodules/pxe-update/)
+- DELETE (with primary key, e.g. /jobmodules/pxe-update/)
 
 ## Documentation
 
 ### Class Attributes
 - slug: The ID of the job module
-- name: A human readable name for the job module
+- name: A human-readable name for the job module
 - active: Unused, will be removed in future updates
     
-### GET method (no parameters)
-Returns a json list of all objects of this type in the MPCC
+### GET method (no primary key)
+Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
+none.  Any field of this type can be passed as a query parameter to filter the
+list (e.g. ?name=example).
 
 Format returned:
 
@@ -163,14 +172,15 @@ Format returned:
     }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST is sent to the base URL (no primary
+    key) and will Create a new entry; it requires ALL required fields.  PATCH
+    will only update the fields passed; fields that are not changing can be omitted.
 
 - GET returns the object specified or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created, or a 400 error if validation fails
 
 - PATCH returns the updated object.
 
@@ -188,11 +198,11 @@ class JobServersAPIView(MProvView):
 # /jobservers/
 
 ## Accepted HTTP Methods:
-- GET (no parameters)
-- GET (with Primary Key, ie: /jobservers/1/)
-- POST (with primary key, ie: /jobservers/1/)
-- PATCH (with primary key, ie: /jobservers/1/)
-- DELETE (with primary key, ie: /jobservers/1/)
+- GET (no primary key)
+- GET (with Primary Key, e.g. /jobservers/1/)
+- POST (no primary key, e.g. /jobservers/)
+- PATCH (with primary key, e.g. /jobservers/1/)
+- DELETE (with primary key, e.g. /jobservers/1/)
 
 ## Documentation
 
@@ -200,13 +210,17 @@ class JobServersAPIView(MProvView):
 - id: The internal ID of the job server
 - name: The hostname of the job server
 - address: The IP address of the jobserver
-- port: What port is the job server on
-- heartbeat_time: The last time of the last heartbeat from the job server
+- port: The port the job server listens on
+- heartbeat_time: The time of the last heartbeat from the job server
 - jobmodules: array of job module IDs that this job server handles.
+- one_minute_load: The job server's 1 minute load average
+- network: (Optional) ID of the network the job server is on
 
     
-### GET method (no parameters)
-Returns a json list of all objects of this type in the MPCC
+### GET method (no primary key)
+Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
+none.  Any field of this type can be passed as a query parameter to filter the
+list (e.g. ?name=example).
 
 Format returned:
 
@@ -228,7 +242,7 @@ Format returned:
         "id": 4,
         "name": "ip172016254054.vpn.jhu.edu",
         "address": "172.16.254.54",
-        "port": null,
+        "port": 8080,
         "heartbeat_time": "2022-05-16T13:56:42.321346-05:00",
         "jobmodules": [
             "nads",
@@ -237,14 +251,18 @@ Format returned:
     }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  PATCH will only update the fields passed;
+    fields that are not changing can be omitted.
 
 - GET returns the object specified or 404
 
-- POST returns the new object created or a 500 style error
+- POST is sent to the base URL (no primary key) and creates or updates the job
+    server with the given name.  It requires name, address, one_minute_load, and
+    jobmodules (a list of job module IDs to register); port is optional and
+    defaults to 8080.  It returns 200 with the job server's ID as a JSON-encoded
+    string, e.g. '{"pk": 3}', or a 500 error if a job module can't be found.
 
 - PATCH returns the updated object.
 

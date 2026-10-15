@@ -162,10 +162,10 @@ class SystemAdmin(admin.ModelAdmin):
             
             obj.save()
             
-            # 3. Notify the user
+            # 2. Notify the user
             self.message_user(request, "Object copied successfully to a new record.")
             
-            # 4. Redirect to the newly created object's edit page
+            # 3. Redirect to the newly created object's edit page
             opts = self.model._meta
             redirect_url = reverse(
                 f"admin:{opts.app_label}_{opts.model_name}_change", 
@@ -317,12 +317,12 @@ class SystemAdmin(admin.ModelAdmin):
               print("Issue hard_reset ... ")
               ipmi.chassis_control_hard_reset()
             except:
-              print("Issue power cyccle ... ")
-              
+              print("Issue power cycle ... ")
+
               ipmi.chassis_control_power_cycle()
               
         elif action=="cycle":
-            print("Issue power cyccle ... ")
+            print("Issue power cycle ... ")
             ipmi.chassis_control_power_cycle()
         elif action=="status":
             
@@ -362,7 +362,7 @@ class SystemAdmin(admin.ModelAdmin):
             form = form_class(request.POST)
             has_batch_errors = False
 
-            form.full_clean()  # form.is_valid() will not work well because <WorkEntry: None>
+            form.full_clean()  # populate cleaned_data; form.is_valid() is not used here
             fieldsUpdated = False
             for field_name in fields:
               
@@ -420,6 +420,7 @@ class SystemAdmin(admin.ModelAdmin):
                       )
                   fieldsUpdated=True
             # Handle set_bootable: mark the NIC matching each system's prov_interface as bootable
+            # (all NICs if prov_interface is empty), or clear bootable on all NICs if unchecked
             bootable_updated = 0
             if 'update_set_bootable' in request.POST:
               if not form.cleaned_data.get('set_bootable'):
@@ -540,7 +541,7 @@ def mark_rebuild(modeladmin, request, queryset):
     # get the jobtype, do nothing if it's not defined.
     if JobType is not None:
 
-        # save a new job, if one doesn't already exist.
+        # create a new image-update job.
         params = { 'imageId': instance.slug}
         Job.objects.create( name=JobType.name, 
             module=JobType, 
@@ -548,7 +549,8 @@ def mark_rebuild(modeladmin, request, queryset):
             params = params,
         )
 
-        # TODO: Increment version number and clear out jobservers field.
+        # Increment version number and clear out jobservers field.
+        # NOTE: instance is not saved here, so only the jobservers clear persists.
         instance.jobservers.clear()
         instance.version = instance.version + 1
 

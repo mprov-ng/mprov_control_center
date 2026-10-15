@@ -109,13 +109,13 @@ class OSRepo(models.Model):
 @receiver(post_save, sender=OSDistro)
 def OSDistroCreateRepos(sender, instance, **kwargs):
   if hasattr(instance, "_post_save"):
-    # if we are fired off from a previous post save clal, skip.
+    # if we are fired off from a previous post_save call, skip.
     return
   if instance.update == False:
     # if we are not set to update, skip.
     return
   baseURL=instance.baseurl
-  # remov trailing slash
+  # remove trailing slash
   if baseURL[:-1] == '/':
      baseURL = baseURL[:-1]
 
@@ -154,7 +154,7 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
   else:
     newRepo = OSRepo()
   newRepo.name = f"EPEL-{instance.version}"
-  # if the version has a . in it, use the archive.  if not, assume latest, pull from main latest.
+  # if the version has a . in it, use the archive.  If not, assume latest and pull from the main (non-archive) tree.
   if "." in instance.version:
     newRepo.repo_package_url = f"https://dl.fedoraproject.org/pub/archive/epel/{instance.version}/Everything/{instance.distArch}/"
   else:
@@ -188,7 +188,7 @@ def RepoUpdateJob(sender, instance, **kwargs):
   if RepoJobType is not None and instance.update and instance.id is not None:
       if instance.managed:
         instance.version = instance.version +1 
-        # save a new job, if one doesn't already exist.
+        # create a new repo-update job.
         params = { 'repo_id': instance.id}
 
         Job.objects.create( name=RepoJobType.name, 
@@ -230,7 +230,7 @@ def DeleteJobserver(sender, instance, **kwargs):
         RepoJobType = None
     
     if RepoJobType is not None:
-        # save a new job, if one doesn't already exist.
+        # create a new repo-update job for every repo.
         repos = OSRepo.objects.all()
         for repo in repos:
           params = { 'repo_id': repo.id}

@@ -24,7 +24,7 @@ class MProvView(
 ## Details
 This class is used as a super class for all the views within the mProv Control Center.
 It should be versatile enough to be used in just about any way as long as you set the
-attributes right, setup a urls.py file right to pass 'pk' in for GET, PATCH, DELETE, POST, etc.
+attributes right, set up a urls.py file to pass 'pk' in for GET, PATCH, and DELETE,
 and make sure to add documentation to the class so that it can be displayed if anyone hits it.
 
 
@@ -117,7 +117,7 @@ and make sure to add documentation to the class so that it can be displayed if a
         result = self.checkContentType(request, format=format)
         if result is not None:
             return result
-        # if we are 'application/json' return an empty dict if
+        # if we are 'application/json' return null (None) if
         # model is not set.
         if self.model == None:
             return Response(None)

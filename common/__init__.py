@@ -87,7 +87,7 @@ def render_config(obj):
       configDict[group.name]['initial_mods'] = group.initial_mods
       configDict[group.name]['prov_interface'] = group.prov_interface
 
-  # finally, collect node configs.
+  # finally, collect the object's own configs.
   configDict['object'] = dict()
   configDict['object']['params'] = yaml.safe_load(obj.config_params)
   configDict['object']['ansibleplaybooks'] = obj.ansibleplaybooks

@@ -14,7 +14,7 @@ class ScriptAdmin(admin.ModelAdmin):
 
   def get_form(self, request, obj=None, **kwargs):
       """
-      Override to populate content field with file contents when editing existing scripts
+      Override to populate the content field with the file contents when editing existing scripts.
       """
       form = super().get_form(request, obj, **kwargs)
       if obj and not obj.content:  # Editing existing object and content is empty

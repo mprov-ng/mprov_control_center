@@ -10,16 +10,16 @@ import requests
 import sh
 import subprocess
 
-# This scirpt will:
-# - grab the disklayout from the mPCC, 
+# This script will:
+# - grab the disklayout from the mPCC,
 # - build the partition table(s)
-# - build the file system(s)
-# - update the /etc/fstab
-# - mount the root filesystem to a subdir
-# - chroot in and mount the remaining filesystems, 
-# - rsync the RAM image to the disk
-# - mark the system's bootable NIC as not bootable to indicate it's provisioned
-# - hand control over to systemd or reboot
+# - build the file system(s) and any software RAID device(s)
+# - write the new mounts to /tmp/fstab
+# - mount all of the new filesystems under /newroot
+# - rsync the RAM image to the disk and update /newroot/etc/fstab
+# - install the boot loader from inside the /newroot chroot
+# - mark the system's NICs as not bootable to indicate it's provisioned
+# - exit, after which mprov_boot_init.sh reboots the system
 
 def exception_hook(exctype, value, traceback):
   traceback.print_exc()
@@ -45,7 +45,7 @@ class mProvStatefulInstaller():
   def __init__(self, **kwargs):
     print("mProv Stateful Installer Starting.")
 
-    # use the jobserver config
+    # use the script-runner config
     self.configfile = "/etc/mprov/script-runner.yaml"
     
     # load our config
@@ -131,7 +131,7 @@ class mProvStatefulInstaller():
     # disks with boot partitions.
     # This is an array because more than
     # one disk can have a bootable partition.
-    # we will probably error  if more than one is detected.
+    # we error out if more than one is detected,
     # as figuring out what disk the user WANTS to boot from
     # requires psychic powers that Python simply can't handle
     bootdisks = []
@@ -184,7 +184,7 @@ class mProvStatefulInstaller():
         # clear the PMBR Boot flag from the disk
         disk.unsetFlag(parted.DISK_GPT_PMBR_BOOT)
 
-        # if we are a boot disk, let's make a couple of needed parttitions
+        # if we are a boot disk, let's make a couple of needed partitions
         # create a biosboot partition
         bootpart={'filesystem': 'biosboot', 'size': 1, 'fill': False, 'partnum': 1}
         start = start + self._createPartition(device, disk, bootpart, sectorsize, start, parttype=parted.PARTITION_NORMAL)
@@ -351,8 +351,8 @@ class mProvStatefulInstaller():
     print("Running restorecon to fix up security contexts...")
     sh.chroot(["/newroot", "restorecon", "-rFp", "/" ])
   def installBootLoader(self):
-      # copy in a script to do the boot loader config, and switch root to that script
-      # before we run the REAL init.
+      # configure grub, regenerate the initramfs, and install the boot loader
+      # from inside the /newroot chroot.
       # first we mount some stuff for the bootloader
       bindMounts = ['dev', 'sys', 'proc']
       for mount in bindMounts:
@@ -396,7 +396,7 @@ class mProvStatefulInstaller():
               for mod in mods:
                   self.modules += mod.replace(",", " ")
 
-      # if we have RAID stuffs, append the following stuff to the commandline and tell grub to do the right thing.
+      # append the RAID options to the command line so the initramfs assembles any RAID devices (always added, RAID or not).
       newcmdline.append("rd.md=1")
       newcmdline.append("rd.md.conf=1")
       newcmdline.append("rd.auto=1")
@@ -512,6 +512,9 @@ class mProvStatefulInstaller():
 
   def cleanupAndSwitchroot(self):
     # disable netboot
+
+    # XXX: the unmount and switch_root steps below are commented out and need
+    # more testing; mprov_boot_init.sh reboots the system instead.
     mprovUrl = self.mprovURL
     apiKey = self.apikey
 
@@ -660,7 +663,7 @@ class mProvStatefulInstaller():
       return None
   
 
-    # everything else is offset by the extended and boot partitions if applicablew
+    # everything else is offset by the biosboot and EFI partitions if applicable
     partOffset = 0
     if pdisk['diskname'] == self.bootdisk:
       # boot disk, we are going to add 2 more to partOffset
@@ -681,7 +684,7 @@ class mProvStatefulInstaller():
             ).stdout.split("\n")[0]
         except:
           pass
-        # here we check if we got a string back from the blkid, if so, assume it's formated
+        # here we check if we got a string back from the blkid, if so, assume it's formatted
         # and return the UUID.  If not, format.
         if part['uuid'] != "":
           return part['uuid']
@@ -723,6 +726,6 @@ def main():
 
 def __main__():
     main()
-    raise Exception("Installer Exitted without switch_root()")
+    raise Exception("Installer Exited without switch_root()")
 if __name__ == "__main__":
     main()

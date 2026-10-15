@@ -126,7 +126,7 @@ def UpdateNetwork(sender, instance, **kwargs):
     except:
         JobType = None
     print(JobType)
-    # get or create the OSIMAGE_UPDATE job module in the DB
+    # look up the pxe/dns/dhcp-update job module in the DB
     # get the jobtype, do nothing if it's not defined.
     if JobType is not None:
         # save a new job, if one doesn't already exist.
@@ -145,7 +145,7 @@ def DeleteNetwork(sender, instance, **kwargs):
     except:
         JobType = None
     print(JobType)
-    # get or create the job module in the DB
+    # look up the pxe/dns/dhcp-delete job module in the DB
     # get the jobtype, do nothing if it's not defined.
     if JobType is not None:
         # save a new job, if one doesn't already exist.

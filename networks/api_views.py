@@ -14,7 +14,7 @@ def update_network_with_confirmation(request, pk):
     Update a network with confirmation for subnet changes.
     
     This endpoint allows updating a network and prompts for confirmation
-    when the subnet is changed, offering to update associated systems and BMCs.
+    when the subnet is changed, offering to update associated network interfaces and BMCs.
     
     POST /networks/{pk}/update-with-confirmation/
     
@@ -36,6 +36,8 @@ def update_network_with_confirmation(request, pk):
     {
         "requires_confirmation": true,
         "message": "Subnet is changing. Do you want to update associated systems and BMCs?",
+        "old_subnet": "192.168.0.0/24",
+        "new_subnet": "192.168.1.0/24",
         "associated_objects": {
             "interfaces": [
                 {
@@ -68,6 +70,12 @@ def update_network_with_confirmation(request, pk):
             "errors": []
         }
     }
+    "update_results" is only included when the subnet changed and
+    "update_associated" was true.  If "update_associated" is false, the network
+    is saved without changing any associated IP addresses.
+    
+    3. If the request body is not valid JSON, or the network data fails
+    validation, a 400 response with the error details is returned.
     """
     
     network = get_object_or_404(Network, pk=pk)

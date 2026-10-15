@@ -33,7 +33,7 @@ class mProvNetworkScriptGenerator():
   def __init__(self, **kwargs):
     print("mProv Network Script Generator Starting.")
 
-    # use the jobserver config
+    # use the script-runner config
     self.configfile = "/etc/mprov/script-runner.yaml"
     
     # load our config

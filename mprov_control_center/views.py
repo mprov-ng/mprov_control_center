@@ -15,21 +15,23 @@ Welcome to the mProv Control Center API.  What you see here is the documentation
 Chances are good you are looking for the [Admin](/admin/) section to get in and modify stuff.  If, 
 however, you are looking for the documentation on how to use this API, you should probably try clicking on 
 one of the following links.   Each link is a section of the API that corresponds to a section of the admin 
-interface.  It will give you documentation on how to use that section of the api.
+interface.  It will give you documentation on how to use that section of the API.
 
 * [/distros/](/distros/)
 * [/images/](/images/)
 * [/jobs/](/jobs/)
 * [/jobmodules/](/jobmodules/)
 * [/jobservers/](/jobservers/)
-* [/kernels/](/kernels/)
 * [/networkinterfaces/](/networkinterfaces/)
 * [/networks/](/networks/)
 * [/networktypes/](/networktypes/)
+* [/osrepos/](/osrepos/)
+* [/ostypes/](/ostypes/)
 * [/repos/](/repos/)
 * [/scripts/](/scripts/)
 * [/switches/](/switches/)
 * [/switchports/](/switchports/)
+* [/systembmcs/](/systembmcs/)
 * [/systemgroups/](/systemgroups/)
 * [/systemimages/](/systemimages/)
 * [/systems/](/systems/)
@@ -42,8 +44,9 @@ interface.  It will give you documentation on how to use that section of the api
 
 class DataTypeView(View):
     """
-    Class used to get the data type of a model, or a list of all registered 
-    data models.
+    Returns the JSON field structure of the model named in the ?model= query
+    parameter (e.g. ?model=jobqueue.models.Job), or, with no ?model=, a list
+    of all registered non-Django data models.
     """
    
     def get(self, request, format=None, **kwargs):
