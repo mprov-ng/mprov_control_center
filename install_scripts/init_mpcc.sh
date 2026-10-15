@@ -71,15 +71,25 @@ python manage.py createcachetable
 python manage.py migrate
 
 # set up the secret key
-# Check if the variable exists in the .env file
-NEW_VALUE=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())') 
-if grep -q "^SECRET_KEY" /var/www/mprov_control_center/.env; then
-    # If it exists, update its value
-    sed -i "s/^SECRET_KEY=.*$/SECRET_KEY=${NEW_VALUE}/" /var/www/mprov_control_center/.env
+# Use SECRET_KEY from the docker env if set, otherwise generate one once and
+# keep it in /etc/mprov/ (a volume) so it survives restarts and image updates.
+SECRET_KEY_FILE=/etc/mprov/secret_key
+if [ -n "$SECRET_KEY" ]; then
+    NEW_VALUE="$SECRET_KEY"
+elif [ -s "$SECRET_KEY_FILE" ]; then
+    NEW_VALUE=$(cat "$SECRET_KEY_FILE")
 else
-    # If it doesn't exist, append it to the file
-    echo "SECRET_KEY=${NEW_VALUE}" >> /var/www/mprov_control_center/.env
+    NEW_VALUE=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
+    mkdir -p /etc/mprov
+    echo "$NEW_VALUE" > "$SECRET_KEY_FILE"
+    chmod 600 "$SECRET_KEY_FILE"
 fi
+case "$NEW_VALUE" in
+    *\'*) echo "Error: SECRET_KEY must not contain a single quote" >&2; exit 1 ;;
+esac
+# delete and re-append rather than sed-replace, so key characters like & aren't interpreted.
+sed -i '/^SECRET_KEY=/d' /var/www/mprov_control_center/.env
+echo "SECRET_KEY='${NEW_VALUE}'" >> /var/www/mprov_control_center/.env
 
 # let's adjust the env file based on the docker env
 
