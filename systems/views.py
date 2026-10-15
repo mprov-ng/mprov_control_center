@@ -40,18 +40,25 @@ POST methods, and they must be formatted in a specific way.
 ## Documentation
 
 ### POST method (with NADS Packet)
-- This will register the mac in the packet, to the host that system
-that has a NIC on the specified switch and port.
+- This will register the MAC in the packet to the system that has a NIC
+with no MAC on the specified switch and port, if that system's model matches
+the vendor and model in the packet.  The NIC also gets an IPv6 link-local
+address (and a GUA if the port's network is IPv6), a pxe-update job is queued,
+and the system is returned as a JSON list.
+- If no system matches and the MAC is not already assigned to a NIC, the packet
+is saved as a N.A.D.S. discovered system.  Returns 200 with an empty body.
+- All fields except "serial" are required.
+
 NADS Packet:
 
 
         {
-            "vendor": The vendor associated with the system you which to register, must match what mPCC knows.
-            "model": The model associated with the system you which to register, must match what mPCC knows.
+            "vendor": The vendor associated with the system you wish to register, must match what mPCC knows.
+            "model": The model associated with the system you wish to register, must match what mPCC knows.
             "switch": "some-switch-host-name", must match what mPCC knows.
-            "port": "someport-number", must match what mPCC knows.
-            "mac": mac of the machine being registered
-            "serial": the serial number from dmidecode
+            "port": "some-port-name", must match what mPCC knows.
+            "mac": MAC of the machine being registered
+            "serial": the serial number from dmidecode (currently ignored)
         }
 
     '''
@@ -150,7 +157,7 @@ NADS Packet:
                         except:
                             JobType = None
                         # print(JobType)
-                        # get or create the job module in the DB
+                        # look up the job module in the DB
                         # get the jobtype, do nothing if it's not defined.
                         if JobType is not None:
                             # save a new job, if one doesn't already exist.
@@ -191,10 +198,10 @@ class SystemAPIView(MProvView):
 
 ## Accepted HTTP Methods:
 - GET (no parameters)
-- GET (with Primary Key, ie: /systems/1/)
-- POST (with primary key, ie: /systems/1/)
-- PATCH (with primary key, ie: /systems/1/)
-- DELETE (with primary key, ie: /systems/1/)
+- GET (with Primary Key, e.g. /systems/1/)
+- POST (no primary key, e.g. /systems/)
+- PATCH (with primary key, e.g. /systems/1/)
+- DELETE (with primary key, e.g. /systems/1/)
 
 ## Documentation
 
@@ -204,12 +211,30 @@ class SystemAPIView(MProvView):
 - timestamp: The creation time of the entry
 - created_by: The user who created this entry
 - updated: Timestamp of the last update
-- systemgroups: array of system group ID's
+- systemgroups: array of system group IDs
 - config_params: The configuration parameters for this entry
 - systemimage: The ID of the system image.
+- systemmodel: The ID of the system model.
+- location: The ID of the system location.
+- stateful: Should this system install its image to disk?
+- disks: array of disk layout IDs
+- scripts: array of script IDs
+- ansibleplaybooks, ansibleroles, ansiblecollections: arrays of Ansible IDs
+- install_kernel_cmdline, tmpfs_root_size, initial_mods, prov_interface: boot options for this system
+- config: The merged configuration from the OS Distro, System Groups, and this system
+
+### Query Parameters
+- ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
+- ?hostname=TEXT: GET only returns systems whose hostname contains the text, or 404 if none.
+- ?detail: GET returns systems with nested details.
+- ?self: GET returns the system that owns the NIC with the requesting IP address, with
+    nested details, or 404 if unknown.  POST with ?self and a body of {"netboot": ...}
+    sets bootable to false on all of the requesting system's NICs; any other key returns 403.
+- ?powerstate: GET with a primary key redirects to a power_on, power_off, or power_unknown
+    status image.
 
 ### GET method (no parameters)
-Returns a json list of all objects in the MPCC of this type
+Returns a JSON list of all objects in the mPCC of this type
 
 Format returned:
 
@@ -233,7 +258,7 @@ Format returned:
         "hostname": "compute002",
         "timestamp": "2022-05-13T09:38:58.211597-05:00",
         "updated": "2022-05-23T16:00:11.526715-05:00",
-        "config_params": "-- #Inherit from System Group or Distribtion.",
+        "config_params": "-- #Inherit from System Group or Distribution.",
         "created_by": 1,
         "systemimage": "compute",
         "systemgroups": [
@@ -245,14 +270,15 @@ Format returned:
 
 
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (no primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST Creates a new entry and is sent to the
+    collection URL without a primary key.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if unchanged.
 
-- GET returns the object specified with a retrieval depth of 3 or 404
+- GET returns the object specified (IDs only, no nested objects) or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created or a 400 error if validation fails
 
 - PATCH returns the updated object.
 
@@ -265,7 +291,7 @@ Format returned:
 
     def post(self, request, *args, **kwargs):
         if 'self' in request.query_params:
-            # someone would like modify themselves.
+            # someone would like to modify themselves.
             # grab the IP
             ip=""
             x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -388,10 +414,10 @@ class SystemGroupAPIView(MProvView):
 
 ## Accepted HTTP Methods:
 - GET (no parameters)
-- GET (with Primary Key, ie: /systemgroups/1/)
-- POST (with primary key, ie: /systemgroups/1/)
-- PATCH (with primary key, ie: /systemgroups/1/)
-- DELETE (with primary key, ie: /systemgroups/1/)
+- GET (with Primary Key, e.g. /systemgroups/1/)
+- POST (no primary key, e.g. /systemgroups/)
+- PATCH (with primary key, e.g. /systemgroups/1/)
+- DELETE (with primary key, e.g. /systemgroups/1/)
 
 ## Documentation
 
@@ -400,9 +426,16 @@ class SystemGroupAPIView(MProvView):
 - name: The name of the system group
 - config_params: The configuration parameters for this entry
 - scripts: A list of scripts that will run on this group
+- ansibleplaybooks, ansibleroles, ansiblecollections: Ansible content for this group
+- install_kernel_cmdline, tmpfs_root_size, initial_mods, prov_interface: boot options for this group
+- systems: array of system IDs in this group
+
+### Query Parameters
+- ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 
 ### GET method (no parameters)
-Returns a json list of all objects in the MPCC of this type
+Returns a JSON list of all objects in the mPCC of this type.  Scripts and Ansible
+content are returned as nested objects; the example below is abbreviated.
 
 Format returned:
 
@@ -429,14 +462,15 @@ Format returned:
     ]
 
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (no primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST Creates a new entry and is sent to the
+    collection URL without a primary key.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if unchanged.
 
-- GET returns the object specified or 404
+- GET returns the object specified with a retrieval depth of 3 or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created or a 400 error if validation fails
 
 - PATCH returns the updated object.
 
@@ -452,24 +486,36 @@ class NetworkInterfaceAPIView(MProvView):
 
 ## Accepted HTTP Methods:
 - GET (no parameters)
-- GET (with Primary Key, ie: /networkinterfaces/1/)
-- POST (with primary key, ie: /networkinterfaces/1/)
-- PATCH (with primary key, ie: /networkinterfaces/1/)
-- DELETE (with primary key, ie: /networkinterfaces/1/)
+- GET (with Primary Key, e.g. /networkinterfaces/1/)
+- POST (no primary key, e.g. /networkinterfaces/)
+- PATCH (with primary key, e.g. /networkinterfaces/1/)
+- DELETE (with primary key, e.g. /networkinterfaces/1/)
 
 ## Documentation
 
 ### Class Attributes
 - id: The internal ID in the db
 - name: The name of the interface
-- hostname: The hostname for this interface to be registered to DNS/DHCP
+- hostname: The hostname for this interface to be registered to DNS/DHCP (set to the system's hostname on save)
+- hostaliases: A space-separated list of alternate hostnames
 - ipaddress: The IP address to be registered to DNS/DHCP for this interface
+- ipv6ll: The IPv6 link-local address
+- ipv6gua: The IPv6 SLAAC global unicast address
+- mac: The MAC address of this interface
+- mtu: The MTU of this interface
+- isgateway: Is this the gateway NIC?
 - bootable: Is this NIC bootable?
 - system: The system ID this NIC is associated with
 - switch_port: The switch port ID this NIC is connected to.
+- network: The network ID this NIC is on.
+
+### Query Parameters
+- ?network=SLUG: GET returns the NICs on that network, either set directly on the NIC or
+    through the network of the NIC's switch port.
+- ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 
 ### GET method (no parameters)
-Returns a json list of all objects in the MPCC of this type
+Returns a JSON list of all objects in the mPCC of this type
 
 Format returned:
 
@@ -498,14 +544,15 @@ Format returned:
     ]
 
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (no primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST Creates a new entry and is sent to the
+    collection URL without a primary key.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if unchanged.
 
-- GET returns the object specified or 404
+- GET returns the object specified with a retrieval depth of 3 or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created or a 400 error if validation fails
 
 - PATCH returns the updated object.
 
@@ -523,7 +570,7 @@ Format returned:
             # get the Network ID
             # This should first query the switch for all ports on that network.
             # It should also query all network interfaces for hard coded networks.
-            # Then reconcile ports <--> interfaces.  Switch port takes precidence, if set.
+            # Then reconcile ports <--> interfaces.  Switch port takes precedence, if set.
             innerQ = SwitchPort.objects.filter(networks=net)
             swportqueryset = NetworkInterface.objects.all().filter(switch_port__in=innerQ)
             nicqueryset = NetworkInterface.objects.all().filter(network=net)
@@ -541,7 +588,7 @@ Format returned:
                     if not found:
                         nics.append(portnic)
 
-            # now we remove nics if they are not the set at the switchport
+            # now we remove NICs that have a switch port that is not on this network
             for nic in nics:
                 found=False
                 if nic.switch_port is not None:
@@ -576,10 +623,12 @@ class SystemImagesAPIView(MProvView):
 
 ## Accepted HTTP Methods:
 - GET (no parameters)
-- GET (with Primary Key, ie: /systemimages/compute/)
-- POST (with primary key, ie: /systemimages/compute/)
-- PATCH (with primary key, ie: /systemimages/compute/)
-- DELETE (with primary key, ie: /systemimages/compute/)
+- GET (with Primary Key, e.g. /systemimages/compute/)
+- POST (no primary key, e.g. /systemimages/)
+- PATCH (with primary key, e.g. /systemimages/compute/)
+- DELETE (with primary key, e.g. /systemimages/compute/)
+
+/systemimages/PK/details and /systemimages/PK/update behave the same as /systemimages/PK/.
 
 ## Documentation
 
@@ -594,11 +643,20 @@ class SystemImagesAPIView(MProvView):
 - version: used internally for tracking when an image changes
 - jobservers: array of jobservers actively serving this version of this image.
 - config_params: YAML of config parameters set on this system image, used by scripts
-- osddistro: the distro to base this image off of.
+- osdistro: the distro to base this image off of.
 - osrepos: (Optional) extra repos for this image.
+- scripts: array of script IDs for this image
+- ansibleplaybooks, ansibleroles, ansiblecollections: arrays of Ansible IDs
+- customIPXE: (Optional) a custom iPXE script served instead of the generated one
+
+### Query Parameters
+- ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
+- ?addjs: PATCH merges the passed jobservers (a list or a single ID) into the
+    existing jobservers instead of replacing them.
 
 ### GET method (no parameters)
-Returns a json list of all objects in the MPCC of this type
+Returns a JSON list of all objects in the mPCC of this type.  System groups are
+returned as nested objects; the example below is abbreviated.
 
 Format returned:
 
@@ -652,14 +710,15 @@ Format returned:
     }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (no primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST Creates a new entry and is sent to the
+    collection URL without a primary key.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if unchanged.
 
 - GET returns the object specified, with retrieval depth of 3 or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created or a 400 error if validation fails
 
 - PATCH returns the updated object.
 
@@ -725,10 +784,10 @@ class SystemBMCAPIView(MProvView):
 
 ## Accepted HTTP Methods:
 - GET (no parameters)
-- GET (with Primary Key, ie: /systembmcs/1/)
-- POST (with primary key, ie: /systembmcs/1/)
-- PATCH (with primary key, ie: /systembmcs/1/)
-- DELETE (with primary key, ie: /systembmcs/1/)
+- GET (with Primary Key, e.g. /systembmcs/1/)
+- POST (no primary key, e.g. /systembmcs/)
+- PATCH (with primary key, e.g. /systembmcs/1/)
+- DELETE (with primary key, e.g. /systembmcs/1/)
 
 ## Documentation
 
@@ -739,11 +798,19 @@ class SystemBMCAPIView(MProvView):
 - username: The username for authentication with this entry
 - password: The password for authentication with this entry. It is write-only:
     GET returns it only for a single entry (/systembmcs/1/) or with `?detail`.
+    An empty password on POST or PATCH is ignored.
 - system: ID of the system this entry is associated with.
 - switch_port: ID of the switchport this entry resides on.
+- network: ID of the network this entry is on.
+- ipv6ll: The IPv6 link-local address of the entry
+- vlan: The VLAN ID of the entry
+
+### Query Parameters
+- ?detail: GET returns entries with nested details.
+- ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 
 ### GET method (no parameters)
-Returns a json list of all objects in the MPCC of this type
+Returns a JSON list of all objects in the mPCC of this type
 
 Format returned:
 
@@ -760,14 +827,15 @@ Format returned:
     ]
 
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (no primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST Creates a new entry and is sent to the
+    collection URL without a primary key.  POST requires ALL required fields.  PATCH
+    will only update the fields passed, required fields can be omitted if unchanged.
 
 - GET returns the object specified with a retrieval depth of 3 or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created or a 400 error if validation fails
 
 - PATCH returns the updated object.
 

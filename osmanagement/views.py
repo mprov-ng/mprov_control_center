@@ -8,27 +8,43 @@ class OSDistroAPIView(MProvView):
 # /distros/
 
 ## Accepted HTTP Methods:
-- GET (no parameters)
-- GET (with Primary Key, ie: /distros/1/)
-- POST (with primary key, ie: /distros/1/)
-- PATCH (with primary key, ie: /distros/1/)
-- DELETE (with primary key, ie: /distros/1/)
+- GET (no primary key)
+- GET (with Primary Key, e.g. /distros/1/)
+- POST (no primary key, e.g. /distros/)
+- PATCH (with primary key, e.g. /distros/1/)
+- DELETE (with primary key, e.g. /distros/1/)
 
 ## Documentation
 
 ### Class Attributes
 - id: The internal ID in the db
-- name: A human readable name 
+- name: A human-readable name 
 - vendor: A name for the vendor of this OS
 - version: The version for this OS, used to pull base repos.
-- config_params: (Optional) YAML of config params for this OS distro, least priority 
-- install_kernel_cmdline: (Optional) The commandline passed to the kernel when it boots on a system
-- baserepo: the ID of the baserepo from the DB to suse to generate the image
+- config_params: (Optional) YAML of config params for this OS distro, lowest priority
+- install_kernel_cmdline: (Optional) The command line passed to the kernel when it boots on a system
+- baserepo: The ID of the base repo from the DB used to generate the image
 - osrepos: (Optional) Repos to be added during image generation
-- scripts: (Optional) Scripts that will run  on images/systems using this  OS
+- scripts: (Optional) Scripts that will run on images/systems using this OS
+- distType: (Optional) The slug of the OS type
+- distArch: The CPU architecture (x86_64, aarch64, ppc64le, or s390x)
+- managed: Whether repos generated for this distro are mProv managed
+- update: If true, saving the distro creates/updates its AppStream, BaseOS, extras,
+    CRB (version 9+) or PowerTools, and EPEL repos from baseurl, then resets to false
+- baseurl: The base URL the generated repos are built from
+- extrarepos: (Optional) IDs of extra repos
+- rootpw: (Optional) Root password for the image
+- rootsshkeys: (Optional) Keys to add to root's authorized keys file
+- ansibleplaybooks, ansibleroles, ansiblecollections: (Optional) Ansible content
+    to run on images/systems using this OS
+- tmpfs_root_size: Size of the root tmpfs filesystem, in GB
+- initial_mods: Comma-separated list of kernel modules to load
+- prov_interface: Interface name to provision over
 
-### GET method (no parameters)
-Returns a json list of all objects in the MPCC of this type
+### GET method (no primary key)
+Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
+none.  Any field of this type can be passed as a query parameter to filter the
+list (e.g. ?name=example).
 
 Format returned:
 
@@ -54,14 +70,15 @@ Format returned:
     }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST is sent to the base URL (no primary
+    key) and will Create a new entry; it requires ALL required fields.  PATCH
+    will only update the fields passed; fields that are not changing can be omitted.
 
 - GET returns the object specified or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created, or a 400 error if validation fails
 
 - PATCH returns the updated object.
 
@@ -77,23 +94,30 @@ class OSRepoAPIView(MProvView):
 # /repos/
 
 ## Accepted HTTP Methods:
-- GET (no parameters)
-- GET (with Primary Key, ie: /repos/1/)
-- POST (with primary key, ie: /repos/1/)
-- PATCH (with primary key, ie: /repos/1/)
-- DELETE (with primary key, ie: /repos/1/)
+- GET (no primary key)
+- GET (with Primary Key, e.g. /repos/1/)
+- POST (no primary key, e.g. /repos/)
+- PATCH (with primary key, e.g. /repos/1/)
+- DELETE (with primary key, e.g. /repos/1/)
 
 ## Documentation
 
 ### Class Attributes
 - id: The internal ID in the db
-- name: A human readable name 
+- name: A human-readable name 
 - repo_package_url: The URL of the repo install package
-- osdistro: (Optional) OS Distros this is associated with
+- managed: Whether mProv downloads and manages this repo
+- update: If true (and managed), saving queues a repo-update job, bumps the
+    version, and clears hosted_by
+- hosted_by: IDs of the job servers hosting this repo
+- ostype: (Optional) The slug of the OS type
+- version: Local version of the repo, if mProv managed
 
 
-### GET method (no parameters)
-Returns a json list of all objects in the MPCC of this type
+### GET method (no primary key)
+Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
+none.  Any field of this type can be passed as a query parameter to filter the
+list (e.g. ?name=example).
 
 Format returned:
 
@@ -102,18 +126,23 @@ Format returned:
         "id": 1,
         "name": "Rocky Linux 8.5 OS",
         "repo_package_url": "https://distro.ibiblio.org/rocky/8.5/BaseOS/x86_64/os/Packages/r/rocky-repos-8.5-3.el8.noarch.rpm",
-        "osdistro": []
+        "managed": false,
+        "update": false,
+        "hosted_by": [],
+        "ostype": null,
+        "version": 1
     }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST is sent to the base URL (no primary
+    key) and will Create a new entry; it requires ALL required fields.  PATCH
+    will only update the fields passed; fields that are not changing can be omitted.
 
 - GET returns the object specified or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created, or a 400 error if validation fails
 
 - PATCH returns the updated object.
 
@@ -130,39 +159,44 @@ class OSTypeAPIView(MProvView):
 # /ostypes/
 
 ## Accepted HTTP Methods:
-- GET (no parameters)
-- GET (with Primary Key, ie: /ostypes/rhel/)
-- POST (with primary key, ie: /ostypes/rhel/)
-- PATCH (with primary key, ie: /ostypes/rhel/)
-- DELETE (with primary key, ie: /ostypes/rhel/)
+- GET (no primary key)
+- GET (with Primary Key, e.g. /ostypes/rhel/)
+- POST (no primary key, e.g. /ostypes/)
+- PATCH (with primary key, e.g. /ostypes/rhel/)
+- DELETE (with primary key, e.g. /ostypes/rhel/)
 
 ## Documentation
 
 ### Class Attributes
 - slug: The internal ID in the db
-- name: A human readable name 
+- name: A human-readable name 
 
 
-### GET method (no parameters)
-Returns a json list of all objects in the MPCC of this type
+### GET method (no primary key)
+Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
+none.  Any field of this type can be passed as a query parameter to filter the
+list (e.g. ?name=example).
 
 Format returned:
 
     [
     {
         "slug": "rhel",
-        "name": "Yum/dnf based Linux OS",
+        "name": "Yum/dnf based Linux OS"
     }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST is sent to the base URL (no primary
+    key) and will Create a new entry; it requires ALL required fields.  PATCH
+    will only update the fields passed; fields that are not changing can be omitted.
 
 - GET returns the object specified or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created, or a 400 error if validation fails.
+    If an OS type with the given slug already exists, its name is updated
+    instead and 200 is returned with an empty body.
 
 - PATCH returns the updated object.
 

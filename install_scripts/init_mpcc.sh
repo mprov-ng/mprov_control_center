@@ -37,7 +37,7 @@ then
               echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
 
               # other variables can be set directly in the ENV (for containers)
-              # or via the .env file.   See the .env.example for possible varialbes.
+              # or via the .env file.   See the env.example for possible variables.
               
               # pull in a .env.custom if it exists.
               if [ -e .env.custom ]
@@ -222,9 +222,9 @@ fi
 chown apache db/ -R
 chmod u+w db/ -R
 
-# start apache in a new PG, filters out signals to the
-# container, ie. SIGWINCH.  The -d flag is still accepted
-# (mprov-compose passes it) but is ignored, this is the only mode.
+# start apache in a new process group, filters out signals to the
+# container, e.g. SIGWINCH.  The -d flag is still accepted
+# (mprov-compose passes it) but is ignored; this is the only mode.
 setsid --wait /usr/sbin/apachectl -D FOREGROUND &
 child_pid=$!
 trap "kill -SIGINT $child_pid" SIGINT

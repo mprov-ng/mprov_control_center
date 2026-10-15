@@ -4,7 +4,8 @@ register = template.Library()
 @register.simple_tag
 def get_docstring(cl):
   """
-  Returns the docstring for the instance.
+  Returns the docstring of the changelist's model (cl.model), or None if it is
+  only Django's auto-generated "ClassName(fields...)" docstring.
   """
   docString = cl.model.__doc__
   if docString.startswith("\n"):

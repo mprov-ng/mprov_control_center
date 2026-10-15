@@ -19,18 +19,23 @@ class ImagesAPIView(MProvView, generics.ListAPIView):
     '''
 # /images/
 
-NOTE: This is a special API Access point for retrieving system images, initramfs, and such
-This API ONLY expects keys to images.  If they primary key does not exist, a 404 is returned.
-If no primary key is specified, 404 is returned.
+NOTE: This is a special API access point for retrieving system images, initramfs, and such.
+This API expects keys to images.  If no primary key is specified, this documentation is
+returned, or a JSON list of all images if the request content type is application/json.
 
 ## Accepted HTTP Methods:
-- GET (with Primary Key, ie: /images/compute/)
+- GET (with Primary Key, e.g. /images/compute/)
+- GET (no primary key, e.g. /images/)
 
 
 ## Documentation
 
 ### GET (with primary key)
-- Will return the binary of the image requested, regardless of requested content type.
+- Will redirect (302) to the image requested on the least loaded jobserver hosting it,
+regardless of requested content type.  A primary key ending in .initramfs or .vmlinuz
+redirects to that file, otherwise the .img is used.
+- Jobservers that fail to respond are removed from the image.  If no jobserver is
+left, a 404 is returned.
 
     '''
     model = SystemImage
@@ -93,7 +98,7 @@ If no primary key is specified, 404 is returned.
         print(f"Error occurred while fetching image: {e}")
         statCode = 0
       while ( statCode <= 199 or statCode >=400):
-        # jobsever gave a bad response, remove it and retry.
+        # jobserver gave a bad response, remove it and retry.
         js_set.remove(js)
         print("Removing Jobserver " + str(js) + ", URL: " + imageURL + " not accessible. Status: " + str(statCode))
         image.jobservers.set(js_set)
@@ -177,15 +182,13 @@ kernels to PXE.  This function may be merged into /images/ at some point.
 
 
 ## Accepted HTTP Methods:
-- GET (with Primary Key, ie: /kernels/compute/)
+- GET (with Primary Key, e.g. /kernels/compute/)
 
 ## Documentation
 
-### Class Attributes
-
-
 ### GET (with primary key)
-- Will return the kernel requested, regardless of requested content type.
+- Will redirect (302) to the kernel (.vmlinuz) of the image requested on the least
+loaded jobserver hosting it, regardless of requested content type.
 
     '''
       model = SystemImage
@@ -220,7 +223,7 @@ kernels to PXE.  This function may be merged into /images/ at some point.
           print(f"Error: {e}")
           statCode = 0
         while ( statCode <= 199 or statCode >=400):
-          # jobsever gave a bad response, remove it and retry.
+          # jobserver gave a bad response, remove it and retry.
           js_set.remove(js)
           print("Removing Jobserver " + str(js) + ", URL: " + imageURL + " not accessible. Status: " + str(statCode))
           image.jobservers.set(js_set)
@@ -282,7 +285,7 @@ class IPXEAPIView(MProvView):
         queryset = self.model.objects.all()
         queryset = queryset.filter(ipaddress=ip)
         qscnt = queryset.count()
-        # our IP is not found, let's see if NADS is running on here.
+        # our IP is not found, let's fall back to the NADS image.
         if qscnt == 0:
             try:
                 imgQs = SystemImage.objects.get(name='__nads__')
@@ -290,8 +293,8 @@ class IPXEAPIView(MProvView):
                 print(f"Error: You are missing a system image of the name '__nads__' so autodetection will fail.")
                 raise NotFound(detail="No __nads__ image.", code=404)
             if type(imgQs) is SystemImage:  
-                # there is a __nads__ iamge, let's serve that.
-                # spoof a nics object
+                # there is a __nads__ image, let's serve that.
+                # spoof a NIC object
                 class Obj: pass
                 system=Obj()
                 system.systemimage = imgQs
@@ -304,10 +307,10 @@ class IPXEAPIView(MProvView):
                 nics = [ nic ]
                 queryset = nics
         else:
-          # here we should have a system, so let's check it has a distro
+          # here we should have a system
 
           # print(queryset)
-          # the following lines allow recurive templating to be done on the kernel cmdline.
+          # the kernel cmdline is rendered as a template further below, allowing recursive templating.
           if qscnt > 1:
             print(f"WARN: More than 1 NIC for IP {ip}.  Using the first bootable one.")
           
@@ -347,7 +350,7 @@ class IPXEAPIView(MProvView):
         # print(nic)
         context = Context(dict(nic=nic))
 
-        # check for a blank mac on the nic, probably means N.A.D.S. boot.
+        # check for the __nads__ image, which means a N.A.D.S. boot.
         if nic.system.systemimage.name == "__nads__":
           # set the mac to the provisioning interface.
           nic.mac = nic.system.systemimage.osdistro.prov_interface

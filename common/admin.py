@@ -8,8 +8,8 @@ from django.forms import Media
 
 
 # wizard on first step has 'wizard_step' unset
-# subequent steps must include it in 
-# the form. should be able to add field progammatically
+# subsequent steps must include it in 
+# the form. should be able to add the field programmatically
 
 class AdminWizardModel(admin.ModelAdmin):
   step_fields = None
@@ -54,7 +54,7 @@ class AdminWizardModel(admin.ModelAdmin):
     if self.step_fields is not None:
       if self.wizard_step >= len(self.step_fields):
         # we have gotten to the end of the wizard.
-        # we are showing the whole form, let's give the user teh Save and Edit button
+        # we are showing the whole form, let's give the user the 'Save & Edit' button
         extra_context = {
           'show_save_and_continue':True,
           'show_save_and_add_another':False,
@@ -69,7 +69,7 @@ class AdminWizardModel(admin.ModelAdmin):
           'show_save_and_add_another':False,
           }
       else: 
-        # we are showing the whole form, let's give the user teh Save and Edit button
+        # we are showing the whole form, let's give the user the 'Save & Edit' button
         extra_context = {
           'show_save_and_continue':True,
           'show_save_and_add_another':False,

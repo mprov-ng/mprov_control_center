@@ -35,7 +35,7 @@ initrd /static/mprov_stateful.sh /tmp/mprov_stateful.sh mode=755 || goto retrydo
 {% endif %}
 initrd /static/default.script /bin/default.script mode=755 || goto retrydownload
 initrd /static/default6.script /bin/default6.script mode=755 || goto retrydownload
-# insert a few more files we are going to need.  wget, curl, 
+# TODO: insert a few more files we are going to need, e.g. wget and curl.
 imgstat
 boot
 {% else %}

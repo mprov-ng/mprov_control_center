@@ -159,7 +159,7 @@ then
   # disable the error trap for the read
   trap ERR
   read -p "Would you like an early shell? (y/n) " -s -n 1 -t 10 early_shell
-  # reenable the error trap
+  # re-enable the error trap
   trap err_handler ERR
   if [ "$early_shell" == "y" ] || [ "$early_shell" == "Y" ] 
   then
@@ -198,7 +198,7 @@ do
   then 
     break
   else
-    echo "Unable to retreive image.  Retrying..."
+    echo "Unable to retrieve image.  Retrying..."
     echo "Press Alt-F2 to access a shell."
     sleep 5
   fi
@@ -261,7 +261,6 @@ then
   
   # here, we run the stateful installer, to provision the disks.
   # Then we can drop out and switch to the new root.
-  # move the mount point for /newroot to /image.
   chroot /image /bin/bash -c "/tmp/mprov_stateful.sh"
   # make the /newroot mount point
   mkdir -p /newroot
@@ -270,6 +269,7 @@ then
   trap ERR  
   # unmount the old image, we don't need it anymore.
   umount -f -R -l /image
+  # move the mount point for /newroot to /image.
   mount --move /newroot /image 
 else
   echo "Stateless Installation"

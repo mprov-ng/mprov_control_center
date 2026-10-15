@@ -28,14 +28,14 @@ class Job(models.Model):
         verbose_name="Job"
         verbose_name_plural="Jobs"
     def save(self, *args, **kwargs):
-        # add some default dependancies
+        # add some default dependencies
         if self.module.slug == "image-update":
             self.params.update({"deps": "repo-sync"})
         super(Job, self).save(*args, **kwargs)
         
 class JobModule(models.Model):
     """ Job Modules are the types of jobs that a job server can execute.  These usually define what jobserver modules/plugins will
-    be run.  They also serve as a point to breakup job server tasks to multiple jobservers, if you desire.
+    be run.  They also serve as a point to break up job server tasks to multiple jobservers, if you desire.
 
         Usually, you should not have to look at this stuff unless something fails.
     """
@@ -56,8 +56,8 @@ class JobStatus(models.Model):
         verbose_name="Job Status"
 
 class JobServer(models.Model):
-    """ This area shows you stauts on job servers that have registered themselves with the mPCC.  It will show you the IP address that the 
-    job server registered with, the port, any job modules it can run, it's load average, and when the mPCC last heard from it.
+    """ This area shows you the status of job servers that have registered themselves with the mPCC.  It will show you the IP address that the 
+    job server registered with, the port, any job modules it can run, its load average, and when the mPCC last heard from it.
 
         Usually, you should not have to look at this stuff unless something fails.
     """

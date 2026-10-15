@@ -16,9 +16,9 @@ class ScriptType(models.Model):
 class Script(models.Model):
   """
   Scripts are small snippets of code that will be run by the mProv 
-  Jobserver on a system or system image.  They are usally run in the 
+  Jobserver on a system or system image.  They are usually run in the 
   system image at generation time, or on the system after it has booted,
-  also known as 'post boot'
+  also known as 'post-boot'.
   """
   endpoint="/scripts/"
   name=models.CharField(max_length=120, verbose_name=("Script Name"))
@@ -84,7 +84,7 @@ class Script(models.Model):
     super(Script, self).save(*args, **kwargs)
 class File(models.Model):
   """
-  Files are uploaded to the system and able to be served via the link provided.
+  Files are uploaded to the mPCC and can be served via the link provided.
   """
   endpoint="/files/"
   name=models.CharField(max_length=120, verbose_name=("File Name"))
@@ -110,7 +110,7 @@ class File(models.Model):
 
 class AnsiblePlaybook(models.Model):
   """
-  Ansible playbooks are single file lists ansible tasks that will be run by the 'run_ansible.sh' script
+  Ansible playbooks are single-file lists of Ansible tasks that will be run by the 'run_ansible.sh' script
   via the mProv Jobserver.
 
   NOTE: Ansible Collections run first, then Ansible Roles, and finally Ansible Playbooks.
@@ -136,7 +136,7 @@ class AnsiblePlaybook(models.Model):
       try:
         os.makedirs(settings.MEDIA_ROOT + '/ansibleplaybooks/' + self.scriptType.slug, exist_ok=True)
       except: 
-        print(f"Error: Unalbe to make script type dir: {settings.MEDIA_ROOT + '/ansibleplaybooks/' + self.scriptType.slug}")
+        print(f"Error: Unable to make script type dir: {settings.MEDIA_ROOT + '/ansibleplaybooks/' + self.scriptType.slug}")
         return
 
     self.filename.name = self.scriptType.slug + '/ansibleplaybooks/' + self.slug + "-v" + str(self.version)
@@ -148,9 +148,9 @@ class AnsiblePlaybook(models.Model):
 
 class AnsibleRole(models.Model):
   ''' 
-    Ansible Roles packed groups of playbooks with configuration data all wrapped up together. 
+    Ansible Roles are packaged groups of playbooks with configuration data all wrapped up together. 
     This section of config management is where you can add either git repositories that contain a single role,
-    or ansible galaxy roles that the 'run_ansible.sh' will attempt to download run if they are associated with a 
+    or Ansible Galaxy roles that the 'run_ansible.sh' script will attempt to download and run if they are associated with a 
     system, system image, system group, or OS Distribution.
 
     NOTE: Ansible Collections are run before Roles.  Roles are run before playbooks.
@@ -177,8 +177,8 @@ class AnsibleRole(models.Model):
 class AnsibleCollection(models.Model):
   ''' 
     Ansible Collections are packages that can contain playbooks, roles, modules, and/or plugins.
-    This section of config management is where you can add ansible galaxy collections that the 
-    'run_ansible.sh' will attempt to download and install if they are associated with a 
+    This section of config management is where you can add Ansible Galaxy collections that the 
+    'run_ansible.sh' script will attempt to download and install if they are associated with a 
     system, system image, system group, or OS Distribution.
 
     NOTE: Ansible Collections are run FIRST, before any playbooks or roles.

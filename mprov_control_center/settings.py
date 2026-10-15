@@ -281,20 +281,20 @@ CACHES = {
 # LDAP OPTIONS:
 if os.environ.get("LDAP_ENABLED", "0") == "1":
 
-    # Most of these should be configurable via the .enf file.  Please read carefully to see if you need to adjust anything.
+    # Most of these should be configurable via the .env file.  Please read carefully to see if you need to adjust anything.
     # You can also see the docs for the LDAP python module for django here: https://django-auth-ldap.readthedocs.io
     AUTH_LDAP_SERVER_URI = os.environ.get("LDAP_URI", '')
 
     # The base to use for searches below.
     AUTH_MPROV_LDAP_BASE = os.environ.get("LDAP_BASE", "dc=example,dc=com")
 
-    # If you are not using direct binds, this is a user and pass that can read authentication
-    # for you.
+    # If you are not using direct binds, this is a bind DN and password that can search the
+    # directory for you.
     #AUTH_LDAP_BIND_DN = os.environ.get("LDAP_BINDDN", '')
     #AUTH_LDAP_BIND_PASSWORD = os.environ.get("LDAP_BINDPASS", '')
 
     # Used in non-direct binds to find users.
-    # This can be overridden with hard coded unions.  See https://django-auth-ldap.readthedocs.io/en/latest/authentication.html
+    # This can be overridden with hard-coded unions (LDAPSearchUnion).  See https://django-auth-ldap.readthedocs.io/en/latest/authentication.html
     #AUTH_LDAP_USER_SEARCH = LDAPSearch(os.environ.get("LDAP_USER_SEARCH", "ou=users,dc=example,dc=com"), ldap.SCOPE_SUBTREE, "(uid=%(user)s)")
 
     # Here, we will be binding directly.  This is the template to use to look for users to authenticate.
@@ -312,7 +312,7 @@ if os.environ.get("LDAP_ENABLED", "0") == "1":
 
     # place any other defaults here.
     AUTH_LDAP_GLOBAL_OPTIONS={}
-    # set if LDAP_SELF_SIGNED_CERT is set in the env.
+    # disable TLS certificate checks if LDAP_SELF_SIGNED_CERT is set to 1 in the env.
 
     if os.environ.get("LDAP_SELF_SIGNED_CERT", "0") == "1":
         AUTH_LDAP_GLOBAL_OPTIONS[ldap.OPT_X_TLS_REQUIRE_CERT] = ldap.OPT_X_TLS_NEVER

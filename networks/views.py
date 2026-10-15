@@ -17,32 +17,33 @@ class NetworkAPIView(MProvView):
 
 ## Accepted HTTP Methods:
 - GET (no parameters)
-- GET (with Primary Key, ie: /networks/1/)
-- POST (with primary key, ie: /networks/1/)
-- PATCH (with primary key, ie: /networks/1/)
-- DELETE (with primary key, ie: /networks/1/)
+- GET (with Primary Key, e.g. /networks/1/)
+- POST (no primary key, e.g. /networks/)
+- PATCH (with primary key, e.g. /networks/1/)
+- DELETE (with primary key, e.g. /networks/1/)
 
 ## Documentation
 
 ### Class Attributes
 - id: The internal ID of the network in the db
-- name: A human readable name for the network
-- net_type: The ID of the network Type for this network.
-- slug: (Optional, generated) a machine parsable version of the network name
-- vlan: (Optional) a descriptor of the vlan.
+- name: A human-readable name for the network
+- net_type: The ID of the network type for this network.
+- slug: (Optional, generated) a machine-parsable version of the network name
+- vlan: (Optional, Default: 0) The integer VLAN ID.
 - subnet: The subnet for this network
 - netmask: The CIDR notation numeric mask
 - gateway: (Optional) The gateway for this network.
-- nameserver1: (Optional) The First nameserver for this network.
+- nameserver1: (Optional) The primary nameserver for this network.
 - domain: (Optional) A domain name to be associated with this network
-- isdhcp: (Default: False) Should mProv mananage DHCP?
+- isdhcp: (Default: False) Should mProv manage DHCP?
 - managedns: (Default: False) Should mProv manage DNS?
 - isbootable: (Default: False) Is this a PXE/BootP/Net Boot network?
-- dhcpstart: (Optional) The staring IP of the DHCP Range for non-associated hosts.
-- dhcpend: (Optional) The ending IP of the DHCP Rnage. 
+- dhcpstart: (Optional) The starting IP of the DHCP range for non-associated hosts.
+- dhcpend: (Optional) The ending IP of the DHCP range. 
 
 ### GET method (no parameters)
-Returns a json list of all networks in the MPCC
+Returns a JSON list of all networks in the mPCC.  The list can be filtered
+with the optional ?isdhcp= and ?managedns= query parameters (True/False or 1/0).
 
 Format returned:
 
@@ -52,7 +53,7 @@ Format returned:
             "id": 1,
             "name": "Cluster LAN",
             "slug": "cluster-lan",
-            "vlan": "default",
+            "vlan": 0,
             "subnet": "172.16.0.0",
             "netmask": 16,
             "gateway": "172.16.1.1",
@@ -67,14 +68,15 @@ Format returned:
         }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST, sent to the collection URL with no
+    primary key, will Create a new entry and requires ALL required fields.  PATCH
+    will only update the fields passed; required fields can be omitted if unchanged.
 
 - GET returns the object specified or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created, or 400 with the validation errors
 
 - PATCH returns the updated object.
 
@@ -117,20 +119,20 @@ class NetworkTypeAPIView(MProvView):
 
 ## Accepted HTTP Methods:
 - GET (no parameters)
-- GET (with Primary Key, ie: /networktypess/1/)
-- POST (with primary key, ie: /networktypes/1/)
-- PATCH (with primary key, ie: /networktypes/1/)
-- DELETE (with primary key, ie: /networktypes/1/)
+- GET (with Primary Key, e.g. /networktypes/1/)
+- POST (no primary key, e.g. /networktypes/)
+- PATCH (with primary key, e.g. /networktypes/1/)
+- DELETE (with primary key, e.g. /networktypes/1/)
 
 ## Documentation
 
 ### Class Attributes
 - id: The internal ID of the network type in the db
-- name: A human readable name for the network type
-- description: (Optional) A human readable explanation of this network type
+- name: A human-readable name for the network type
+- description: (Optional) A human-readable explanation of this network type
 
 ### GET method (no parameters)
-Returns a json list of all networktypes in the MPCC
+Returns a JSON list of all network types in the mPCC
 
 Format returned:
 
@@ -147,14 +149,15 @@ Format returned:
     }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST, sent to the collection URL with no
+    primary key, will Create a new entry and requires ALL required fields.  PATCH
+    will only update the fields passed; required fields can be omitted if unchanged.
 
 - GET returns the object specified or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created, or 400 with the validation errors
 
 - PATCH returns the updated object.
 
@@ -170,25 +173,25 @@ class SwitchAPIView(MProvView):
 
 ## Accepted HTTP Methods:
 - GET (no parameters)
-- GET (with Primary Key, ie: /switches/1/)
-- POST (with primary key, ie: /switches/1/)
-- PATCH (with primary key, ie: /switches/1/)
-- DELETE (with primary key, ie: /switches/1/)
+- GET (with Primary Key, e.g. /switches/1/)
+- POST (no primary key, e.g. /switches/)
+- PATCH (with primary key, e.g. /switches/1/)
+- DELETE (with primary key, e.g. /switches/1/)
 
 ## Documentation
 
 ### Class Attributes
 - id: Internal ID of this switch in the db
 - hostname: hostname of this switch
-- timestamp: (Auto) Creation time for this switch
-- updated: (Auto) Last update time for this switch
+- timestamp: (Default: now) Creation time for this switch
+- updated: (Default: now) Last update time for this switch (not changed automatically on save)
 - mgmt_ip: The IP Address of the management interface for this switch
 - mgmt_mac: The MAC address of the management interface for this switch
-- created_by: The user who made this swtich
-- network: ID of the network for this switch.
+- created_by: The user who last saved this switch (set automatically on every save)
+- network: (Optional) ID of the management network for this switch.
     
 ### GET method (no parameters)
-Returns a json list of all objects of this type in the MPCC
+Returns a JSON list of all objects of this type in the mPCC
 
 Format returned:
 
@@ -205,14 +208,15 @@ Format returned:
     }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST, sent to the collection URL with no
+    primary key, will Create a new entry and requires ALL required fields.  PATCH
+    will only update the fields passed; required fields can be omitted if unchanged.
 
 - GET returns the object specified or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created, or 400 with the validation errors
 
 - PATCH returns the updated object.
 
@@ -238,21 +242,21 @@ class SwitchPortAPIView(MProvView):
 
 ## Accepted HTTP Methods:
 - GET (no parameters)
-- GET (with Primary Key, ie: /switchports/1/)
-- POST (with primary key, ie: /switchports/1/)
-- PATCH (with primary key, ie: /switchports/1/)
-- DELETE (with primary key, ie: /switchports/1/)
+- GET (with Primary Key, e.g. /switchports/1/)
+- POST (no primary key, e.g. /switchports/)
+- PATCH (with primary key, e.g. /switchports/1/)
+- DELETE (with primary key, e.g. /switchports/1/)
 
 ## Documentation
 
 ### Class Attributes
 - id: Internal ID of this port in the db
-- name: A human readable name for the port number
+- name: A human-readable name for the port number
 - switch: ID of the switch this port is associated with
 - networks: ID of the network for this port.
     
 ### GET method (no parameters)
-Returns a json list of all objects of this type in the MPCC
+Returns a JSON list of all objects of this type in the mPCC
 
 Format returned:
 
@@ -277,14 +281,15 @@ Format returned:
     }
     ]
 
-### GET, POST, PATCH, DELETE (with primary key)
-- These methods, when passed a primary key, will Retrieve, Create, Update, or 
-    Delete that entry in the database.  POST requires ALL required fields.  PATCH
-    will only update the fields passed, required fields can be omitted if changed.
+### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+- GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
+    Delete that entry in the database.  POST, sent to the collection URL with no
+    primary key, will Create a new entry and requires ALL required fields.  PATCH
+    will only update the fields passed; required fields can be omitted if unchanged.
 
 - GET returns the object specified or 404
 
-- POST returns the new object created or a 500 style error
+- POST returns the new object created, or 400 with the validation errors
 
 - PATCH returns the updated object.
 

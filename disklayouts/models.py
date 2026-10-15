@@ -55,7 +55,7 @@ class DiskLayout(models.Model):
     super(DiskLayout, self).save(*args, **kwargs)
 
 class RaidLayout(DiskLayout):
-  """ Raid Layouts are similar to a Physical Disk Layout, but pertain ONLY  to setting up software RAID devices."""
+  """ RAID Layouts are similar to a Physical Disk Layout, but pertain ONLY to setting up software RAID devices."""
   class Meta:
     verbose_name = "Software RAID Layout"
   class DiskTypes(models.TextChoices):

@@ -45,7 +45,7 @@ server hosts the repository.
           repo = OSRepo.objects.get(pk=kwargs['pk'])
         else: 
           result = self.checkContentType(request, format=format, kwargs=kwargs)
-          # no pk in image, spit out a list then.
+          # no pk in the request, spit out a list then.
           self.queryset = OSRepo.objects.all()
           if result is not None:
               
@@ -64,7 +64,7 @@ server hosts the repository.
               body.append(BeautifulSoup(html, features="html.parser"))
               result.content = str(bs).encode(result.charset)
               return result 
-          # no pk in image, spit out a list then.
+          # no pk in the request, spit out a list then.
           return(generics.ListAPIView.get(self, request, format=None))
         # choose a random jobserver
         js_set = list(repo.hosted_by.all())

@@ -18,7 +18,8 @@ echo "mProv boot setup..."
 set +e
 set -o pipefail
 cd /bin
-# install all the enabled busybox links
+# remove any old init links, mount the pseudo filesystems, then install all
+# the enabled busybox links
  
 
 rm -f /bin/init /init /sbin/init
