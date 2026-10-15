@@ -109,7 +109,20 @@ if [ -n "$NEW_VALUE" ]; then
     fi
 fi
 mkdir -p /var/www/mprov_control_center/db/
-if [ ! -e /var/www/mprov_control_center/db/.initialized ]
+# First-run state comes from the database, not a marker file: the DB
+# persists across container recreates, the container filesystem doesn't.
+# Exit 0 = already initialized, 10 = needs init, anything else = error.
+python manage.py shell -c "
+import sys
+from django.contrib.auth.models import User
+sys.exit(0 if User.objects.filter(is_superuser=True).exists() else 10)
+"
+init_state=$?
+if [ "$init_state" != "0" ] && [ "$init_state" != "10" ]
+then
+       echo "Error: unable to determine first-run state from the database, skipping first-run setup." >&2
+fi
+if [ "$init_state" == "10" ]
 then
        python manage.py createsuperuser --noinput
 
@@ -167,7 +180,6 @@ EOF
        chmod 600 /etc/mprov/apikey
 
        /var/www/mprov_control_center/install_scripts/load_default_scripts.sh
-       touch /var/www/mprov_control_center/db/.initialized
 fi
 
 # fix the db perms... again...
