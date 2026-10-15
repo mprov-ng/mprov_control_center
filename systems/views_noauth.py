@@ -319,11 +319,10 @@ class IPXEAPIView(MProvView):
                 nic = s_nic
                 break
           if nic==None:
-            # not bootable, we just return and let the template handle it.
-            if not nic.bootable:
-              rendered: str = template.render(context)
-              context= {
-              'nic': nic,
+            # no bootable nic, so hand the template the first one and let it
+            # fall through to the local boot branch.
+            context= {
+              'nic': queryset.first(),
             }
             return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
             
@@ -331,9 +330,6 @@ class IPXEAPIView(MProvView):
           if nic.system.systemimage == None:
             print(f"Error: System has no image assigned, netbooting not possible.")
             raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
-          if not hasattr(nic, "bootable"):
-            print(f"Error: System definition has no bootable NIC.  Cannot boot")
-            raise NotFound(detail=f"Error: System definition has no bootable NIC.  Cannot boot")
         nic.bootserver=f"{request.scheme}://{request.META.get('SERVER_NAME')}:{request.META.get('SERVER_PORT')}"
         
         # if "." in nic.bootserver:
@@ -346,12 +342,9 @@ class IPXEAPIView(MProvView):
         class GenericObject:
           pass    
         if not hasattr(nic.system.systemimage.osdistro, "install_kernel_cmdline"):
-
+           # no distro on the image, so use a blank one to get the defaults.
            nic.system.systemimage.osdistro = OSDistro()
-
-           setattr(nic.system.systemimage.osdistro, "install_kernel_cmdline", "")
-        else: 
-          template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
+        template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
         # print(nic)
         context = Context(dict(nic=nic))
 
@@ -361,7 +354,6 @@ class IPXEAPIView(MProvView):
           nic.mac = nic.system.systemimage.osdistro.prov_interface
         # not bootable, we just return and let the template handle it.
         if not nic.bootable:
-          rendered: str = template.render(context)
           context= {
             'nic': nic,
           }
