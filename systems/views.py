@@ -907,11 +907,11 @@ class SystemPowerAPIView(MProvView):
                 try:
                     print("Issue hard_reset ... ")
                     ipmi.chassis_control_hard_reset()
-                except:
+                except Exception:
+                    # Only fall back to a power cycle if the hard reset failed.
                     print("Issue power cycle ... ")
-                
-                ipmi.chassis_control_power_cycle()
-                
+                    ipmi.chassis_control_power_cycle()
+
             elif action=="cycle":
                 print("Issue power cycle ... ")
                 ipmi.chassis_control_power_cycle()
