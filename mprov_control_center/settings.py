@@ -333,7 +333,7 @@ if os.environ.get("LDAP_ENABLED", "0") == "1":
     # set if LDAP_SELF_SIGNED_CERT is set in the env.
 
     if os.environ.get("LDAP_SELF_SIGNED_CERT", "0") == "1":
-        AUTH_LDAP_GLOBAL_OPTIONS = AUTH_LDAP_GLOBAL_OPTIONS.update({ ldap.OPT_X_TLS_REQUIRE_CERT: ldap.OPT_X_TLS_NEVER })
+        AUTH_LDAP_GLOBAL_OPTIONS[ldap.OPT_X_TLS_REQUIRE_CERT] = ldap.OPT_X_TLS_NEVER
 
 
     # You may need to change this depending on your LDAP setup.  If you change this, make sure
