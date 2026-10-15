@@ -82,14 +82,27 @@ else
 fi
 
 # let's adjust the env file based on the docker env
+# only use the values that are set, so unset ones don't leave empty entries.
+NEW_VALUE=""
+for host in "$MPROV_MPCC_HOSTNAME" \
+            "${MPROV_MPCC_HOSTNAME:+${MPROV_DOMAINNAME:+${MPROV_MPCC_HOSTNAME}.${MPROV_DOMAINNAME}}}" \
+            "$MPROV_MPCC_IPs" \
+            "$ALLOWED_HOSTS"
+do
+    if [ -n "$host" ]; then
+        NEW_VALUE="${NEW_VALUE:+${NEW_VALUE},}${host}"
+    fi
+done
 
-NEW_VALUE="$MPROV_MPCC_HOSTNAME,${MPROV_MPCC_HOSTNAME}.${MPROV_DOMAINNAME},$MPROV_MPCC_IPs,${ALLOWED_HOSTS}"
-if grep -q "^ALLOWED_HOSTS=" /var/www/mprov_control_center/.env; then
-    # If it exists, update its value
-    sed -i "s/^ALLOWED_HOSTS=.*/ALLOWED_HOSTS=${NEW_VALUE}/" /var/www/mprov_control_center/.env
-else
-    # If it doesn't exist, append it to the file
-    echo "ALLOWED_HOSTS=${NEW_VALUE}" >> /var/www/mprov_control_center/.env
+# if nothing is set, leave any existing ALLOWED_HOSTS in the .env alone.
+if [ -n "$NEW_VALUE" ]; then
+    if grep -q "^ALLOWED_HOSTS=" /var/www/mprov_control_center/.env; then
+        # If it exists, update its value
+        sed -i "s/^ALLOWED_HOSTS=.*/ALLOWED_HOSTS=${NEW_VALUE}/" /var/www/mprov_control_center/.env
+    else
+        # If it doesn't exist, append it to the file
+        echo "ALLOWED_HOSTS=${NEW_VALUE}" >> /var/www/mprov_control_center/.env
+    fi
 fi
 mkdir -p /var/www/mprov_control_center/db/
 if [ "$1" != "-d" ] 
