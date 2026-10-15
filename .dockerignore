@@ -1,0 +1,35 @@
+# Keep secrets, local state and VCS metadata out of the image.  The
+# Dockerfile does `COPY ./`, so anything not listed here ends up in it.
+
+# VCS and CI
+.git
+.github
+.gitignore
+
+# Local notes and editor settings
+WORKING.md
+.vscode
+*.code-workspace
+
+# Credentials and env files.  The Dockerfile writes its own .env.
+.env
+.env.*
+env.db
+install_scripts/env.db
+id_rsa
+id_rsa.pub
+
+# Local virtualenv; the Dockerfile builds its own.
+bin/
+lib/
+lib64
+pyvenv.cfg
+**/__pycache__
+*.py[cod]
+
+# Runtime state.  The Dockerfile creates media/ and the db symlink.
+media/
+db
+.dev.init
+backups/*
+!backups/README.md
