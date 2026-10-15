@@ -6,7 +6,7 @@ from systems.views import SystemPowerAPIView
 from django.test import TestCase
 from django.contrib.auth.models import User
 from osmanagement.models import OSDistro
-from systems.models import System, SystemImage, NetworkInterface
+from systems.models import System, SystemGroup, SystemImage, NetworkInterface
 
 class SystemPowerAPIViewResetTests(SimpleTestCase):
   """ The reset action hard resets, and only power cycles if the hard reset fails. """
@@ -87,3 +87,89 @@ class IPXEAPIViewTests(TestCase):
     response = self.get_ipxe("10.0.0.99")
     self.assertEqual(response.status_code, 200)
     self.assertIn(f"kernel /images/{image.slug}.vmlinuz", response.content.decode())
+
+
+class FlattenConfigTests(TestCase):
+  """ System.config is built from OS Distro -> System Groups (by name) -> System.
+  install_kernel_cmdline and initial_mods append unless prefixed with '=', everything
+  else overwrites when set. """
+
+  def setUp(self):
+    self.user = User.objects.create(username="flatten-test")
+    self.distro = OSDistro.objects.create(
+      name="test-distro", vendor="test", version="9", baseurl="http://localhost/",
+      install_kernel_cmdline="quiet", initial_mods="e1000", prov_interface="eth0", tmpfs_root_size=8,
+    )
+    self.image = SystemImage.objects.create(name="test-image", created_by=self.user, osdistro=self.distro)
+    self.group_a = SystemGroup.objects.create(name="a-group", install_kernel_cmdline="console=ttyS0", initial_mods="mlx5_core")
+    self.group_b = SystemGroup.objects.create(name="b-group", prov_interface="ib0", tmpfs_root_size=16)
+
+  def make_system(self, hostname, groups=(), **kwargs):
+    system = System.objects.create(hostname=hostname, created_by=self.user, **kwargs)
+    system.systemgroups.add(*groups)
+    # config is flattened on load, so re-fetch after the groups are attached.
+    return System.objects.get(pk=system.pk)
+
+  def test_distro_only(self):
+    system = self.make_system("distro-only", systemimage=self.image)
+    self.assertEqual(system.config["install_kernel_cmdline"], "quiet")
+    self.assertEqual(system.config["initial_mods"], "e1000")
+    self.assertEqual(system.config["prov_interface"], "eth0")
+    self.assertEqual(system.config["tmpfs_root_size"], 8)
+
+  def test_appends_and_overwrites_through_hierarchy(self):
+    system = self.make_system(
+      "full-stack", groups=[self.group_a, self.group_b], systemimage=self.image,
+      install_kernel_cmdline="nomodeset", initial_mods="ixgbe",
+    )
+    self.assertEqual(system.config["install_kernel_cmdline"], "quiet console=ttyS0 nomodeset")
+    self.assertEqual(system.config["initial_mods"], "e1000,mlx5_core,ixgbe")
+    self.assertEqual(system.config["prov_interface"], "ib0")
+    self.assertEqual(system.config["tmpfs_root_size"], 16)
+
+  def test_system_overwrites(self):
+    system = self.make_system(
+      "overwrite", groups=[self.group_a, self.group_b], systemimage=self.image,
+      install_kernel_cmdline="=single", initial_mods="=virtio_net", prov_interface="eno1", tmpfs_root_size=32,
+    )
+    self.assertEqual(system.config["install_kernel_cmdline"], "single")
+    self.assertEqual(system.config["initial_mods"], "virtio_net")
+    self.assertEqual(system.config["prov_interface"], "eno1")
+    self.assertEqual(system.config["tmpfs_root_size"], 32)
+
+  def test_group_overwrite_then_system_append(self):
+    group = SystemGroup.objects.create(name="c-group", install_kernel_cmdline="=rd.break")
+    system = self.make_system("group-overwrite", groups=[group], systemimage=self.image, install_kernel_cmdline="nomodeset")
+    self.assertEqual(system.config["install_kernel_cmdline"], "rd.break nomodeset")
+
+  def test_groups_apply_in_name_order(self):
+    group_z = SystemGroup.objects.create(name="z-group", prov_interface="eth9")
+    system = self.make_system("group-order", groups=[group_z, self.group_b], systemimage=self.image)
+    self.assertEqual(system.config["prov_interface"], "eth9")
+
+  def test_reload_does_not_accumulate(self):
+    system = self.make_system("reload", groups=[self.group_a], install_kernel_cmdline="nomodeset", initial_mods="ixgbe")
+    for _ in range(3):
+      system = System.objects.get(pk=system.pk)
+    self.assertEqual(system.config["install_kernel_cmdline"], "console=ttyS0 nomodeset")
+    self.assertEqual(system.config["initial_mods"], "mlx5_core,ixgbe")
+
+  def test_no_leak_between_systems(self):
+    first = self.make_system("first", groups=[self.group_a, self.group_b], systemimage=self.image)
+    second = self.make_system("second")
+    self.assertIsNot(first.config, second.config)
+    self.assertNotIn("prov_interface", second.config)
+    self.assertNotIn("install_kernel_cmdline", second.config)
+    self.assertEqual(first.config["prov_interface"], "ib0")
+
+  def test_append_without_distro(self):
+    system = self.make_system("no-distro", install_kernel_cmdline="console=tty0", initial_mods="ixgbe")
+    self.assertEqual(system.config["install_kernel_cmdline"], "console=tty0")
+    self.assertEqual(system.config["initial_mods"], "ixgbe")
+
+  def test_queryset_instances_keep_their_own_config(self):
+    self.make_system("list-a", groups=[self.group_b], systemimage=self.image)
+    self.make_system("list-b", prov_interface="eno2")
+    configs = {s.hostname: s.config for s in System.objects.all()}
+    self.assertEqual(configs["list-a"]["prov_interface"], "ib0")
+    self.assertEqual(configs["list-b"]["prov_interface"], "eno2")

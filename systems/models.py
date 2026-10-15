@@ -100,7 +100,6 @@ class System(models.Model):
   disks = models.ManyToManyField('disklayouts.Disklayout', blank=True, through=DiskLayout.systems.through)
   # bootdisk = models.ForeignKey(DiskLayout, blank=True, null=True, on_delete=models.SET_NULL, verbose_name="Boot Disk Layout", help_text="Boot disk layout for stateful installs")
   stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system use images to disk?")
-  config = {}
   location = models.ForeignKey('SystemLocation', blank=True, null=True, on_delete=models.SET_NULL,  )
   class Meta:
     ordering = ['hostname']
@@ -118,6 +117,8 @@ class System(models.Model):
 
   
   def flatten_config(self):
+    # rebuilt per instance on every call, never shared between Systems.
+    self.config = {}
     if self.id is None:
       return
     # Used to merge the OS Distro level params, and any System Group
@@ -162,10 +163,10 @@ class System(models.Model):
                         # no specifier, let's append
                         if field == 'install_kernel_cmdline':
                           # kernel cmdline is space separated.
-                          self.config[field] += f" {sysgrpfield}"
+                          self.config[field] = (self.config.get(field, "") + f" {sysgrpfield}").lstrip(" ")
                         else:
                           # mod list is comma separated.
-                          self.config[field] += f",{sysgrpfield}"
+                          self.config[field] = (self.config.get(field, "") + f",{sysgrpfield}").lstrip(",")
                     else: 
                       # everything else overwrites.
                       self.config[field] = sysgrpfield
@@ -196,10 +197,10 @@ class System(models.Model):
                   # no specifier, let's append
                   if field == 'install_kernel_cmdline':
                     # kernel cmdline is space separated.
-                    self.config[field] += f" {sysfield}"
+                    self.config[field] = (self.config.get(field, "") + f" {sysfield}").lstrip(" ")
                   else:
                     # mod list is comma separated.
-                    self.config[field] += f",{sysfield}"
+                    self.config[field] = (self.config.get(field, "") + f",{sysfield}").lstrip(",")
               else: 
                 # everything else overwrites.
                 self.config[field] = sysfield
