@@ -36,12 +36,6 @@ then
               ALLOWED_HOSTS=${MYHOST},${ALLOWED_HOSTS}
               echo "ALLOWED_HOSTS=$ALLOWED_HOSTS" >> .env
 
-              # append the db stuff if a file exists.
-              if [ -e "${RUNDIR}/env.db" ]
-              then
-                     cat ${RUNDIR}/env.db >> .env
-              fi
-
               # other variables can be set directly in the ENV (for containers)
               # or via the .env file.   See the .env.example for possible varialbes.
               
@@ -92,43 +86,34 @@ else
     echo "ALLOWED_HOSTS=${NEW_VALUE}" >> /var/www/mprov_control_center/.env
 fi
 mkdir -p /var/www/mprov_control_center/db/
-if [ "$1" != "-d" ] 
+if [ ! -e /var/www/mprov_control_center/db/.initialized ]
 then
+       python manage.py createsuperuser --noinput
 
-       # Run the scripts from install_scripts/install.d/ in order
-       for i in `ls /var/www/mprov_control_center/install_scripts/init.d | sort -n`
+       python manage.py loaddata */fixtures/*
+       # try to generate some interface commands based on ENV vars.
+       IFACE_CMDS=""
+       counter="0"
+       OLD_IFS=$IFS
+       IFS=","
+       for ip in $MPROV_MPCC_IPs
        do
-              /var/www/mprov_control_center/install_scripts/init.d/$i
-       done
-else
-       if [ ! -e /var/www/mprov_control_center/db/.initialized ]
-       then
-              python manage.py createsuperuser --noinput
-
-              python manage.py loaddata */fixtures/*
-              # try to generate some interface commands based on ENV vars.
-              IFACE_CMDS=""
-              counter="0"
-              OLD_IFS=$IFS
-              IFS=","
-              for ip in $MPROV_MPCC_IPs
-              do
-                     counter=$((counter+1))
-                     IFACE_CMDS=$(
-                     cat <<-EOV 
+              counter=$((counter+1))
+              IFACE_CMDS=$(
+              cat <<-EOV 
 $IFACE_CMDS
 netinf = NetworkInterface.objects.create(hostname="${MPROV_MPCC_HOSTNAME}", name="eno$counter", system=selfSys, ipaddress="${ip}") 
 netinf.save()
 EOV
-                     )
+              )
 
-              done
+       done
 
-              IFS=$OLD_IFS
+       IFS=$OLD_IFS
 
-              # add our host to the mpcc
-              . /var/www/mprov_control_center/bin/activate
-              cat <<EOF | /var/www/mprov_control_center/manage.py shell
+       # add our host to the mpcc
+       . /var/www/mprov_control_center/bin/activate
+       cat <<EOF | /var/www/mprov_control_center/manage.py shell
 from systems.models import System, NetworkInterface
 from django.contrib.auth.models import User
 
@@ -143,7 +128,7 @@ ${IFACE_CMDS}
 EOF
 
 # generate an api key
-              cat << EOF > /tmp/genAPIKey.py
+       cat << EOF > /tmp/genAPIKey.py
 import rest_framework_api_key
 apikey = rest_framework_api_key.models.APIKey()
 key = rest_framework_api_key.models.APIKey.objects.assign_key(apikey)
@@ -152,28 +137,24 @@ apikey.save()
 print(key)
 EOF
 
-              apikey=`cat /tmp/genAPIKey.py | python3 manage.py shell`
+       apikey=`cat /tmp/genAPIKey.py | python3 manage.py shell`
 
-              # echo this out to a file in /etc/mprov/
-              echo "export MPROV_APIKEY=$apikey" > /etc/mprov/apikey
-              chmod 600 /etc/mprov/apikey
+       # echo this out to a file in /etc/mprov/
+       echo "export MPROV_APIKEY=$apikey" > /etc/mprov/apikey
+       chmod 600 /etc/mprov/apikey
 
-              /var/www/mprov_control_center/install_scripts/load_default_scripts.sh
-              touch /var/www/mprov_control_center/db/.initialized
-       fi
+       /var/www/mprov_control_center/install_scripts/load_default_scripts.sh
+       touch /var/www/mprov_control_center/db/.initialized
 fi
 
 # fix the db perms... again...
 chown apache db/ -R
 chmod u+w db/ -R
 
-# if we are running in docker, just start apache
-if [ "$1" == "-d" ]
-then
-  # start apache in a new PG, filters out signals to the
-  # container, ie. SIGWINCH
-  setsid --wait /usr/sbin/apachectl -D FOREGROUND &
-  child_pid=$!
-  trap "kill -SIGINT $child_pid" SIGINT
-  wait $child_pid
-fi
+# start apache in a new PG, filters out signals to the
+# container, ie. SIGWINCH.  The -d flag is still accepted
+# (mprov-compose passes it) but is ignored, this is the only mode.
+setsid --wait /usr/sbin/apachectl -D FOREGROUND &
+child_pid=$!
+trap "kill -SIGINT $child_pid" SIGINT
+wait $child_pid

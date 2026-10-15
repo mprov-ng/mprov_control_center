@@ -1,1 +1,0 @@
-../load_default_scripts.sh
