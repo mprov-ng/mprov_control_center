@@ -339,7 +339,7 @@ if os.environ.get("LDAP_ENABLED", "0") == "1":
     # You may need to change this depending on your LDAP setup.  If you change this, make sure
     # you import the right Type from the module at the top of this file.
     AUTH_LDAP_GROUP_TYPE = PosixGroupType(name_attr="cn")
-    AUTH_LDAP_GROUP_SEARCH = LDAPSearch({AUTH_MPROV_LDAP_BASE},ldap.SCOPE_SUBTREE, "(objectClass=posixGroup)")
+    AUTH_LDAP_GROUP_SEARCH = LDAPSearch(AUTH_MPROV_LDAP_BASE, ldap.SCOPE_SUBTREE, "(objectClass=posixGroup)")
 
 
     AUTH_LDAP_USER_FLAGS_BY_GROUP = {
