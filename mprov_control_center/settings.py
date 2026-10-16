@@ -14,6 +14,7 @@ import os
 import ldap
 from django_auth_ldap.config import LDAPSearch, PosixGroupType
 import socket
+import datetime
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -140,7 +141,7 @@ JAZZMIN_SETTINGS={
         'systems.nadssystem': 'fas fa-search-plus',
         'systems.systemlocation': 'fas fa-map-marker-alt',
     },
-    'copyright': ' 2022 The Johns Hopkins University ',
+    'copyright': f'2022-{datetime.date.today().year} The Johns Hopkins University',
     "related_modal_active": False,
     "navigation_expanded": False,
     "name": socket.gethostname(),

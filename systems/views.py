@@ -890,8 +890,8 @@ class SystemPowerAPIView(MProvView):
                 ipmi.session.establish()
                 ipmi.target = pyipmi.Target(ipmb_address=0x20)
                 ipmi.chassis_control_power_up()
-            except:
-                print("Host Already Up")
+            except Exception as e:
+                print(f"Power-on before reset failed (host may already be on): {e}")
         try:
             ipmi.session.establish()
             ipmi.target = pyipmi.Target(ipmb_address=0x20)    
