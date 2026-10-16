@@ -10,7 +10,7 @@
     <form action="" method="post">
         {% csrf_token %}
         <div class="card card-outline">
-          <div class="card-header with-boarder">
+          <div class="card-header with-border">
             <h4 class="card-title">Bulk System Update</h4>
           </div>
 
@@ -27,9 +27,9 @@
                   <div class="form-group">
                     
                     <div class="row">
-                      <div class="col-100 col-sm-2 text-left"><input type="checkbox" name="update_{{field.html_name }}"/></div>
-                      <label class="col-100 col-sm-4 text-left" for="{{field.id_for_label}}">{{field.label}}</label> 
-                      <div class="col-100 col-sm-6">{{ field }}
+                      <div class="col-12 col-sm-2 text-left"><input type="checkbox" name="update_{{field.html_name }}"/></div>
+                      <label class="col-12 col-sm-4 text-left" for="{{field.id_for_label}}">{{field.label}}</label> 
+                      <div class="col-12 col-sm-6">{{ field }}
                         <div class="help-block red">{{ field.errors }}</div>
                         <div class="help-block">{{field.help_text}}</div>
                       </div>
@@ -39,7 +39,7 @@
                 </div>
                 <div class="col-12 col-lg-4">
                   <div class="card">
-                    <div class="card-header with-boarder">
+                    <div class="card-header with-border">
                       <h4 class="card-title">Change these values for hosts:</h4>
                     </div>
                     <div class="card-body">
