@@ -3,6 +3,33 @@ on:
   push:
     branches:
       - main
+    # Skip the build when a push only touches files that .dockerignore
+    # keeps out of the image.  Keep this list in sync with .dockerignore.
+    paths-ignore:
+      - '.github/**'
+      - '.gitignore'
+      - 'REVIEW-2026-10.md'
+      - '.vscode/**'
+      - '*.code-workspace'
+      - '.env'
+      - '.env.*'
+      - 'env.db'
+      - 'install_scripts/env.db'
+      - 'id_rsa'
+      - 'id_rsa.pub'
+      - 'bin/**'
+      - 'lib/**'
+      - 'lib64'
+      - 'lib64/**'
+      - 'pyvenv.cfg'
+      - '**/__pycache__/**'
+      - '*.py[cod]'
+      - 'media/**'
+      - 'db'
+      - 'db/**'
+      - '.dev.init'
+      - 'backups/**'
+      - '!backups/README.md'
 jobs:
   build:
     runs-on: ubuntu-latest
