@@ -6,16 +6,8 @@ import yaml
 import os
 import sys
 import time
-import traceback
 import requests
 from ipaddress import IPv4Network
-
-
-
-def exception_hook(exctype, value, tracebak):
-  traceback.print_exc()
-  print("\n\nERROR: Network setup failed.  Dropping to shell.  Note: You are still in the RAM disk.")
-  os.execv("/bin/setsid" "/bin/bash -m  <> /dev/tty1 >&0 2>&1")
 
 
 class mProvNetworkScriptGenerator():
@@ -192,8 +184,6 @@ class mProvNetworkScriptGenerator():
 def main():
   netGen = mProvNetworkScriptGenerator()
   netGen.generateNetworkInterfaceFiles()
-def __main__():
-    main()
 if __name__ == "__main__":
     main()
 

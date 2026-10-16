@@ -5,7 +5,6 @@ import socket
 import uuid
 import yaml, os, sys, glob, time
 import parted
-import traceback
 import requests
 import sh
 import subprocess
@@ -20,11 +19,6 @@ import subprocess
 # - install the boot loader from inside the /newroot chroot
 # - mark the system's NICs as not bootable to indicate it's provisioned
 # - exit, after which mprov_boot_init.sh reboots the system
-
-def exception_hook(exctype, value, traceback):
-  traceback.print_exc()
-  print("\n\nERROR: Installer failed.  Dropping to shell.  Note: You are still in the RAM disk.")
-  os.execv("/bin/setsid" "/bin/bash -m  <> /dev/tty1 >&0 2>&1")
 
 
 class mProvStatefulInstaller():
@@ -724,8 +718,5 @@ def main():
   sInstaller.cleanupAndSwitchroot()
   pass
 
-def __main__():
-    main()
-    raise Exception("Installer Exited without switch_root()")
 if __name__ == "__main__":
     main()
