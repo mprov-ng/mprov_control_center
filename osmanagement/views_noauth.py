@@ -11,6 +11,27 @@ from bs4 import BeautifulSoup
 
 
 class OSRepoURLAPIView(MProvView, generics.ListAPIView):
+      '''
+# /osrepos/
+
+Public, unauthenticated access to the OS repositories in the mPCC.
+
+## Accepted HTTP Methods:
+- GET (no parameters)
+- GET (with Primary Key, ie: /osrepos/1/)
+- GET (with Primary Key and a path, ie: /osrepos/1/repodata/repomd.xml)
+
+## Documentation
+
+### GET method (no parameters)
+Returns the list of repositories.  Managed repositories link to /osrepos/&lt;id&gt;/,
+unmanaged ones link to their package URL.
+
+### GET method (with primary key)
+Redirects (302) to a randomly chosen job server that hosts the repository.  Any
+path after the primary key is appended to the redirect.  Returns 404 if no job
+server hosts the repository.
+      '''
       model = OSRepo
       # TODO: placeholder for now to test 302 redirects
       authentication_classes = [] #disables authentication
