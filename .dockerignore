@@ -7,7 +7,7 @@
 .gitignore
 
 # Local notes and editor settings
-WORKING.md
+REVIEW-2026-10.md
 .vscode
 *.code-workspace
 
