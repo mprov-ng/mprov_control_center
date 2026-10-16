@@ -1,6 +1,7 @@
 import json
 from unittest import mock
 
+from django.contrib.auth.models import User
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -22,6 +23,13 @@ class JobQueueURLTests(APITestCase):
     response = self.get_json("/jobqueue/status-changes/")
     self.assertEqual(response.status_code, 200)
     self.assertEqual(response.json(), {"changes": []})
+
+  def test_status_changes_need_a_staff_login(self):
+    self.client.logout()
+    self.assertEqual(self.get_json("/jobqueue/status-changes/").status_code, 403)
+    User.objects.create_user("user", password="password")
+    self.client.login(username="user", password="password")
+    self.assertEqual(self.get_json("/jobqueue/status-changes/").status_code, 403)
 
 
 class JobDetailTests(APITestCase):

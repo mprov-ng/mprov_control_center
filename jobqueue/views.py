@@ -311,8 +311,11 @@ Format returned:
 class JobStatusChangesView(View):
     """
     View to retrieve recent job status changes for toast notifications.
+    Only admin users (staff) can see them; anyone else gets 403.
     """
     def get(self, request):
+        if not (request.user.is_active and request.user.is_staff):
+            return JsonResponse({'detail': "Authentication required."}, status=403)
         # Get recent job status changes from cache
         from django.core.cache import cache
         
