@@ -3,7 +3,6 @@ import subprocess
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect
 from .serializers import (
-    NetworkInterfaceDetailsSerializer,
     NetworkInterfaceSerializer,
     SystemSerializer,
     SystemGroupSerializer,
@@ -609,11 +608,6 @@ Format returned:
         # return the super call for get.
         return super().get(request, format=None, **kwargs)
         
-
-
-class NetworkInterfaceDetailAPIView(MProvView):
-      model = NetworkInterface
-      serializer_class = NetworkInterfaceDetailsSerializer
 
 
 class SystemImagesAPIView(MProvView):
