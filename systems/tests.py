@@ -331,3 +331,11 @@ class SystemRegAPIViewTests(TestCase):
     nads = NADSSystem.objects.get(mac=self.packet["mac"])
     self.assertEqual((nads.switch, nads.port), ("sw2", "2/7"))
     self.assertEqual(NADSSystem.objects.count(), 1)
+
+  def test_missing_field_is_400(self):
+    packet = dict(self.packet)
+    del packet["vendor"]
+    del packet["mac"]
+    response = self.client.post("/systems/register", packet, content_type="application/json")
+    self.assertEqual(response.status_code, 400)
+    self.assertEqual(set(response.json()), {"vendor", "mac"})

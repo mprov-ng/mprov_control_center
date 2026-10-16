@@ -46,7 +46,8 @@ address (and a GUA if the port's network is IPv6), a pxe-update job is queued,
 and the system is returned as a JSON list.
 - If no system matches and the MAC is not already assigned to a NIC, the packet
 is saved as a N.A.D.S. discovered system.  Returns 200 with an empty body.
-- All fields except "serial" are required.
+- All fields except "serial" are required ("switch" and "port" may be null).
+A missing field returns 400 with an error for each one.
 
 NADS Packet:
 
@@ -94,7 +95,10 @@ NADS Packet:
 
     def post(self, request, *args, **kwargs):
         print(request.data)
-        
+        missing = [field for field in ('vendor', 'model', 'switch', 'port', 'mac') if field not in request.data]
+        if missing:
+            return Response({field: "This field is required." for field in missing}, status=400)
+
         if request.data['switch'] is not None:
             try:
                 switch = Switch.objects.get(hostname=request.data['switch'])
