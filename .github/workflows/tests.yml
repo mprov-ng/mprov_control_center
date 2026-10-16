@@ -1,9 +1,71 @@
 name: Tests
 on:
   pull_request:
+    paths-ignore:
+      # Skip changes that can't affect the tests: files .dockerignore keeps
+      # out of the image (the same list as dockerimages-dev.yml), plus docs.
+      # Changes to this workflow still run it.
+      - '.github/**'
+      - '!.github/workflows/tests.yml'
+      - '.gitignore'
+      - 'REVIEW-2026-10.md'
+      - '**.md'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.vscode/**'
+      - '*.code-workspace'
+      - '.env'
+      - '.env.*'
+      - 'env.db'
+      - 'install_scripts/env.db'
+      - 'id_rsa'
+      - 'id_rsa.pub'
+      - 'bin/**'
+      - 'lib/**'
+      - 'lib64'
+      - 'lib64/**'
+      - 'pyvenv.cfg'
+      - '**/__pycache__/**'
+      - '*.py[cod]'
+      - 'media/**'
+      - 'db'
+      - 'db/**'
+      - '.dev.init'
+      - 'backups/**'
   push:
     branches:
       - main
+    paths-ignore:
+      # Skip changes that can't affect the tests: files .dockerignore keeps
+      # out of the image (the same list as dockerimages-dev.yml), plus docs.
+      # Changes to this workflow still run it.
+      - '.github/**'
+      - '!.github/workflows/tests.yml'
+      - '.gitignore'
+      - 'REVIEW-2026-10.md'
+      - '**.md'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.vscode/**'
+      - '*.code-workspace'
+      - '.env'
+      - '.env.*'
+      - 'env.db'
+      - 'install_scripts/env.db'
+      - 'id_rsa'
+      - 'id_rsa.pub'
+      - 'bin/**'
+      - 'lib/**'
+      - 'lib64'
+      - 'lib64/**'
+      - 'pyvenv.cfg'
+      - '**/__pycache__/**'
+      - '*.py[cod]'
+      - 'media/**'
+      - 'db'
+      - 'db/**'
+      - '.dev.init'
+      - 'backups/**'
 jobs:
   test:
     runs-on: ubuntu-latest

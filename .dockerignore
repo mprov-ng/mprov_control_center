@@ -1,7 +1,7 @@
 # Keep secrets, local state and VCS metadata out of the image.  The
 # Dockerfile does `COPY ./`, so anything not listed here ends up in it.
-# .github/workflows/dockerimages-dev.yml mirrors this list in its
-# paths-ignore, so keep the two in sync.
+# .github/workflows/dockerimages-dev.yml and tests.yml mirror this list in
+# their paths-ignore, so keep them in sync.
 
 # VCS and CI
 .git
