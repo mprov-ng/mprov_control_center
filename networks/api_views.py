@@ -84,17 +84,25 @@ def update_network_with_confirmation(request, pk):
         data = json.loads(request.body)
         network_data = data.get('network_data', {})
         update_associated = data.get('update_associated', None)
-    except (json.JSONDecodeError, KeyError):
+        if not isinstance(network_data, dict):
+            raise TypeError("network_data must be an object")
+    except (json.JSONDecodeError, AttributeError, TypeError):
         return Response(
             {"error": "Invalid JSON data"}, 
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
+    # Validate first, so the subnet check below compares parsed values
+    # (e.g. a netmask sent as "24" is the same as 24).
+    serializer = NetworkAPISerializer(network, data=network_data, partial=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     # Check if subnet is changing
     old_subnet = str(network.subnet)
     old_netmask = network.netmask
-    new_subnet = network_data.get('subnet', old_subnet)
-    new_netmask = network_data.get('netmask', old_netmask)
+    new_subnet = str(serializer.validated_data.get('subnet', old_subnet))
+    new_netmask = serializer.validated_data.get('netmask', old_netmask)
     
     subnet_changing = (old_subnet != new_subnet or old_netmask != new_netmask)
     
@@ -144,11 +152,6 @@ def update_network_with_confirmation(request, pk):
                 'bmcs': proposed_bmcs
             }
         })
-    
-    # Update the network
-    serializer = NetworkAPISerializer(network, data=network_data, partial=True)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     # Save the network
     network = serializer.save()

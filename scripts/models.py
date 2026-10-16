@@ -44,6 +44,7 @@ class Script(models.Model):
         return
 
     print(self.filename)
+    file_path = None
     if self.filename:
 
       # Set the filename path before saving
@@ -64,7 +65,7 @@ class Script(models.Model):
           print(f"Error reading file {file_path}: {e}")
     
     # Write content field back to file if it has content
-    if self.content:
+    if self.content and file_path is not None:
       try:
         # Ensure directory exists
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -74,7 +75,7 @@ class Script(models.Model):
         print(f"Error writing content to file {file_path}: {e}")
     
     print(file_path)
-    if os.path.exists(file_path):
+    if file_path is not None and os.path.exists(file_path):
       print("Converting file")
       os.system(f"dos2unix -n {file_path} {file_path}.new")
       os.system(f"/bin/mv -v {file_path}.new {file_path}")
@@ -131,12 +132,14 @@ class AnsiblePlaybook(models.Model):
   def save(self, *args, **kwargs):
     if not self.slug:
       self.slug = slugify(self.filename.name)
-    if not os.path.exists(settings.MEDIA_ROOT + '/ansibleplaybooks/' + self.scriptType.slug): 
+    # the dir the playbook is stored in, below.
+    playbook_dir = settings.MEDIA_ROOT + '/' + self.scriptType.slug + '/ansibleplaybooks'
+    if not os.path.exists(playbook_dir):
       # make the dir
       try:
-        os.makedirs(settings.MEDIA_ROOT + '/ansibleplaybooks/' + self.scriptType.slug, exist_ok=True)
+        os.makedirs(playbook_dir, exist_ok=True)
       except: 
-        print(f"Error: Unable to make script type dir: {settings.MEDIA_ROOT + '/ansibleplaybooks/' + self.scriptType.slug}")
+        print(f"Error: Unable to make script type dir: {playbook_dir}")
         return
 
     self.filename.name = self.scriptType.slug + '/ansibleplaybooks/' + self.slug + "-v" + str(self.version)
@@ -204,6 +207,6 @@ class AnsibleCollection(models.Model):
 
 @receiver(post_delete, sender=Script)
 def DeleteScript(sender, instance, **kwargs):
-  # TODO: Delete scripts from the filesystem when
-  # they are removed in the admin interface.
-  pass
+  # Delete the script's file when the script is deleted.
+  if instance.filename:
+    instance.filename.delete(save=False)

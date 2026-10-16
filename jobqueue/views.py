@@ -43,7 +43,8 @@ Returns a JSON list of all objects of this type in the mPCC.  The list can be
 filtered with these optional query parameters:
 
 - module: A job module ID, or a JSON array of job module IDs (e.g. ?module=["repo-update","pxe-update"])
-- params: Filters with a JSON `contains` lookup of [value] against the job's params
+- params: A JSON object (e.g. ?params={"imageId":"compute"}); only jobs whose params
+    have each of its keys set to that value are returned.  Anything else returns 400.
 - jobserver: ID of the assigned job server
 - status: ID of the job's status
 
@@ -98,7 +99,7 @@ Format returned:
         
         if 'pk' in kwargs:
             # someone is looking for a specific item.
-            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+            return self.retrieve(request, pk=kwargs['pk'])
 
         # Let's see if someone is looking for something specific.
         queryset = self.model.objects.all()
@@ -114,9 +115,17 @@ Format returned:
             else:
                 queryset = queryset.filter(module=jobmodule)
         params = self.request.query_params.get('params')
-        # print(params)
         if params is not None:
-            queryset = queryset.filter(params__contains=[(params)])
+            # match each key of a JSON object against the job's params.  Key
+            # lookups work on every database backend; contains doesn't on SQLite.
+            try:
+                params = json.loads(params)
+            except ValueError:
+                params = None
+            if not isinstance(params, dict):
+                return Response({'params': "Must be a JSON object, e.g. {\"imageId\": \"compute\"}."}, status=400)
+            for key, value in params.items():
+                queryset = queryset.filter(**{f"params__{key}": value})
         jobserver = self.request.query_params.get('jobserver')
         if jobserver is not None:
             queryset = queryset.filter(jobserver=jobserver)
@@ -143,7 +152,7 @@ class JobModulesAPIView(MProvView):
 ## Documentation
 
 ### Class Attributes
-- slug: The ID of the job module
+- slug: The ID of the job module.  Required on POST; it can't be changed afterwards.
 - name: A human-readable name for the job module
 - active: Unused, will be removed in future updates
     
@@ -262,7 +271,8 @@ Format returned:
     server with the given name.  It requires name, address, one_minute_load, and
     jobmodules (a list of job module IDs to register); port is optional and
     defaults to 8080.  It returns 200 with the job server's ID as a JSON-encoded
-    string, e.g. '{"pk": 3}', or a 500 error if a job module can't be found.
+    string, e.g. '{"pk": 3}', 400 if a required field is missing or the name is
+    blank, or a 500 error if a job module can't be found.
 
 - PATCH returns the updated object.
 
@@ -275,6 +285,11 @@ Format returned:
     # Redefine post to create_or_update.
     
     def post(self, request, format=None):
+        missing = [field for field in ('name', 'address', 'one_minute_load', 'jobmodules') if field not in request.data]
+        if missing:
+            return Response({field: "This field is required." for field in missing}, status=status.HTTP_400_BAD_REQUEST)
+        if not request.data['name']:
+            return Response({'name': "This field may not be blank."}, status=status.HTTP_400_BAD_REQUEST)
         if 'port' not in request.data:
             request.data['port'] = None
         defaults = {
@@ -287,20 +302,17 @@ Format returned:
         data = {}
         if defaults['port'] == None:
             defaults['port'] = 8080
-        if request.data['name']:
-            obj, created = JobServer.objects.update_or_create(
-                name=request.data['name'],
-                defaults=defaults,
-                
-            )
-            if obj is not None:
-                for i in request.data['jobmodules']:
-                    # look up the jobmodule
-                    try:
-                        obj.jobmodules.add(JobModule.objects.get(pk=i))
-                    except :
-                        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
-            obj.save()
+        obj, created = JobServer.objects.update_or_create(
+            name=request.data['name'],
+            defaults=defaults,
+        )
+        for i in request.data['jobmodules']:
+            # look up the jobmodule
+            try:
+                obj.jobmodules.add(JobModule.objects.get(pk=i))
+            except :
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
+        obj.save()
         data['pk'] = obj.pk
         return Response(status=status.HTTP_200_OK,data=json.dumps(data))
 
@@ -308,8 +320,11 @@ Format returned:
 class JobStatusChangesView(View):
     """
     View to retrieve recent job status changes for toast notifications.
+    Only admin users (staff) can see them; anyone else gets 403.
     """
     def get(self, request):
+        if not (request.user.is_active and request.user.is_staff):
+            return JsonResponse({'detail': "Authentication required."}, status=403)
         # Get recent job status changes from cache
         from django.core.cache import cache
         

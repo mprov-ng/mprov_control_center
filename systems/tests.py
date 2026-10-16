@@ -1,11 +1,12 @@
 import io
+import tempfile
 from contextlib import redirect_stdout
 from types import SimpleNamespace
 from unittest import mock
 
 from django.test import SimpleTestCase
 from systems.views import SystemPowerAPIView
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 from osmanagement.models import OSDistro
 from systems.models import System, SystemGroup, SystemImage, NetworkInterface, SystemBMC, SystemBMCForm
@@ -96,6 +97,13 @@ class SystemBMCPasswordTests(TestCase):
     self.bmc.refresh_from_db()
     self.assertEqual(self.bmc.password, "new-secret")
 
+  def test_post_without_password(self):
+    other = System.objects.create(hostname="bmc-node2", created_by=self.user)
+    response = self.client.post("/systembmcs/", data=f'{{"system": {other.id}, "ipaddress": "10.0.1.7"}}',
+                                content_type="application/json")
+    self.assertEqual(response.status_code, 201, response.content)
+    self.assertEqual(SystemBMC.objects.get(system=other).ipaddress, "10.0.1.7")
+
   def test_admin_form_does_not_print_password(self):
     form = SystemBMCForm(data={"system": self.system.id, "ipaddress": "10.0.1.6", "password": "form-secret", "vlan": 0})
     out = io.StringIO()
@@ -154,6 +162,79 @@ class IPXEAPIViewTests(TestCase):
     response = self.get_ipxe("10.0.0.99")
     self.assertEqual(response.status_code, 200)
     self.assertIn(f"kernel /images/{image.slug}.vmlinuz", response.content.decode())
+
+
+  def test_stateful_system(self):
+    self.system.stateful = True
+    self.system.save()
+    NetworkInterface.objects.create(system=self.system, name="eth0", ipaddress="10.0.0.8", bootable=True)
+    content = self.get_ipxe("10.0.0.8").content.decode()
+    self.assertIn("mprov_stateful=1", content)
+    # mprov_stateful.py finds the boot disk from the disk layouts itself.
+    self.assertNotIn("mprov_bootdisk", content)
+
+  def test_nads_boot_gets_templated_cmdline_and_rescue(self):
+    self.distro.install_kernel_cmdline = "quiet img={{ nic.system.systemimage.slug }}"
+    self.distro.save()
+    SystemImage.objects.create(name="__nads__", created_by=self.user, osdistro=self.distro)
+    content = self.client.get("/ipxe/?rescue", REMOTE_ADDR="10.0.0.99").content.decode()
+    self.assertIn("quiet img=nads mprov_rescue=1", content)
+
+  def test_nads_boot_serves_custom_ipxe(self):
+    SystemImage.objects.create(name="__nads__", created_by=self.user, osdistro=self.distro,
+                               customIPXE="#!ipxe\necho custom {{ nic.system.systemimage.slug }}")
+    response = self.get_ipxe("10.0.0.99")
+    self.assertEqual(response.content.decode(), "#!ipxe\necho custom nads")
+
+
+class ImagesAPIViewTests(TestCase):
+  """ /images/<pk>/ redirects to a job server hosting the image, or 404s. """
+
+  def test_unknown_image_is_404(self):
+    self.assertEqual(self.client.get("/images/nope/").status_code, 404)
+    self.assertEqual(self.client.get("/images/nope.vmlinuz/").status_code, 404)
+
+
+class ImagesAPIViewJobserverTests(TestCase):
+  """ /images/<pk>/ picks a job server the client can resolve and reach. """
+
+  def setUp(self):
+    from jobqueue.models import JobServer
+    user = User.objects.create(username="images-test")
+    self.image = SystemImage.objects.create(name="compute", created_by=user, needs_rebuild=False)
+    self.bad = JobServer.objects.create(name="bad", address="bad.example", one_minute_load=0.1)
+    self.good = JobServer.objects.create(name="good", address="good.example", one_minute_load=0.5)
+    self.ip = JobServer.objects.create(name="ip", address="10.0.0.3", one_minute_load=0.9)
+    self.image.jobservers.add(self.bad, self.good, self.ip)
+    patcher = mock.patch("systems.views_noauth.dns.resolver.resolve", side_effect=self.resolve)
+    patcher.start()
+    self.addCleanup(patcher.stop)
+
+  @staticmethod
+  def resolve(name, rdtype, search=True):
+    if name == "good.example":
+      return SimpleNamespace(rrset=["10.0.0.2"])
+    raise Exception(f"NXDOMAIN {name}")
+
+  def test_unresolvable_jobservers_are_skipped(self):
+    from systems.views_noauth import ImagesAPIView
+    self.assertEqual(ImagesAPIView().getJobserver(self.image, "10.0.0.50"), [self.good, self.ip])
+
+  def test_no_resolvable_jobserver_is_404(self):
+    from rest_framework.exceptions import NotFound
+    from systems.views_noauth import ImagesAPIView
+    self.image.jobservers.remove(self.good, self.ip)
+    with self.assertRaises(NotFound):
+      ImagesAPIView().getJobserver(self.image, "10.0.0.50")
+
+  @mock.patch("systems.views_noauth.requests.head")
+  def test_unreachable_jobserver_is_removed_from_the_image(self, head):
+    head.side_effect = lambda url, timeout: SimpleNamespace(status_code=500 if "good.example" in url else 200)
+    response = self.client.get("/images/compute/", REMOTE_ADDR="10.0.0.50")
+    self.assertEqual(response.status_code, 302)
+    self.assertEqual(response["Location"], "http://10.0.0.3:8080/images/compute/compute.img")
+    # bad.example didn't resolve for this client, but it may serve others.
+    self.assertEqual(sorted(js.name for js in self.image.jobservers.all()), ["bad", "ip"])
 
 
 class FlattenConfigTests(TestCase):
@@ -240,3 +321,322 @@ class FlattenConfigTests(TestCase):
     configs = {s.hostname: s.config for s in System.objects.all()}
     self.assertEqual(configs["list-a"]["prov_interface"], "ib0")
     self.assertEqual(configs["list-b"]["prov_interface"], "eno2")
+
+
+  def test_comment_only_field_does_not_override(self):
+    self.group_b.config_params = "extra_packages:\n  - vim"
+    self.group_b.save()
+    for value in ("# one\n# two", "# one\n\n  # two\n"):
+      system = self.make_system(f"comments-{len(value)}", groups=[self.group_b], systemimage=self.image, config_params=value)
+      self.assertEqual(system.config["config_params"], "extra_packages:\n  - vim")
+
+  def test_field_with_content_keeps_its_comments(self):
+    system = self.make_system("commented", systemimage=self.image, config_params="# note\n# note 2\nfoo: 1")
+    self.assertEqual(system.config["config_params"], "# note\n# note 2\nfoo: 1")
+
+class BMCInlineTests(SimpleTestCase):
+  """ The BMC inline is labelled "System BMC", with plural "System BMCs". """
+
+  def test_labels(self):
+    from systems.admin import BMCInline
+    self.assertEqual(BMCInline.verbose_name, "System BMC")
+    self.assertEqual(BMCInline.verbose_name_plural, "System BMCs")
+
+
+class SystemBulkUpdateTests(TestCase):
+  """ The "Update fields on multiple systems" admin action. """
+
+  def setUp(self):
+    self.user = User.objects.create_superuser("admin", "admin@example.com", "password")
+    self.client.force_login(self.user)
+    self.system = System.objects.create(hostname="bulk-node", created_by=self.user)
+    self.nic = NetworkInterface.objects.create(system=self.system, name="eth0", bootable=True)
+
+  def bulk_update(self, **data):
+    data.update({"action": "bulk_update", "_selected_action": [self.system.pk], "form-post": "1"})
+    response = self.client.post("/admin/systems/system/", data, follow=True)
+    self.assertEqual(response.status_code, 200)
+    return [str(m) for m in response.context["messages"]]
+
+  def test_clearing_bootable_reports_only_the_clear(self):
+    messages = self.bulk_update(update_set_bootable="on")
+    self.nic.refresh_from_db()
+    self.assertFalse(self.nic.bootable)
+    self.assertIn("Bootable NIC cleared on 1 system(s).", messages)
+    self.assertFalse(any(m.startswith("Bootable NIC set") for m in messages), messages)
+
+  def test_setting_bootable(self):
+    self.nic.bootable = False
+    self.nic.save()
+    messages = self.bulk_update(update_set_bootable="on", set_bootable="on")
+    self.nic.refresh_from_db()
+    self.assertTrue(self.nic.bootable)
+    self.assertIn("Bootable NIC set on 1 system(s).", messages)
+
+  def test_many_to_many_field(self):
+    group = SystemGroup.objects.create(name="compute")
+    self.bulk_update(update_systemgroups="on", systemgroups=[group.pk])
+    self.assertEqual(list(self.system.systemgroups.all()), [group])
+
+
+class MarkRebuildActionTests(TestCase):
+  """ The "Mark images as needing rebuild" admin action handles every selected image and saves the new version. """
+
+  def test_every_image_gets_a_job_and_a_new_version(self):
+    from jobqueue.models import Job, JobModule, JobServer, JobStatus
+    from systems.admin import mark_rebuild
+    user = User.objects.create(username="rebuild-test")
+    module = JobModule.objects.create(slug="image-update", name="Update Images")
+    JobStatus.objects.create(pk=1, name="PENDING")
+    jobserver = JobServer.objects.create(name="js1")
+    images = []
+    for name in ("compute", "login"):
+      image = SystemImage.objects.create(name=name, created_by=user, needs_rebuild=False)
+      image.jobservers.add(jobserver)
+      images.append(image)
+    versions = {image.pk: SystemImage.objects.get(pk=image.pk).version for image in images}
+    Job.objects.all().delete()
+
+    mark_rebuild(None, None, SystemImage.objects.all())
+
+    for image in images:
+      image = SystemImage.objects.get(pk=image.pk)
+      self.assertTrue(image.needs_rebuild)
+      self.assertEqual(image.version, versions[image.pk] + 1)
+      self.assertEqual(list(image.jobservers.all()), [])
+      self.assertEqual(Job.objects.filter(module=module, params__imageId=image.pk).count(), 1)
+    self.assertEqual(SystemImage.objects.count(), 2)
+
+
+class SystemRegAPIViewTests(TestCase):
+  """ POST /systems/register records unknown MACs as N.A.D.S. systems. """
+
+  packet = {"vendor": "Dell", "model": "R650", "switch": "sw1", "port": "1/1", "mac": "aa:bb:cc:dd:ee:ff"}
+
+  def register(self, **changes):
+    return self.client.post("/systems/register", {**self.packet, **changes}, content_type="application/json")
+
+  def test_known_mac_on_a_new_port_updates_the_entry(self):
+    from systems.models import NADSSystem
+    self.assertEqual(self.register().status_code, 200)
+    self.assertEqual(self.register(switch="sw2", port="2/7").status_code, 200)
+    nads = NADSSystem.objects.get(mac=self.packet["mac"])
+    self.assertEqual((nads.switch, nads.port), ("sw2", "2/7"))
+    self.assertEqual(NADSSystem.objects.count(), 1)
+
+  def test_missing_field_is_400(self):
+    packet = dict(self.packet)
+    del packet["vendor"]
+    del packet["mac"]
+    response = self.client.post("/systems/register", packet, content_type="application/json")
+    self.assertEqual(response.status_code, 400)
+    self.assertEqual(set(response.json()), {"vendor", "mac"})
+
+
+class SystemAPIViewListTests(TestCase):
+  """ GET /systems/ applies ?FIELD= filters together with ?hostname=, and keeps the base class's responses. """
+
+  def setUp(self):
+    self.user = User.objects.create_superuser("admin", "admin@example.com", "password")
+    self.client.force_login(self.user)
+    self.group = SystemGroup.objects.create(name="compute")
+    for hostname in ("compute001", "compute002", "login001"):
+      System.objects.create(hostname=hostname, created_by=self.user)
+    System.objects.get(hostname="compute002").systemgroups.add(self.group)
+
+  def get_json(self, url):
+    return self.client.get(url, CONTENT_TYPE="application/json")
+
+  def hostnames(self, response):
+    self.assertEqual(response.status_code, 200)
+    return sorted(s["hostname"] for s in response.json())
+
+  def test_hostname_contains(self):
+    self.assertEqual(self.hostnames(self.get_json("/systems/?hostname=compute")), ["compute001", "compute002"])
+
+  def test_hostname_keeps_other_filters(self):
+    response = self.get_json(f"/systems/?hostname=compute&systemgroups={self.group.pk}")
+    self.assertEqual(self.hostnames(response), ["compute002"])
+
+  def test_unknown_hostname_is_404(self):
+    self.assertEqual(self.get_json("/systems/?hostname=nope").status_code, 404)
+
+  def test_bad_filter_is_400(self):
+    response = self.get_json("/systems/?systemgroups=not-a-number")
+    self.assertEqual(response.status_code, 400)
+    self.assertIn("systemgroups", response.json())
+
+  def test_no_matches_is_an_empty_list(self):
+    # libgenders in the jobserver fails its job on a 404 here.
+    self.assertEqual(self.hostnames(self.get_json("/systems/?systemgroups=999")), [])
+
+  def test_docs_page(self):
+    response = self.client.get("/systems/")
+    self.assertTrue(response["Content-Type"].startswith("text/html"))
+    self.assertIn("<h1>/systems/</h1>", response.content.decode())
+
+
+class NetworkInterfaceNetworkFilterTests(TestCase):
+  """ GET /networkinterfaces/?network=SLUG reconciles NIC networks with switch port networks. """
+
+  def setUp(self):
+    from networks.models import Network, NetworkType, Switch, SwitchPort
+    self.user = User.objects.create_superuser("admin", "admin@example.com", "password")
+    self.client.force_login(self.user)
+    net_type = NetworkType.objects.create(name="Ethernet")
+    self.lan = Network.objects.create(name="Cluster LAN", net_type=net_type, subnet="172.16.0.0", netmask=16)
+    self.mgmt = Network.objects.create(name="Mgmt", net_type=net_type, subnet="10.0.0.0", netmask=8)
+    switch = Switch.objects.create(hostname="sw1", mgmt_ip="10.0.0.1", mgmt_mac="de:ad:be:ef:00:01", created_by=self.user)
+    self.system = System.objects.create(hostname="node", created_by=self.user)
+    port = lambda name, net: SwitchPort.objects.create(name=name, switch=switch, networks=net)
+    self.nic("direct", self.lan, None)
+    self.nic("other-port-1", self.lan, port("1", self.mgmt))
+    self.nic("other-port-2", self.lan, port("2", self.mgmt))
+    self.nic("port-only", None, port("3", self.lan))
+    self.nic("both", self.lan, port("4", self.lan))
+
+  def nic(self, name, network, switch_port):
+    return NetworkInterface.objects.create(system=self.system, name=name, network=network, switch_port=switch_port)
+
+  def get_json(self, url):
+    return self.client.get(url, CONTENT_TYPE="application/json")
+
+  def test_switch_port_takes_precedence(self):
+    response = self.get_json("/networkinterfaces/?network=cluster-lan")
+    self.assertEqual(response.status_code, 200)
+    nics = {nic["name"]: nic for nic in response.json()}
+    self.assertEqual(sorted(nics), ["both", "direct", "port-only"])
+    self.assertEqual({nic["network"] for nic in nics.values()}, {self.lan.pk})
+
+  def test_unknown_network_is_404(self):
+    self.assertEqual(self.get_json("/networkinterfaces/?network=nope").status_code, 404)
+
+
+class SystemImageAddJobserverTests(TestCase):
+  """ PATCH /systemimages/<pk>/?addjs adds job servers to the image instead of replacing them. """
+
+  def setUp(self):
+    from jobqueue.models import JobServer
+    self.user = User.objects.create_superuser("admin", "admin@example.com", "password")
+    self.client.force_login(self.user)
+    self.image = SystemImage.objects.create(name="compute", created_by=self.user, needs_rebuild=False)
+    self.js1, self.js2, self.js3 = (JobServer.objects.create(name=f"js{i}") for i in range(1, 4))
+    self.image.jobservers.add(self.js1)
+
+  def addjs(self, jobservers):
+    import json
+    return self.client.patch(f"/systemimages/{self.image.pk}/?addjs", json.dumps({"jobservers": jobservers}),
+                             content_type="application/json")
+
+  def jobserver_ids(self):
+    return sorted(self.image.jobservers.values_list("id", flat=True))
+
+  def test_add_a_list(self):
+    self.assertEqual(self.addjs([self.js2.id, self.js3.id]).status_code, 200)
+    self.assertEqual(self.jobserver_ids(), [self.js1.id, self.js2.id, self.js3.id])
+
+  def test_add_one(self):
+    self.assertEqual(self.addjs(self.js2.id).status_code, 200)
+    self.assertEqual(self.jobserver_ids(), [self.js1.id, self.js2.id])
+
+
+class SystemPowerAPIViewQueryTests(TestCase):
+  """ GET /power/<action>/ finds the BMCs to act on from the query string. """
+
+  def setUp(self):
+    self.user = User.objects.create_superuser("admin", "admin@example.com", "password")
+    self.client.force_login(self.user)
+    self.system = System.objects.create(hostname="power-node", created_by=self.user)
+    self.bmc = SystemBMC.objects.create(system=self.system, ipaddress="10.0.2.5", username="admin", password="pw")
+    patcher = mock.patch.object(SystemPowerAPIView, "_doPowerCmd", return_value={"status": 200})
+    self.power = patcher.start()
+    self.addCleanup(patcher.stop)
+
+  def get_json(self, url):
+    return self.client.get(url, CONTENT_TYPE="application/json")
+
+  def test_by_id(self):
+    response = self.get_json(f"/power/status/?id={self.system.id}")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.json(), {str(self.bmc): {"status": 200}})
+
+  def test_unknown_id_is_404(self):
+    self.assertEqual(self.get_json("/power/status/?id=999").status_code, 404)
+    self.power.assert_not_called()
+
+  def test_bad_id_is_400(self):
+    self.assertEqual(self.get_json("/power/status/?id=abc").status_code, 400)
+
+  def test_by_bmc_field(self):
+    response = self.get_json("/power/status/?ipaddress=10.0.2.5")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.json(), {str(self.bmc): {"status": 200}})
+
+  def test_field_filter_acts_on_at_most_10(self):
+    for i in range(12):
+      system = System.objects.create(hostname=f"many{i}", created_by=self.user)
+      SystemBMC.objects.create(system=system, ipaddress=f"10.0.3.{i}", username="ops", password="pw")
+    response = self.get_json("/power/off/?username=ops")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(self.power.call_count, 10)
+
+  def test_no_filter_is_400(self):
+    self.assertEqual(self.get_json("/power/off/").status_code, 400)
+    self.power.assert_not_called()
+
+  def test_unknown_field_is_400(self):
+    self.assertEqual(self.get_json("/power/off/?nope=1").status_code, 400)
+
+  def test_no_match_is_404(self):
+    self.assertEqual(self.get_json("/power/off/?ipaddress=10.9.9.9").status_code, 404)
+    self.power.assert_not_called()
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class NestedWritableSerializerTests(TestCase):
+  """ /systemgroups/, /systemimages/ and /scripts/ accept IDs on POST and still return nested objects. """
+
+  def setUp(self):
+    from scripts.models import Script, ScriptType
+    self.user = User.objects.create_superuser("admin", "admin@example.com", "password")
+    self.client.force_login(self.user)
+    self.script_type = ScriptType.objects.create(name="Post Boot", slug="post-boot")
+    self.script = Script(name="hello", slug="hellosh", scriptType=self.script_type)
+    self.script.save()
+
+  def post_json(self, url, data):
+    import json
+    return self.client.post(url, json.dumps(data), content_type="application/json")
+
+  def test_create_system_group_with_script_ids(self):
+    response = self.post_json("/systemgroups/", {"name": "compute", "scripts": ["hellosh"]})
+    self.assertEqual(response.status_code, 201, response.content)
+    group = SystemGroup.objects.get(name="compute")
+    self.assertEqual([s.pk for s in group.scripts.all()], ["hellosh"])
+    script = response.json()["scripts"][0]
+    self.assertEqual((script["slug"], script["scriptType"]["slug"]), ("hellosh", "post-boot"))
+
+  def test_create_system_group_without_related(self):
+    self.assertEqual(self.post_json("/systemgroups/", {"name": "login"}).status_code, 201)
+
+  def test_create_system_image_with_group_ids(self):
+    group = SystemGroup.objects.create(name="compute")
+    response = self.post_json("/systemimages/", {"name": "compute-img", "created_by": self.user.pk,
+                                                 "systemgroups": [group.pk], "jobservers": []})
+    self.assertEqual(response.status_code, 201, response.content)
+    self.assertEqual(response.json()["systemgroups"][0]["name"], "compute")
+
+  def test_create_script_with_type_id(self):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    response = self.client.post("/scripts/", {"name": "new", "scriptType": "post-boot",
+                                              "filename": SimpleUploadedFile("new.sh", b"echo new\n")})
+    self.assertEqual(response.status_code, 201, response.content)
+    self.assertEqual(response.json()["scriptType"], {"name": "Post Boot", "slug": "post-boot"})
+
+  def test_list_is_still_nested(self):
+    group = SystemGroup.objects.create(name="compute")
+    group.scripts.add(self.script)
+    response = self.client.get("/systemgroups/", CONTENT_TYPE="application/json")
+    script = response.json()[0]["scripts"][0]
+    self.assertEqual(script["scriptType"], {"name": "Post Boot", "slug": "post-boot"})
+    self.assertEqual(script["name"], "hello")

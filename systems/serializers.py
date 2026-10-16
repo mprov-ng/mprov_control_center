@@ -5,7 +5,8 @@ from rest_framework import serializers
 from jobqueue.models import JobServer
 from disklayouts.serializers import DiskLayoutAPISerializer
 from networks.models import SwitchPort, Network
-from scripts.models import Script
+from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
+from common.serializers import NestedPrimaryKeyRelatedField
 from scripts.serializers import ScriptAPISerializer, AnsibleCollectionAPISerializer, AnsiblePlaybookAPISerializer, AnsibleRoleAPISerializer
 
 class SystemSerializer(serializers.ModelSerializer): 
@@ -24,16 +25,18 @@ class SystemBMCSerializer(serializers.ModelSerializer):
         # serializer returns it, because mprov_scripts' setupBMC.py needs it.
         extra_kwargs = {'password': {'write_only': True}}
 class SystemGroupSerializer(serializers.ModelSerializer): 
-    scripts = ScriptAPISerializer(many=True)
-    ansibleplaybooks = AnsiblePlaybookAPISerializer(many=True)
-    ansibleroles = AnsibleRoleAPISerializer(many=True)
-    ansiblecollections = AnsibleCollectionAPISerializer(many=True)
+    # read as nested objects, written as IDs.
+    scripts = NestedPrimaryKeyRelatedField(ScriptAPISerializer, many=True, required=False, queryset=Script.objects.all())
+    ansibleplaybooks = NestedPrimaryKeyRelatedField(AnsiblePlaybookAPISerializer, many=True, required=False, queryset=AnsiblePlaybook.objects.all())
+    ansibleroles = NestedPrimaryKeyRelatedField(AnsibleRoleAPISerializer, many=True, required=False, queryset=AnsibleRole.objects.all())
+    ansiblecollections = NestedPrimaryKeyRelatedField(AnsibleCollectionAPISerializer, many=True, required=False, queryset=AnsibleCollection.objects.all())
     class Meta:
         model = SystemGroup
         fields = '__all__' 
 class SystemImageSerializer(serializers.ModelSerializer):
     jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all())
-    systemgroups=SystemGroupSerializer(many=True)
+    # read as nested objects, written as IDs.
+    systemgroups=NestedPrimaryKeyRelatedField(SystemGroupSerializer, many=True, required=False, queryset=SystemGroup.objects.all())
     class Meta:
         model = SystemImage
         fields = '__all__'

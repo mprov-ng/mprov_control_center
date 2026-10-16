@@ -15,7 +15,6 @@ set kernel-cmdline ${kernel-cmdline} {{ nic.system.systemimage.osdistro.install_
 {% endif %}
 {% if nic.system.stateful %}
 set kernel-cmdline ${kernel-cmdline} mprov_stateful=1
-set kernel-cmdline ${kernel-cmdline} mprov_bootdisk={{ nic.system.bootdisk.diskname }}
 {% else %}
 set kernel-cmdline ${kernel-cmdline} mprov_stateful=0
 {% endif %}

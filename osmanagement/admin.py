@@ -1,5 +1,6 @@
-from jobqueue.models import JobModule, JobStatus, Job
+from jobqueue.models import JobModule, queue_job
 from django.contrib import admin
+from django.db.models import F
 from .forms import OSDistro_form
 from .models import (
   OSDistro,
@@ -9,32 +10,21 @@ from .models import (
 @admin.action(description="Mark repositories as needing update.")
 def mark_update(modeladmin, request, queryset):
   queryset.update(update=True)
-  for instance in queryset:
-    if not instance.update: 
+  try:
+      JobType = JobModule.objects.get(slug='repo-update')
+  except JobModule.DoesNotExist:
+      # do nothing if the jobtype isn't defined.
       return
 
-    JobType = None
-    try:
-        JobType = JobModule.objects.get(slug='repo-update')
-    except:
-        JobType = None
-    # print(str(JobType) + " post")
+  for instance in queryset:
+    # queue a repo-update job.
+    queue_job(JobType, { 'repo_id': instance.id})
 
-    # get the jobtype, do nothing if it's not defined.
-    if JobType is not None:
-
-        # create a new repo-update job.
-        params = { 'repo_id': instance.id}
-        Job.objects.create( name=JobType.name, 
-            module=JobType, 
-            status=JobStatus.objects.get(pk=1), 
-            params = params,
-        )
-
-        # Clear out the hosted_by jobservers and increment the version number
-        # (on this in-memory instance only; it is not saved here).
-        instance.hosted_by.clear()
-        instance.version = instance.version + 1
+    # Clear out the hosted_by jobservers and increment the version number.
+    # update() saves the version without firing RepoUpdateJob, which would
+    # increment it again.
+    instance.hosted_by.clear()
+    OSRepo.objects.filter(pk=instance.pk).update(version=F('version') + 1)
 
 class OSRepoAdmin(admin.ModelAdmin):
   model=OSRepo

@@ -1,6 +1,5 @@
 
 from yaml import serialize
-from django.contrib.auth.models import User
 
 from rest_framework import serializers
 from .models import Network, Switch, NetworkType, SwitchPort
@@ -17,15 +16,16 @@ class NetworkTypeAPISerializer(serializers.ModelSerializer):
     fields = '__all__'
 
 class SwitchAPISerializer(serializers.ModelSerializer):
-  created_by = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-  network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
+  # set from the request user by the UpdateSwitch pre_save signal.
+  created_by = serializers.PrimaryKeyRelatedField(read_only=True)
+  network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all(), required=False, allow_null=True)
   class Meta:
     model = Switch
     fields = '__all__'
 
 class SwitchPortAPISerializer(serializers.ModelSerializer):
   switch = serializers.PrimaryKeyRelatedField(queryset=Switch.objects.all())
-  networks = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
+  networks = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all(), required=False, allow_null=True)
 
   class Meta:
     model = SwitchPort

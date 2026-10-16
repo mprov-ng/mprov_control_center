@@ -3,11 +3,11 @@ import traceback
 from django.contrib import admin
 from django.forms import BaseInlineFormSet
 from django.utils.html import mark_safe
-from django.utils.text import slugify
 from jobqueue.models import JobModule, JobStatus, Job
 from django import forms
 from django.urls import reverse
 from django.db.models.query import QuerySet
+from django.db.models import F
 
 from django.shortcuts import render
 from django.core.exceptions import ValidationError
@@ -102,7 +102,7 @@ class BMCInline(admin.StackedInline):
   list_display_links = ['id', 'ipaddress']
   readonly_fields = ['ipv6ll']
   verbose_name="System BMC"
-  verbose_name="System BMCs"
+  verbose_name_plural="System BMCs"
   form = SystemBMCForm
   def get_formset(self, request, obj, **kwargs):
     formset =  super().get_formset(request, obj, **kwargs)
@@ -369,11 +369,9 @@ class SystemAdmin(admin.ModelAdmin):
               if f"update_{field_name}" not in request.POST:
                  continue
               cleaned_field_data = form.cleaned_data[field_name]
+              is_m2m = self.model._meta.get_field(field_name).many_to_many
               for item in queryset.all():
-                  fieldCheck = getattr(item, field_name)
-                  fieldCheck = fieldCheck
-                  print(fieldCheck.__class__.__name__)
-                  if fieldCheck.__class__.__name__ == "ManyRelatedManager": 
+                  if is_m2m:
                      item.clean()
                   else: 
                     try:
@@ -397,7 +395,7 @@ class SystemAdmin(admin.ModelAdmin):
                   )
 
               for item in queryset.all():
-                  if fieldCheck.__class__.__name__ == "ManyRelatedManager": 
+                  if is_m2m:
                      m2mfield = getattr(item, field_name)
                      m2mfield.set(cleaned_field_data)
                      item.save()
@@ -452,8 +450,8 @@ class SystemAdmin(admin.ModelAdmin):
                           else:
                               nic.bootable = False
                           nic.save()
-              self.message_user(request, f"Bootable NIC set on {bootable_updated} system(s).")
-              fieldsUpdated = True
+                self.message_user(request, f"Bootable NIC set on {bootable_updated} system(s).")
+                fieldsUpdated = True
 
             if fieldsUpdated is False:
               self.message_user(request, "No fields selected to update.")
@@ -526,33 +524,26 @@ class SystemLocationAdmin(admin.ModelAdmin):
 @admin.action(description="Mark images as needing rebuild")
 def mark_rebuild(modeladmin, request, queryset):
   queryset.update(needs_rebuild=True)
-  for instance in queryset:
-    if not instance.needs_rebuild: 
+  try:
+      JobType = JobModule.objects.get(slug='image-update')
+  except JobModule.DoesNotExist:
+      # do nothing if the jobtype isn't defined.
       return
-    instance.slug = slugify(instance.name)
 
-    JobType = None
-    try:
-        JobType = JobModule.objects.get(slug='image-update')
-    except:
-        JobType = None
-    # print(str(JobType) + " post")
+  for instance in queryset:
+    # create a new image-update job.
+    params = { 'imageId': instance.slug}
+    Job.objects.create( name=JobType.name,
+        module=JobType,
+        status=JobStatus.objects.get(pk=1),
+        params = params,
+    )
 
-    # get the jobtype, do nothing if it's not defined.
-    if JobType is not None:
-
-        # create a new image-update job.
-        params = { 'imageId': instance.slug}
-        Job.objects.create( name=JobType.name, 
-            module=JobType, 
-            status=JobStatus.objects.get(pk=1), 
-            params = params,
-        )
-
-        # Increment version number and clear out jobservers field.
-        # NOTE: instance is not saved here, so only the jobservers clear persists.
-        instance.jobservers.clear()
-        instance.version = instance.version + 1
+    # Increment version number and clear out jobservers field.
+    # update() saves the version without firing UpdateSystemImages, which
+    # would queue a second job and clear needs_rebuild.
+    instance.jobservers.clear()
+    SystemImage.objects.filter(pk=instance.pk).update(version=F('version') + 1)
 
 class SystemImageAdmin(admin.ModelAdmin):
   list_display = ['slug', 'name', 'version', 'registered_jobservers']

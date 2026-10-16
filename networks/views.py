@@ -43,7 +43,9 @@ class NetworkAPIView(MProvView):
 
 ### GET method (no parameters)
 Returns a JSON list of all networks in the mPCC.  The list can be filtered
-with the optional ?isdhcp= and ?managedns= query parameters (True/False or 1/0).
+with the optional ?isdhcp= and ?managedns= query parameters (true/false in any
+case, or 1/0), and by any other field with ?FIELD=VALUE (exact match).  An
+invalid filter returns 400; no matches returns an empty list.
 
 Format returned:
 
@@ -98,20 +100,25 @@ Format returned:
         
         if 'pk' in kwargs:
             # someone is looking for a specific item.
-            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+            return self.retrieve(request, pk=kwargs['pk'])
 
         # Let's see if someone is looking for something specific.
-        queryset = self.model.objects.all()
-        isdhcp = self.request.query_params.get('isdhcp')
-        if isdhcp is not None:
-            queryset = queryset.filter(isdhcp=isdhcp)
-        if self.request.query_params.get('managedns') is not None:
-            queryset = queryset.filter(managedns=self.request.query_params.get('managedns'))
-
-        
+        queryset, error_body = self.filter_by_query_params(request, kwargs, skip=('isdhcp', 'managedns'))
+        for field in ('isdhcp', 'managedns'):
+            value = self.request.query_params.get(field)
+            if value is None:
+                continue
+            value = {'true': True, '1': True, 'false': False, '0': False}.get(value.lower())
+            if value is None:
+                error_body[field] = f"{field} must be true, false, 1 or 0."
+            else:
+                queryset = queryset.filter(**{field: value})
+        if len(error_body) > 0:
+            return Response(error_body, status=400)
         self.queryset=queryset
-        # return the super call for get.
-        return generics.ListAPIView.get(self, request, format=None);
+        # return the super call for get.  No match is an empty list, not 404:
+        # the jobserver's dnsmasq plugins loop over this list.
+        return generics.ListAPIView.get(self, request, format=None)
 
 class NetworkTypeAPIView(MProvView):
     '''
@@ -189,7 +196,13 @@ class SwitchAPIView(MProvView):
 - mgmt_mac: The MAC address of the management interface for this switch
 - created_by: The user who last saved this switch (set automatically on every save)
 - network: (Optional) ID of the management network for this switch.
-    
+
+### Query Parameters
+- ?network=SLUG: GET only returns switches on the network with that slug, or 404 if
+    there is no such network.  A network with no switches returns an empty list.
+- ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
+    Without ?network=, an empty result returns 404.
+
 ### GET method (no parameters)
 Returns a JSON list of all objects of this type in the mPCC
 
@@ -227,14 +240,24 @@ Format returned:
     serializer_class = SwitchAPISerializer
 
     def get(self, request, format=None, **kwargs):
-        super().get(request, format=None, **kwargs)
-        if 'network' in self.request.query_params:
-            network = self.request.query_params['network']
-            net = Network.objects.get(slug=network)
-            self.queryset = self.model.objects.filter(network=net)
-        
-        # return the super call for get.
-        return generics.ListAPIView.get(self, request, format=None);
+        if 'pk' in kwargs or 'network' not in request.query_params:
+            return super().get(request, format=format, **kwargs)
+
+        # ?network= takes a network slug, which the base class can't filter on.
+        result = self.checkContentType(request, format=format)
+        if result is not None:
+            return result
+        net = Network.objects.filter(slug=request.query_params['network']).first()
+        if net is None:
+            return Response(None, status=404)
+        self.queryset, error_body = self.filter_by_query_params(request, kwargs, skip=('network',))
+        if len(error_body) > 0:
+            return Response(error_body, status=400)
+        self.queryset = self.queryset.filter(network=net)
+
+        # A network with no switches returns an empty list, not 404: the
+        # jobserver's dnsmasq plugins add this list to their host lists.
+        return generics.ListAPIView.get(self, request, format=None)
 
 class SwitchPortAPIView(MProvView):
     '''

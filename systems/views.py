@@ -46,7 +46,8 @@ address (and a GUA if the port's network is IPv6), a pxe-update job is queued,
 and the system is returned as a JSON list.
 - If no system matches and the MAC is not already assigned to a NIC, the packet
 is saved as a N.A.D.S. discovered system.  Returns 200 with an empty body.
-- All fields except "serial" are required.
+- All fields except "serial" are required ("switch" and "port" may be null).
+A missing field returns 400 with an error for each one.
 
 NADS Packet:
 
@@ -94,7 +95,10 @@ NADS Packet:
 
     def post(self, request, *args, **kwargs):
         print(request.data)
-        
+        missing = [field for field in ('vendor', 'model', 'switch', 'port', 'mac') if field not in request.data]
+        if missing:
+            return Response({field: "This field is required." for field in missing}, status=400)
+
         if request.data['switch'] is not None:
             try:
                 switch = Switch.objects.get(hostname=request.data['switch'])
@@ -176,14 +180,17 @@ NADS Packet:
         if sysnic.count() > 0:
             return Response(None, status=200)
         else: 
+            # mac is unique, so it's the only lookup field; a known MAC seen on
+            # a new switch or port updates the existing entry.
             nadssys = NADSSystem.objects.update_or_create(
                 mac=request.data['mac'],
-                switch=request.data['switch'],
-                port=request.data['port'],
-                vendor=request.data['vendor'],
-                model=request.data['model'],
-                # XXX Future: serial=request.data['serial']
-                )
+                defaults={
+                    'switch': request.data['switch'],
+                    'port': request.data['port'],
+                    'vendor': request.data['vendor'],
+                    'model': request.data['model'],
+                    # XXX Future: 'serial': request.data['serial']
+                })
         print(sysnic)
    
         # TODO insert MAC ban code here if needed.
@@ -225,6 +232,7 @@ class SystemAPIView(MProvView):
 ### Query Parameters
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 - ?hostname=TEXT: GET only returns systems whose hostname contains the text, or 404 if none.
+    It can be combined with ?FIELD=VALUE filters.
 - ?detail: GET returns systems with nested details.
 - ?self: GET returns the system that owns the NIC with the requesting IP address, with
     nested details, or 404 if unknown.  POST with ?self and a body of {"netboot": ...}
@@ -354,22 +362,17 @@ Format returned:
             self.serializer_class = SystemSerializer
 
             # someone is looking for a specific item.
-            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+            return self.retrieve(request, pk=kwargs['pk'])
          
-        # call the base class get()
-        # this does do some initial filtering.
-        super().get(request, format=None, **kwargs)
+        result = self.checkContentType(request, format=format)
+        if result is not None:
+            return result
 
-        # result = self.checkContentType(request, format=format, kwargs=kwargs)
-        # if result is not None:
-        #     return result
-        # if self.model == None:
-        #     return Response(None)
-        # if 'pk' in kwargs:
-        #     # someone is looking for a specific item.
-        #     return self.retrieve(self, request, format=None, pk=kwargs['pk'])
-        # self.serializer_class = SystemSerializer
-        # self.queryset = self.model.objects.all()
+        # ?FIELD=VALUE filters from the base class. hostname is a contains
+        # match instead, below.
+        self.queryset, error_body = self.filter_by_query_params(request, kwargs, skip=('hostname',))
+        if len(error_body) > 0:
+            return Response(error_body, status=400)
 
         # post-query filters and such.
         if 'detail' in request.query_params:
@@ -378,7 +381,6 @@ Format returned:
         if 'hostname' in request.query_params:
             # someone is looking for a specific item.
             print('Hostname query: ?hostname=' + request.query_params['hostname'])
-            self.queryset = self.model.objects.all()
             self.queryset = self.queryset.filter(hostname__contains=request.query_params['hostname'])
             if self.queryset.count() == 0:
                 return Response(None, status=404)
@@ -426,6 +428,7 @@ class SystemGroupAPIView(MProvView):
 - config_params: The configuration parameters for this entry
 - scripts: A list of scripts that will run on this group
 - ansibleplaybooks, ansibleroles, ansiblecollections: Ansible content for this group
+    (all four are returned as nested objects, and sent as arrays of IDs on POST and PATCH)
 - install_kernel_cmdline, tmpfs_root_size, initial_mods, prov_interface: boot options for this group
 - systems: array of system IDs in this group
 
@@ -510,7 +513,9 @@ class NetworkInterfaceAPIView(MProvView):
 
 ### Query Parameters
 - ?network=SLUG: GET returns the NICs on that network, either set directly on the NIC or
-    through the network of the NIC's switch port.
+    through the network of the NIC's switch port, or 404 if there is no such network.
+    The switch port's network takes precedence: those NICs are listed with this network,
+    and a NIC whose switch port is on another network is left out.
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 
 ### GET method (no parameters)
@@ -564,42 +569,24 @@ Format returned:
         
         if 'network' in self.request.query_params:
             network = self.request.query_params['network']
-            net = Network.objects.filter(slug=network)[0]
-        #   
-            # get the Network ID
-            # This should first query the switch for all ports on that network.
-            # It should also query all network interfaces for hard coded networks.
-            # Then reconcile ports <--> interfaces.  Switch port takes precedence, if set.
-            innerQ = SwitchPort.objects.filter(networks=net)
-            swportqueryset = NetworkInterface.objects.all().filter(switch_port__in=innerQ)
-            nicqueryset = NetworkInterface.objects.all().filter(network=net)
-            nics = list(nicqueryset)
-            print(swportqueryset.count())
-            if swportqueryset.count() > 0:
-                for portnic in swportqueryset:
-                    # find the nic in nics 
-                    # nics [ {nicobj} ]
-                    found=False
-                    for nic in nics:
-                        if nic.id == portnic.id:
-                            nic.network = portnic.network
-                            found=True
-                    if not found:
-                        nics.append(portnic)
-
-            # now we remove NICs that have a switch port that is not on this network
+            net = Network.objects.filter(slug=network).first()
+            if net is None:
+                return Response(None, status=404)
+            # Return the NICs on a switch port on this network, and the NICs
+            # set to this network directly.  Switch port takes precedence: a
+            # NIC whose port is on this network is listed with this network,
+            # and a NIC whose port is on another network is left out.
+            portnics = {nic.id: nic for nic in NetworkInterface.objects.filter(switch_port__networks=net)}
+            nics = []
+            for nic in NetworkInterface.objects.filter(network=net):
+                if nic.id in portnics:
+                    nics.append(portnics.pop(nic.id))
+                elif nic.switch_port is None:
+                    nics.append(nic)
+            nics.extend(portnics.values())
             for nic in nics:
-                found=False
-                if nic.switch_port is not None:
-                    for portnic in swportqueryset:
-                        if nic.id == portnic.id:
-                            found=True
-                            break
-                    if not found:
-                        nics.remove(nic)
-                
-                    
-                    
+                nic.network = net
+
             # now we have a list of nics return that as json
             return Response(NetworkInterfaceSerializer(nics, many=True).data)
         
@@ -632,7 +619,8 @@ class SystemImagesAPIView(MProvView):
 - timestamp: (Optional) The time this entry was created
 - created_by: The User that is creating this 
 - updated: (Auto) The time this entry was last updated
-- systemgroups: Array of system groups this system image is a part of
+- systemgroups: Array of system groups this system image is a part of (returned as
+    nested objects, sent as an array of IDs on POST and PATCH)
 - needs_rebuild: If the user is asking to rebuild this image.
 - version: used internally for tracking when an image changes
 - jobservers: array of jobservers actively serving this version of this image.
@@ -756,12 +744,13 @@ Format returned:
             # merge without duplicates
             print("Merging Array.")
             jobservers = list(set(jobservers + request.data['jobservers']))
-            # remove the jobservers from the kwargs.
-            del request.data['jobservers']
           else:
             print("Adding Jobserver")
             jobservers.append(request.data['jobservers'])
             # jobservers isn't a list, let's try to append our new jobserver.
+          # remove the jobservers from the request data, so the update below
+          # doesn't replace the merged list.
+          del request.data['jobservers']
           sysimage.jobservers.set(jobservers)
           sysimage.save()
         
@@ -847,7 +836,7 @@ Format returned:
         return super().get(request, format, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        if request.data['password'] == "":
+        if request.data.get('password') == "":
             del request.data['password']
         return super().post(request, *args, **kwargs)
 
@@ -883,7 +872,10 @@ class SystemPowerAPIView(MProvView):
             else :
                 return Response(None, status=404)
         if 'id' in request.query_params:
-            system_results= System.objects.get(id=request.query_params['id'])
+            try:
+                system_results= System.objects.filter(id=request.query_params['id']).first()
+            except ValueError:
+                return Response({'id': "Must be a system ID."}, status=400)
             if system_results is None:
                 return Response(None, status=404)
             self.queryset = self.model.objects.filter(system=system_results.id)
@@ -892,7 +884,10 @@ class SystemPowerAPIView(MProvView):
                 results[str(bmc)] = self._doPowerCmd(bmc, kwargs['action'])
             return Response(results, status=200)
 
+        # otherwise act on the BMCs matching ?FIELD=VALUE filters on the BMC
+        # fields, up to 10 of them, like ?hostname=.
         error_body = {}
+        filtered = False
         for field in request.query_params:
             #print(field)
             if field == 'detail':
@@ -902,15 +897,24 @@ class SystemPowerAPIView(MProvView):
                 # we found a field.
                 try:
                     self.queryset = self.queryset.filter((field,request.query_params[field]))
+                    filtered = True
                 except BaseException as e:
                     error_body[field] = f"Error searching for {field}: {type(e)=}: {e=}"
             else: 
                 error_body[field] = f"Error searching for {field}: Field doesn't exist."
         if len(error_body) > 0:
             return Response(error_body, status=400)
+        if not filtered:
+            # never act on every BMC at once.
+            return Response("Bad Request: pass ?hostname=, ?id= or a BMC field filter.", status=400)
         if self.queryset.count() == 0:
             return Response(None, status=404)
-
+        if self.queryset.count() > 10:
+            print("WARN: Large BMC set returned, truncating.")
+        results = {}
+        for bmc in self.queryset[:10]:
+            results[str(bmc)] = self._doPowerCmd(bmc, kwargs['action'])
+        return Response(results, status=200)
 
     def _doPowerCmd(self, bmc, action="on"):
         print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, action: {action}")

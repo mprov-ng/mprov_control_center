@@ -1,7 +1,7 @@
 from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import pre_save, pre_delete, post_save
-from jobqueue.models import JobModule, Job, JobStatus, JobServer
+from jobqueue.models import JobModule, Job, JobStatus, JobServer, queue_job
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 
 # This will be an object managed by the jobserver image-update and repo-update modules.
@@ -114,10 +114,8 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
   if instance.update == False:
     # if we are not set to update, skip.
     return
-  baseURL=instance.baseurl
-  # remove trailing slash
-  if baseURL[:-1] == '/':
-     baseURL = baseURL[:-1]
+  # remove trailing slashes
+  baseURL=instance.baseurl.rstrip('/')
 
   genRepos = ['AppStream', 'BaseOS', 'extras' ]
   if float(instance.version) >= 9:
@@ -188,14 +186,8 @@ def RepoUpdateJob(sender, instance, **kwargs):
   if RepoJobType is not None and instance.update and instance.id is not None:
       if instance.managed:
         instance.version = instance.version +1 
-        # create a new repo-update job.
-        params = { 'repo_id': instance.id}
-
-        Job.objects.create( name=RepoJobType.name, 
-            module=RepoJobType, 
-            status=JobStatus.objects.get(pk=1), 
-            params=params,          
-        )
+        # queue a repo-update job.
+        queue_job(RepoJobType, { 'repo_id': instance.id})
         instance.hosted_by.clear()
       try: 
         instance._post_save = True
@@ -230,13 +222,8 @@ def DeleteJobserver(sender, instance, **kwargs):
         RepoJobType = None
     
     if RepoJobType is not None:
-        # create a new repo-update job for every repo.
+        # queue a repo-update job for every repo.
         repos = OSRepo.objects.all()
         for repo in repos:
-          params = { 'repo_id': repo.id}
-          Job.objects.create( name=RepoJobType.name, 
-              module=RepoJobType, 
-              status=JobStatus.objects.get(pk=1), 
-              params=params,          
-          )
+          queue_job(RepoJobType, { 'repo_id': repo.id})
     
