@@ -163,6 +163,19 @@ class IPXEAPIViewTests(TestCase):
     self.assertIn(f"kernel /images/{image.slug}.vmlinuz", response.content.decode())
 
 
+  def test_nads_boot_gets_templated_cmdline_and_rescue(self):
+    self.distro.install_kernel_cmdline = "quiet img={{ nic.system.systemimage.slug }}"
+    self.distro.save()
+    SystemImage.objects.create(name="__nads__", created_by=self.user, osdistro=self.distro)
+    content = self.client.get("/ipxe/?rescue", REMOTE_ADDR="10.0.0.99").content.decode()
+    self.assertIn("quiet img=nads mprov_rescue=1", content)
+
+  def test_nads_boot_serves_custom_ipxe(self):
+    SystemImage.objects.create(name="__nads__", created_by=self.user, osdistro=self.distro,
+                               customIPXE="#!ipxe\necho custom {{ nic.system.systemimage.slug }}")
+    response = self.get_ipxe("10.0.0.99")
+    self.assertEqual(response.content.decode(), "#!ipxe\necho custom nads")
+
 class FlattenConfigTests(TestCase):
   """ System.config is built from OS Distro -> System Groups (by name) -> System.
   install_kernel_cmdline and initial_mods append unless prefixed with '=', everything
