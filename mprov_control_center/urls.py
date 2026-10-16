@@ -40,7 +40,7 @@ from networks.api_views import (
     preview_subnet_changes
 )
 
-from osmanagement.views_noath import OSRepoURLAPIView
+from osmanagement.views_noauth import OSRepoURLAPIView
 
 from django.conf import settings
 from django.conf.urls.static import static

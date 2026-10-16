@@ -94,7 +94,7 @@ class NetworkInterfaceInline(admin.StackedInline):
     return fields
   
 
-class BMCInLine(admin.StackedInline):
+class BMCInline(admin.StackedInline):
   model = SystemBMC
   extra = 1
   max_num=1 
@@ -115,7 +115,7 @@ class BMCInLine(admin.StackedInline):
 class SystemAdmin(admin.ModelAdmin):
   actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
 
-  inlines = [ NetworkInterfaceInline, BMCInLine]
+  inlines = [ NetworkInterfaceInline, BMCInline]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
   readonly_fields = ['timestamp', 'updated', 'created_by']
   list_display_links = ['id', 'hostname']

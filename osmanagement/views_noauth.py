@@ -60,9 +60,9 @@ class OSRepoURLAPIView(MProvView, generics.ListAPIView):
           rurl = kwargs['redirect_url']
         else:
           rurl = ""
-        imageURL = f"http://{js.address}:{str(js.port)}/repos/{repo.id}/{rurl}"
+        repoURL = f"http://{js.address}:{str(js.port)}/repos/{repo.id}/{rurl}"
 
-        return redirect(imageURL)        
+        return redirect(repoURL)        
       def post(self, request, *args, **kwargs):
         return HttpResponseNotAllowed(["GET"])
 

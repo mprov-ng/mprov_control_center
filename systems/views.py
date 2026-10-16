@@ -574,7 +574,7 @@ class NetworkInterfaceDetailAPIView(MProvView):
       serializer_class = NetworkInterfaceDetailsSerializer
 
 
-class SytemImagesAPIView(MProvView):
+class SystemImagesAPIView(MProvView):
     
     '''
 # /systemimages/

@@ -1,9 +1,9 @@
 from django.urls import path
-from systems.views import SytemImagesAPIView
+from systems.views import SystemImagesAPIView
 
 urlpatterns = [
-    path('<str:pk>/', SytemImagesAPIView.as_view()),
-    path('<str:pk>/details', SytemImagesAPIView.as_view()),
-    path('<str:pk>/update', SytemImagesAPIView.as_view()),
-    path('', SytemImagesAPIView.as_view()),
+    path('<str:pk>/', SystemImagesAPIView.as_view()),
+    path('<str:pk>/details', SystemImagesAPIView.as_view()),
+    path('<str:pk>/update', SystemImagesAPIView.as_view()),
+    path('', SystemImagesAPIView.as_view()),
 ]
