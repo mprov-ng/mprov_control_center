@@ -126,7 +126,19 @@ if [ "$init_state" == "10" ]
 then
        python manage.py createsuperuser --noinput
 
-       python manage.py loaddata */fixtures/*
+       # systems.yaml refers to scripts that come from the mprov_scripts repo, so
+       # it has to load after load_default_scripts.sh.  loaddata commits all its
+       # fixtures together, so one missing reference rolls back every one of them.
+       fixtures=()
+       for f in */fixtures/*
+       do
+              [[ "$f" == systems/* ]] || fixtures+=("$f")
+       done
+       python manage.py loaddata "${fixtures[@]}"
+       /var/www/mprov_control_center/install_scripts/load_default_scripts.sh
+       # before the self System below, as the fixture rows have fixed pks.
+       python manage.py loaddata systems/fixtures/*
+
        # try to generate some interface commands based on ENV vars.
        IFACE_CMDS=""
        counter="0"
@@ -178,8 +190,6 @@ EOF
        # echo this out to a file in /etc/mprov/
        echo "export MPROV_APIKEY=$apikey" > /etc/mprov/apikey
        chmod 600 /etc/mprov/apikey
-
-       /var/www/mprov_control_center/install_scripts/load_default_scripts.sh
 fi
 
 # fix the db perms... again...
