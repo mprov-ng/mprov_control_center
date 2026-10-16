@@ -253,7 +253,7 @@ class SystemAdmin(admin.ModelAdmin):
           func_timeout(5, self._doPowerCmd, [mybmc, "pxe"])
         except FunctionTimedOut:
            print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
-  @admin.action(description="Boot to PXE(EFI)")
+  @admin.action(description="Boot to PXE (EFI)")
   def sys_pxe_efi(self, request, queryset):
      for system in queryset: 
         mybmc = SystemBMC.objects.all().filter(system=system.id)
@@ -522,7 +522,7 @@ class SystemLocationAdmin(admin.ModelAdmin):
    def get_list_display(self, request):
         return [field.name for field in self.model._meta.concrete_fields]
 
-@admin.action(description="Mark images as needing rebuild.")
+@admin.action(description="Mark images as needing rebuild")
 def mark_rebuild(modeladmin, request, queryset):
   queryset.update(needs_rebuild=True)
   for instance in queryset:

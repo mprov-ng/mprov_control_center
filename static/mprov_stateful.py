@@ -108,7 +108,7 @@ class mProvStatefulInstaller():
     try:
       response = self.session.get(self.mprovURL, stream=True)
     except:
-      print("Error: Communication error to the server.  Retrying.", file=sys.stderr)
+      print("Error: Communication error to the server.", file=sys.stderr)
       self.sessionOk = False
       time.sleep(self.heartbeatInterval)
       return False
@@ -278,7 +278,7 @@ class mProvStatefulInstaller():
       if pdisk['mount'] == "/":
         self.rootpartUUID=f"UUID={partuuid}"
         print(self.rootpartUUID)
-    print("Done With RAID devices.")
+    print("Done with RAID devices.")
     
 
   def mountDisks(self):
@@ -425,8 +425,9 @@ class mProvStatefulInstaller():
           sh.chroot(["/newroot", "mount", "-t", "proc", "none", "/proc"])
       except:
           pass
-      print([f"/newroot", f"dracut", "--regenerate-all", "-f", "--mdadmconf", "--force-add", "mdraid"])
-      result = sh.chroot([f"/newroot", f"dracut", "--regenerate-all", "-f", "-vvv", "--mdadmconf", "--force-add", "mdraid"], _err_to_out=True)
+      dracut_cmd = ["/newroot", "dracut", "--regenerate-all", "-f", "-vvv", "--mdadmconf", "--force-add", "mdraid"]
+      print(dracut_cmd)
+      result = sh.chroot(dracut_cmd, _err_to_out=True)
       with open("/newroot/tmp/dracut.out", "w") as out:
           out.writelines(result)
 
@@ -736,7 +737,7 @@ class mProvStatefulInstaller():
         partprefix="p"
       else:
         partprefix=""
-      print(f"Setting bootable flag on {device.path}{partprefix}{part['partnum']}")
+      print(f"Setting bios_grub flag on {device.path}{partprefix}{part['partnum']}")
       partition.setFlag(parted.PARTITION_BIOS_GRUB)
       if device.path != self.bootdisk:
         print("ERROR: Somehow, the disk we detected was not the same as the one we are trying to set.  Bailing out.")

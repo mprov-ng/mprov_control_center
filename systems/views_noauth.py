@@ -310,7 +310,7 @@ class IPXEAPIView(MProvView):
           # print(queryset)
           # the following lines allow recurive templating to be done on the kernel cmdline.
           if qscnt > 1:
-            print(f"WARN: More than 1 NIC for IP {ip}.  Only using the first one!")
+            print(f"WARN: More than 1 NIC for IP {ip}.  Using the first bootable one.")
           
           # first let's find a bootable nic if one exists.
           nic=None

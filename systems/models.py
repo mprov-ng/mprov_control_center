@@ -452,7 +452,7 @@ def DeleteSystemImage(sender, instance, **kwargs):
         jobserver = jobserver,
       )
   else:
-    print("JobType was none.  HuH?")
+    print("WARN: No image-delete job module found; no job was queued.")
 
 # emits an image-update job everytime an image is modified.
 @receiver(pre_save, sender=SystemImage)

@@ -51,8 +51,7 @@ class OSRepoURLAPIView(MProvView, generics.ListAPIView):
         js = None
         if(len(js_set)==0):
           # if there are no jobservers, return 404
-          raise NotFound(detail="Error 404, No Jobservers for Repo", code=404) 
-        print(js_set)
+          raise NotFound(detail="No job servers host this repository.", code=404) 
         js = random.choice(js_set)
         if ":" in js.address:
           js.address=f"[{js.address}]"

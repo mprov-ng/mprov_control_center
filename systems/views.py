@@ -897,7 +897,7 @@ class SystemPowerAPIView(MProvView):
         try:
             ipmi.session.establish()
             ipmi.target = pyipmi.Target(ipmb_address=0x20)    
-            print(f"IPMI Power Action {action}")     
+            print(f"IPMI Power Action: {action}")     
             if action=="on":
                 print("Issue power up... ")
                 ipmi.chassis_control_power_up()
