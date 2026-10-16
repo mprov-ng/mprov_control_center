@@ -176,6 +176,14 @@ class IPXEAPIViewTests(TestCase):
     response = self.get_ipxe("10.0.0.99")
     self.assertEqual(response.content.decode(), "#!ipxe\necho custom nads")
 
+
+class ImagesAPIViewTests(TestCase):
+  """ /images/<pk>/ redirects to a job server hosting the image, or 404s. """
+
+  def test_unknown_image_is_404(self):
+    self.assertEqual(self.client.get("/images/nope/").status_code, 404)
+    self.assertEqual(self.client.get("/images/nope.vmlinuz/").status_code, 404)
+
 class FlattenConfigTests(TestCase):
   """ System.config is built from OS Distro -> System Groups (by name) -> System.
   install_kernel_cmdline and initial_mods append unless prefixed with '=', everything
