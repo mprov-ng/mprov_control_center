@@ -567,6 +567,30 @@ class SystemPowerAPIViewQueryTests(TestCase):
   def test_bad_id_is_400(self):
     self.assertEqual(self.get_json("/power/status/?id=abc").status_code, 400)
 
+  def test_by_bmc_field(self):
+    response = self.get_json("/power/status/?ipaddress=10.0.2.5")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.json(), {str(self.bmc): {"status": 200}})
+
+  def test_field_filter_acts_on_at_most_10(self):
+    for i in range(12):
+      system = System.objects.create(hostname=f"many{i}", created_by=self.user)
+      SystemBMC.objects.create(system=system, ipaddress=f"10.0.3.{i}", username="ops", password="pw")
+    response = self.get_json("/power/off/?username=ops")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(self.power.call_count, 10)
+
+  def test_no_filter_is_400(self):
+    self.assertEqual(self.get_json("/power/off/").status_code, 400)
+    self.power.assert_not_called()
+
+  def test_unknown_field_is_400(self):
+    self.assertEqual(self.get_json("/power/off/?nope=1").status_code, 400)
+
+  def test_no_match_is_404(self):
+    self.assertEqual(self.get_json("/power/off/?ipaddress=10.9.9.9").status_code, 404)
+    self.power.assert_not_called()
+
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
 class NestedWritableSerializerTests(TestCase):
