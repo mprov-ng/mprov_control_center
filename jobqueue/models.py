@@ -1,4 +1,3 @@
-import time
 import datetime
 from django.db import models
 from django.utils.timezone import make_aware, is_aware
@@ -89,16 +88,14 @@ class JobServer(models.Model):
         verbose_name="Job Server"
 
     def save(self, *args, **kwargs):
-        # check for stale servers
-        # only runs when a save lands on second :00 of a minute
-        # print(f"{int(time.time()) % 10}")
-        if int(time.time() % 60) == 0:
-            # delete any servers that are older than 1 minute heartbeat.
-            delTime = time.time() - 60
-            delDateTime = datetime.datetime.fromtimestamp(delTime)#.strftime("%Y-%m-%d %H:%M:%S")
-            delDateTime = make_aware(delDateTime)
+        # delete any other servers whose last heartbeat is more than a
+        # minute old.  Job servers save on every heartbeat (every 10
+        # seconds by default), so this runs often.
+        delDateTime = timezone.now() - datetime.timedelta(seconds=60)
+        stale = self.__class__.objects.filter(heartbeat_time__lte=delDateTime).exclude(pk=self.pk)
+        if stale.exists():
             print("Info: Removing stale jobservers.")
-            self.__class__.objects.filter(heartbeat_time__lte=delDateTime).delete()
+            stale.delete()
         
         # search for a network that our address is in.
         #myaddr = ipaddress.ip_address(self.address)
