@@ -1,0 +1,40 @@
+name: Tests
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v7
+
+      -
+        name: Setup buildx
+        uses: docker/setup-buildx-action@v4
+
+      # Build the same image that ships, without pushing it, so the tests
+      # run against the real dependencies.
+      -
+        name: Build Test Docker Image
+        uses: docker/build-push-action@v7
+        with:
+          tags: mpcc-test:ci
+          load: true
+          push: false
+
+      # Includes MigrationsTest, which fails if a model change has no
+      # migration committed for it.
+      -
+        name: Run Django Tests
+        run: |
+          docker run --rm --entrypoint bash mpcc-test:ci -c '
+            cd /var/www/mprov_control_center &&
+            . bin/activate &&
+            export SECRET_KEY="$(python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")" &&
+            python manage.py check &&
+            python manage.py test
+          '
