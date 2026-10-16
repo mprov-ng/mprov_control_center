@@ -70,3 +70,11 @@ class JobServerRegisterTests(APITestCase):
     response = self.post({"name": "js1"})
     self.assertEqual(response.status_code, 400)
     self.assertEqual(set(response.json()), {"address", "one_minute_load", "jobmodules"})
+
+  def test_list_shows_job_modules(self):
+    server = JobServer.objects.create(name="js1")
+    server.jobmodules.add(JobModule.objects.create(slug="nads", name="NADS"),
+                          JobModule.objects.create(slug="dnsmasq", name="DNSMasq"))
+    response = self.get_json("/jobservers/")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(sorted(response.json()[0]["jobmodules"]), ["dnsmasq", "nads"])
