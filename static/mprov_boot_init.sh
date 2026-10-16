@@ -54,7 +54,6 @@ export MPROV_IMAGE_URL=`get_kcmdline_opt mprov_image_url`
 export MPROV_INITIAL_MODS=`get_kcmdline_opt mprov_initial_mods`
 export MPROV_PROV_INTF=`get_kcmdline_opt mprov_prov_intf`
 export MPROV_STATEFUL=`get_kcmdline_opt mprov_stateful`
-export MPROV_BOOTDISK=`get_kcmdline_opt mprov_bootdisk`
 export MPROV_RESCUE=`get_kcmdline_opt mprov_rescue`
 # load our initial modules
 echo -n "" > /tmp/init_mods

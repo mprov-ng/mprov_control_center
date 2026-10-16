@@ -163,6 +163,15 @@ class IPXEAPIViewTests(TestCase):
     self.assertIn(f"kernel /images/{image.slug}.vmlinuz", response.content.decode())
 
 
+  def test_stateful_system(self):
+    self.system.stateful = True
+    self.system.save()
+    NetworkInterface.objects.create(system=self.system, name="eth0", ipaddress="10.0.0.8", bootable=True)
+    content = self.get_ipxe("10.0.0.8").content.decode()
+    self.assertIn("mprov_stateful=1", content)
+    # mprov_stateful.py finds the boot disk from the disk layouts itself.
+    self.assertNotIn("mprov_bootdisk", content)
+
   def test_nads_boot_gets_templated_cmdline_and_rescue(self):
     self.distro.install_kernel_cmdline = "quiet img={{ nic.system.systemimage.slug }}"
     self.distro.save()
