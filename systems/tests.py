@@ -240,3 +240,12 @@ class FlattenConfigTests(TestCase):
     configs = {s.hostname: s.config for s in System.objects.all()}
     self.assertEqual(configs["list-a"]["prov_interface"], "ib0")
     self.assertEqual(configs["list-b"]["prov_interface"], "eno2")
+
+
+class BMCInlineTests(SimpleTestCase):
+  """ The BMC inline is labelled "System BMC", with plural "System BMCs". """
+
+  def test_labels(self):
+    from systems.admin import BMCInline
+    self.assertEqual(BMCInline.verbose_name, "System BMC")
+    self.assertEqual(BMCInline.verbose_name_plural, "System BMCs")
