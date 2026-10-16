@@ -2,8 +2,14 @@
 # Use the full URL to avoid confusion with podman builds.
 FROM docker.io/rockylinux/rockylinux:8.8 
 
-# Update system and install necessary dependencies
-RUN dnf clean all && dnf update -y && \
+# Update the system and install the dependencies in one layer, so the repo
+# metadata is downloaded once and a slow mirror can only hit one step.
+# fastestmirror picks a mirror by latency instead of taking the first one.
+# The repos are enabled in the same order as before (base packages, then
+# EPEL and Development Tools, then PowerTools for parted-devel), so the same
+# packages come from the same repos.
+RUN echo "fastestmirror=True" >> /etc/dnf/dnf.conf && \
+    dnf update -y && \
     dnf install -y \
         curl \
         wget \
@@ -17,7 +23,7 @@ RUN dnf clean all && dnf update -y && \
         python38-pip \
         openssh-server \
         openssl \
-	ipmitool \
+        ipmitool \
         jq \
         iproute \
         openldap-devel \
@@ -25,24 +31,18 @@ RUN dnf clean all && dnf update -y && \
         httpd \
         mod_ssl \
         python38-devel \
-	    mariadb \
-	    mariadb-common \
-	    mariadb-devel \
+        mariadb \
+        mariadb-common \
+        mariadb-devel \
         python38-mod_wsgi.x86_64 && \
-    dnf clean all
-
-# Install EPEL and Development Tools
-RUN dnf -y install epel-release && \
-    dnf -y groupinstall "Development Tools" && \
-    dnf clean all
-
-RUN dnf -y install openldap-devel && dnf clean all
-
-# Configure Python 3.8 if necessary
-RUN alternatives --set python3 /usr/bin/python3.8 || true && \
-    dnf config-manager --enable powertools  && \
+    dnf install -y epel-release && \
+    dnf groupinstall -y "Development Tools" && \
+    dnf config-manager --enable powertools && \
     dnf install -y parted-devel && \
     dnf clean all
+
+# Configure Python 3.8 if necessary
+RUN alternatives --set python3 /usr/bin/python3.8 || true
 
 # gen ssl
 RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/localhost.key -x509 -days 365 -out /etc/pki/tls/certs/localhost.crt -nodes -subj "/C=US/ST=Maryland/L=Baltimore/O=Johns Hopkins/OU=ARCH/CN=localhost"
