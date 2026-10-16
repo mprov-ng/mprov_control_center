@@ -127,7 +127,23 @@ and make sure to add documentation to the class so that it can be displayed if a
             # someone is looking for a specific item.
             return self.retrieve(request, pk=kwargs['pk'])
         
-        self.queryset = self.model.objects.all()
+        self.queryset, error_body = self.filter_by_query_params(request, kwargs)
+        if len(error_body) > 0:
+            return Response(error_body, status=400)
+        if self.queryset.count() == 0:
+            return Response(None, status=404)
+
+        # return the super call for get.
+        return generics.ListAPIView.get(self, request, format=None)
+
+    def filter_by_query_params(self, request, kwargs, skip=()):
+        '''
+        Filters all objects of self.model by each ?FIELD=VALUE query parameter
+        that names a model field (exact match), except the fields in skip.
+        Returns the queryset and a dict of errors by field, which is empty
+        if every filter worked.
+        '''
+        queryset = self.model.objects.all()
 
         # check our query and see if we can get filters based on the query
         error_body = {}
@@ -136,25 +152,19 @@ and make sure to add documentation to the class so that it can be displayed if a
             filter_value = request.query_params[field]
             if field in kwargs:
                 filter_value = kwargs[field]
-            if field == 'detail':
+            if field == 'detail' or field in skip:
                 # ignore the detail flag.
                 continue
             if any(x for x in self.model._meta.get_fields() if x.name == field):
                 # we found a field.
                 try:
                     # print(f"{field}: {filter_value}")
-                    self.queryset = self.queryset.filter((field,filter_value))
+                    queryset = queryset.filter((field,filter_value))
                 except BaseException as e:
                     error_body[field] = f"Error searching for {field}: {type(e)=}: {e=}"
             # else: 
             #     error_body[field] = f"Error searching for {field}: Field doesn't exist."
-        if len(error_body) > 0:
-            return Response(error_body, status=400)
-        if self.queryset.count() == 0:
-            return Response(None, status=404)
-
-        # return the super call for get.
-        return generics.ListAPIView.get(self, request, format=None)
+        return queryset, error_body
 
     
     def post(self, request, *args, **kwargs):
