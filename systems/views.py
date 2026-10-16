@@ -21,7 +21,6 @@ from rest_framework.response import Response
 from networks.models import SwitchPort, Network, Switch
 from rest_framework import generics
 from jobqueue.models import Job, JobModule, JobStatus
-from jobqueue.serializers import JobServerAPISerializer
 from django.utils.text import slugify
 import pyipmi
 import pyipmi.interfaces
@@ -675,7 +674,6 @@ Format returned:
     model = SystemImage
     queryset = SystemImage.objects.all()
     serializer_class = SystemImageSerializer
-    jobservers=JobServerAPISerializer(many=True)
     
     def get(self, request, format=None, **kwargs):
 
