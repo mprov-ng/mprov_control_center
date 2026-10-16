@@ -55,6 +55,20 @@ class JobStatus(models.Model):
     class Meta:
         verbose_name="Job Status"
 
+PENDING = 1
+
+def queue_job(module, params=None):
+    """
+    Queue a pending job for module with params, unless an identical job is
+    already pending, so repeated triggers don't pile up duplicate jobs.
+    Returns the new or existing job.
+    """
+    params = {} if params is None else params
+    job = Job.objects.filter(module=module, status_id=PENDING, params=params).first()
+    if job is None:
+        job = Job.objects.create(name=module.name, module=module, status=JobStatus.objects.get(pk=PENDING), params=params)
+    return job
+
 class JobServer(models.Model):
     """ This area shows you the status of job servers that have registered themselves with the mPCC.  It will show you the IP address that the 
     job server registered with, the port, any job modules it can run, its load average, and when the mPCC last heard from it.
