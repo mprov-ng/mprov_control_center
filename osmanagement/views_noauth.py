@@ -33,7 +33,6 @@ path after the primary key is appended to the redirect.  Returns 404 if no job
 server hosts the repository.
       '''
       model = OSRepo
-      # TODO: placeholder for now to test 302 redirects
       authentication_classes = [] #disables authentication
       permission_classes = [] #disables permission
       serializer_class = OSRepoAPISerializer

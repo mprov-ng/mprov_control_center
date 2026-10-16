@@ -74,10 +74,9 @@ class JobServer(models.Model):
     class Meta:
         verbose_name="Job Server"
 
-    # XXX: With the correct related fields on the serializer, do we need this?
     def save(self, *args, **kwargs):
         # check for stale servers
-        # only run if we are on a 5 minute boundry
+        # only runs when a save lands on second :00 of a minute
         # print(f"{int(time.time()) % 10}")
         if int(time.time() % 60) == 0:
             # delete any servers that are older than 1 minute heartbeat.

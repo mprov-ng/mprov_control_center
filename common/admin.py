@@ -103,8 +103,8 @@ class AdminWizardModel(admin.ModelAdmin):
 
     else:      
       # if our current step is the end of the wizard, just display the form
-      # # as normal. 
-      # # XXX: Should we change this?
+      # as normal.
+      # TODO: this add-wizard code needs an audit, and may need replacing.
       if self.wizard_step >= len(self.step_fields):
         return super().get_form(request, obj=obj, change=change, **kwargs)
       

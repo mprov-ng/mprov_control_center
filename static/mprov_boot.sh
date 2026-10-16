@@ -2,16 +2,6 @@
 
 export PATH=$PATH:/sbin
 
-# if this works, it would be great...
-err_handler() {
-  echo "Error: SOMETHING HAS GONE TERRIBLY WRONG! DROPPING TO SERIAL SHELL!"
-  # redirect stdio to tty1 and start a new process group, enables bash
-  # job control... hopefully
-  export -f get_kcmdline_opt
-  mount -t devtmpfs devtmpfs /dev 
-
-  exec /bin/setsid /bin/bash -m  <> /dev/tty0 >&0 2>&1
-}
 get_kcmdline_opt(){
   for i in  `cat /proc/cmdline`
   do
@@ -24,7 +14,6 @@ get_kcmdline_opt(){
 
 }
 
-export -f err_handler
 echo "mProv boot setup..."
 set +e
 set -o pipefail

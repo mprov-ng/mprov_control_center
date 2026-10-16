@@ -64,6 +64,5 @@ Format returned:
 
     '''
   model = Script
-  template = "scripts_docs.html"
   serializer_class = ScriptAPISerializer
   queryset = Script.objects.all()

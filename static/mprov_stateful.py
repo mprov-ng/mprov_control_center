@@ -305,8 +305,7 @@ class mProvStatefulInstaller():
       currFstabLines = currFstab.readlines()
     
     # re-arrange the lines into array of lines.
-    # XXX: Does NOT handle spaces in the path 
-    # or any other spaces well.
+    # fstab fields are whitespace-separated; spaces in paths are escaped as \040.
     for idx,line in enumerate(currFstabLines):
       currFstabLines[idx] = line.split()
       currFstabLines[idx].append("\n")
@@ -316,8 +315,7 @@ class mProvStatefulInstaller():
       newFstabLines = newFstab.readlines()
     
     # re-arrange the lines into array of lines.
-    # XXX: Does NOT handle spaces in the path 
-    # or any other spaces well.
+    # fstab fields are whitespace-separated; spaces in paths are escaped as \040.
     for idx,line in enumerate(newFstabLines):
       found=False
       newFstabLines[idx] = line.split()
@@ -511,112 +509,9 @@ class mProvStatefulInstaller():
               "--verbose",
               bootdisk ])
           sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/etc/grub2.cfg"])
-  # def installBootLoader(self):
-  #   # copy in a script to do the boot loader config, and switch root to that script
-  #   # before we run the REAL init.
-    
-  #   # first we mount some stuff for the bootloader
-  #   bindMounts = ['dev', 'sys', 'proc']
-  #   for mount in bindMounts:
-  #     sh.mount(['-o', 'bind', f"/{mount}", f"/newroot/{mount}"])
-    
-  #   bootdisk = self.bootdisk
 
-  #   # add the kernel commandline to /etc/default/grub
-  #   with open("/proc/cmdline", "r") as cmdline:
-  #     cmdlineFile = cmdline.readlines()
-    
-  #   # collapse the command line into a space separated string
-  #   cmdlinestr = ' '.join(cmdlineFile)
-
-  #   newcmdline = []
-  #   # now let's filter out some stuff the new OS doesn't need
-  #   for arg in cmdlinestr.split(' '):
-  #     try:
-  #       argKey, argvalue = arg.split('=', 1)
-  #       if argKey == 'initrd' or \
-  #         argKey == 'rdinit' or \
-  #         argKey.startswith('mprov') or \
-  #         argKey == 'autorelabel' :
-  #           if argKey == "mprov_initial_mods":
-  #             self.modules = argvalue.replace(",", " ")
-  #           continue
-  #       newcmdline.append(arg)
-  #     except:
-  #       pass
-
-  #   # check for auto-detected modules
-  #   if os.path.exists("/tmp/init_mods") :
-  #     with open("/tmp/init_mods") as mods:
-  #       for mod in mods:
-  #         self.modules += mod.replace(",", " ")
-
-
-
-  #   # if we have RAID stuffs, append the following stuff to the commandline and tell grub to do the right thing.
-  #   newcmdline.append("rd.md=1")
-  #   newcmdline.append("rd.md.conf=1")
-  #   newcmdline.append("rd.auto=1")
-
-  #   # read in the current /etc/default/grub 
-  #   if not os.path.exists("/newroot/etc/default/grub"):
-  #     grubfileLines = []
-  #   else:
-  #     with open("/newroot/etc/default/grub", "r") as grubfile:
-  #       grubfileLines = grubfile.readlines()
-
-  #   # remove the GRUB_CMDLINE_LINUX entry
-  #   grubfileNew = [line for line in grubfileLines if not 'GRUB_CMDLINE_LINUX=' in line]
-    
-  #   # now add our new commandline
-  #   grubfileNew.append(f"GRUB_CMDLINE_LINUX=\"{' '.join(newcmdline)} root={self.rootpartUUID}\"")
-
-  #   # write out the new file
-  #   with open("/newroot/etc/default/grub", "w") as grubfileout:
-  #     grubfileout.writelines(grubfileNew)
-
-  #   print(f"Regenerating initial ramdisk... ")
-  #   try:
-  #     sh.chroot(["/newroot", "mount", "-t", "proc", "none", "/proc"])
-  #   except:
-  #     pass
-    
-  #   print([f"/newroot", f"dracut", "--regenerate-all", "-f", "--mdadmconf", "--force-add", "mdraid"])
-  #   result = sh.chroot([f"/newroot", f"dracut", "--regenerate-all", "-f", "-vvv", "--mdadmconf", "--force-add", "mdraid"], _err_to_out=True)
-  #   with open("/newroot/tmp/dracut.out", "w") as out:
-  #     out.writelines(result)
-
-  #   print(f"Installing boot loader...")
-
-  #   # Check [ -d /sys/firmware/efi ] && echo UEFI || echo BIOS
-  #   if os.path.exists("/sys/firmware/efi"):
-  #     print("Configuring GRUB2 EFI Setup...")
-  #     try:
-  #       sh.chroot(["/newroot", "dnf", "-y", "install", "shim", "grub2-efi-*", "grub2-common"])
-  #     except:
-  #       pass
-
-  #     sh.chroot(["/newroot", "dnf", "-y", f"reinstall", "shim", "grub2-efi-*", "grub2-common"])
-  #     sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/etc/grub2-efi.cfg"])
-  #     sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/grub2/grub2-efi.cfg"])
-  #   else:
-  #     print("Configuring GRUB2 BIOS Setup...")
-  #     with open("/newroot/etc/default/grub", "a") as gd:
-  #       gd.write("\nGRUB_ENABLE_BLSCFG=false")
-  #     sh.chroot([
-  #       f"/newroot", 
-  #       "grub2-install", 
-  #       "--boot-directory=/boot",
-  #       "--recheck",
-  #       "--verbose",
-  #       bootdisk ])
-  #     sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/etc/grub2.cfg"])
-
-    
   def cleanupAndSwitchroot(self):
     # disable netboot
-    
-    # XXX: Removed for the moment, needs more testing.
     mprovUrl = self.mprovURL
     apiKey = self.apikey
 

@@ -260,7 +260,6 @@ Format returned:
 
     '''
     model = System
-    template = "systems_docs.html"
     serializer_class = SystemSerializer
     queryset = None
 
@@ -445,7 +444,6 @@ Format returned:
 
     '''
     model = SystemGroup
-    template = "systemgroup_docs.html"
     serializer_class = SystemGroupSerializer
 
 class NetworkInterfaceAPIView(MProvView):
@@ -515,7 +513,6 @@ Format returned:
 
     '''
     model = NetworkInterface
-    template = "networkinterface_docs.html"
     serializer_class = NetworkInterfaceSerializer
     def get(self, request, format=None, **kwargs):
         
@@ -569,7 +566,6 @@ Format returned:
 
 class NetworkInterfaceDetailAPIView(MProvView):
       model = NetworkInterface
-      template = "networkinterface_docs.html"
       serializer_class = NetworkInterfaceDetailsSerializer
 
 
@@ -779,7 +775,6 @@ Format returned:
 
     '''
     model = SystemBMC
-    template = "systems_docs.html"
     serializer_class = SystemBMCSerializer
     queryset = None
     def get(self, request, format=None, **kwargs):
