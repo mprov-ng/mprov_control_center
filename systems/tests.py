@@ -226,6 +226,7 @@ class ImagesAPIViewJobserverTests(TestCase):
     # bad.example didn't resolve for this client, but it may serve others.
     self.assertEqual(sorted(js.name for js in self.image.jobservers.all()), ["bad", "ip"])
 
+
 class FlattenConfigTests(TestCase):
   """ System.config is built from OS Distro -> System Groups (by name) -> System.
   install_kernel_cmdline and initial_mods append unless prefixed with '=', everything
@@ -311,6 +312,17 @@ class FlattenConfigTests(TestCase):
     self.assertEqual(configs["list-a"]["prov_interface"], "ib0")
     self.assertEqual(configs["list-b"]["prov_interface"], "eno2")
 
+
+  def test_comment_only_field_does_not_override(self):
+    self.group_b.config_params = "extra_packages:\n  - vim"
+    self.group_b.save()
+    for value in ("# one\n# two", "# one\n\n  # two\n"):
+      system = self.make_system(f"comments-{len(value)}", groups=[self.group_b], systemimage=self.image, config_params=value)
+      self.assertEqual(system.config["config_params"], "extra_packages:\n  - vim")
+
+  def test_field_with_content_keeps_its_comments(self):
+    system = self.make_system("commented", systemimage=self.image, config_params="# note\n# note 2\nfoo: 1")
+    self.assertEqual(system.config["config_params"], "# note\n# note 2\nfoo: 1")
 
 class BMCInlineTests(SimpleTestCase):
   """ The BMC inline is labelled "System BMC", with plural "System BMCs". """
