@@ -14,7 +14,7 @@ from ipaddress import IPv4Network
 
 def exception_hook(exctype, value, tracebak):
   traceback.print_exc()
-  print("\n\nERROR: Installer failed.  Dropping to shell.  Note: You are still in the RAM disk.")
+  print("\n\nERROR: Network setup failed.  Dropping to shell.  Note: You are still in the RAM disk.")
   os.execv("/bin/setsid" "/bin/bash -m  <> /dev/tty1 >&0 2>&1")
 
 
