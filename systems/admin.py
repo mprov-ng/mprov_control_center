@@ -16,6 +16,7 @@ from scripts.models import Script
 import pyipmi
 import pyipmi.interfaces
 from func_timeout import func_timeout, FunctionTimedOut
+import os
 import subprocess
 
 from .models import (
@@ -266,7 +267,7 @@ class SystemAdmin(admin.ModelAdmin):
            print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
   
   def _doPowerCmd(self, bmc, action="on"):
-    print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, pass: {bmc.password}, action: {action}")
+    print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, action: {action}")
 
        
     interface = pyipmi.interfaces.create_interface('rmcp', slave_address=0x81,
@@ -287,9 +288,11 @@ class SystemAdmin(admin.ModelAdmin):
           
           # XXX: bootdev is not implemented in python-ipmi(pyipmi)
           # so we will need to issue a raw ipmitool command.
-          ipmitool_cmd = f"/usr/bin/ipmitool -Ilanplus -U{bmc.username} -P{bmc.password} -H{bmc.ipaddress} chassis bootdev pxe {efiopt}"
+          # -E reads the password from IPMI_PASSWORD, keeping it out of the process list.
+          ipmitool_cmd = ["/usr/bin/ipmitool", "-Ilanplus", f"-U{bmc.username}", "-E", f"-H{bmc.ipaddress}", "chassis", "bootdev", "pxe"] + efiopt.split()
+          ipmitool_env = {**os.environ, "IPMI_PASSWORD": bmc.password or ""}
           try:
-            subprocess.run(args=ipmitool_cmd.split())
+            subprocess.run(args=ipmitool_cmd, env=ipmitool_env)
           except: 
             print("Error Setting PXE.")
             return

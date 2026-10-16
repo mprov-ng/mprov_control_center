@@ -1,3 +1,5 @@
+import io
+from contextlib import redirect_stdout
 from types import SimpleNamespace
 from unittest import mock
 
@@ -6,7 +8,7 @@ from systems.views import SystemPowerAPIView
 from django.test import TestCase
 from django.contrib.auth.models import User
 from osmanagement.models import OSDistro
-from systems.models import System, SystemGroup, SystemImage, NetworkInterface
+from systems.models import System, SystemGroup, SystemImage, NetworkInterface, SystemBMC, SystemBMCForm
 
 class SystemPowerAPIViewResetTests(SimpleTestCase):
   """ The reset action hard resets, and only power cycles if the hard reset fails. """
@@ -35,6 +37,71 @@ class SystemPowerAPIViewResetTests(SimpleTestCase):
     subprocess.run.assert_called_once()
     self.ipmi.chassis_control_hard_reset.assert_called_once_with()
     self.ipmi.chassis_control_power_cycle.assert_not_called()
+
+  @mock.patch("systems.views.subprocess")
+  def test_pxe_passes_password_in_env(self, subprocess):
+    # the password must not be on the ipmitool command line, where ps shows it.
+    SystemPowerAPIView()._doPowerCmd(self.bmc, "pxeefi")
+    args = subprocess.run.call_args.kwargs["args"]
+    env = subprocess.run.call_args.kwargs["env"]
+    self.assertIn("-E", args)
+    self.assertEqual(args[-1], "options=efiboot")
+    self.assertFalse(any("secret" in arg for arg in args))
+    self.assertEqual(env["IPMI_PASSWORD"], "secret")
+
+  @mock.patch("systems.views.subprocess")
+  def test_power_cmd_does_not_print_password(self, subprocess):
+    out = io.StringIO()
+    with redirect_stdout(out):
+      SystemPowerAPIView()._doPowerCmd(self.bmc, "pxe")
+    self.assertNotIn("secret", out.getvalue())
+
+
+class SystemBMCPasswordTests(TestCase):
+  """ The BMC password is write-only, except for a single entry or ?detail, which
+  mprov_scripts' setupBMC.py reads. """
+
+  def setUp(self):
+    self.user = User.objects.create(username="bmc-test")
+    self.system = System.objects.create(hostname="bmc-node", created_by=self.user)
+    self.bmc = SystemBMC.objects.create(system=self.system, ipaddress="10.0.1.5", username="admin", password="bmc-secret")
+    self.client.force_login(self.user)
+
+  def get_json(self, url):
+    return self.client.get(url, CONTENT_TYPE="application/json")
+
+  def test_list_omits_password(self):
+    response = self.get_json("/systembmcs/")
+    self.assertEqual(response.status_code, 200)
+    self.assertNotIn("password", response.json()[0])
+    self.assertNotIn("bmc-secret", response.content.decode())
+
+  def test_detail_returns_password(self):
+    response = self.get_json(f"/systembmcs/?system={self.system.id}&detail")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.json()[0]["password"], "bmc-secret")
+
+  def test_single_entry_returns_password(self):
+    response = self.get_json(f"/systembmcs/{self.bmc.id}/")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.json()["password"], "bmc-secret")
+
+  def test_patch_sets_password_without_echo_or_print(self):
+    out = io.StringIO()
+    with redirect_stdout(out):
+      response = self.client.patch(f"/systembmcs/{self.bmc.id}/", data='{"password": "new-secret"}', content_type="application/json")
+    self.assertEqual(response.status_code, 200)
+    self.assertNotIn("password", response.json())
+    self.assertNotIn("new-secret", out.getvalue())
+    self.bmc.refresh_from_db()
+    self.assertEqual(self.bmc.password, "new-secret")
+
+  def test_admin_form_does_not_print_password(self):
+    form = SystemBMCForm(data={"system": self.system.id, "ipaddress": "10.0.1.6", "password": "form-secret", "vlan": 0})
+    out = io.StringIO()
+    with redirect_stdout(out):
+      self.assertTrue(form.is_valid(), form.errors)
+    self.assertNotIn("form-secret", out.getvalue())
 
 
 

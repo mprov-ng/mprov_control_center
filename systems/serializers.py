@@ -20,6 +20,9 @@ class SystemBMCSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemBMC
         fields = '__all__'
+        # Accept the password on POST/PATCH but never return it. Only the ?detail
+        # serializer returns it, because mprov_scripts' setupBMC.py needs it.
+        extra_kwargs = {'password': {'write_only': True}}
 class SystemGroupSerializer(serializers.ModelSerializer): 
     scripts = ScriptAPISerializer(many=True)
     ansibleplaybooks = AnsiblePlaybookAPISerializer(many=True)

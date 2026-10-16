@@ -39,7 +39,7 @@ Format returned:
         "name": "Rocky Linux 8 Latest",
         "vendor": "Rocky Linux",
         "version": "8",
-        "config_params": "rootpw: 'root:$6$80Lz0whR9xNVPouX$L3wyFx7h3oYS9RvzFTVJLFUkjApUCJ3kH5KtOUZgREMEDp7owSxVq5NlFCcR9s3knaz7g4YuCXBiqcbQJGRl91'
+        "config_params": "rootpw: 'root:$6$<salt>$<hash>'
                           extra_packages: 
                             - vim-enhanced
                             - wget

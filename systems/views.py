@@ -1,3 +1,4 @@
+import os
 import subprocess
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect
@@ -640,7 +641,7 @@ Format returned:
         "updated": "2022-05-12T16:20:51.588620-05:00",
         "needs_rebuild": false,
         "version": 7,
-        "config_params": "- rootpw: '$6$80Lz0whR9xNVPouX$L3wyFx7h3oYS9RvzFTVJLFUkjApUCJ3kH5KtOUZgREMEDp7owSxVq5NlFCcR9s3knaz7g4YuCXBiqcbQJGRl91'",
+        "config_params": "- rootpw: '$6$<salt>$<hash>'",
         "created_by": 1,
         "osdistro": 1,
         "systemgroups": [
@@ -742,7 +743,8 @@ class SystemBMCAPIView(MProvView):
 - ipaddress: The IP of the entry
 - mac: The MAC address of the entry
 - username: The username for authentication with this entry
-- password: The pwassword for authentication with this entry
+- password: The password for authentication with this entry. It is write-only:
+    GET returns it only for a single entry (/systembmcs/1/) or with `?detail`.
 - system: ID of the system this entry is associated with.
 - switch_port: ID of the switchport this entry resides on.
 
@@ -758,7 +760,6 @@ Format returned:
         "ipaddress": "172.16.20.1",
         "mac": null,
         "username": null,
-        "password": null,
         "system": 1,
         "switch_port": null
     }
@@ -791,14 +792,12 @@ Format returned:
         return super().get(request, format, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        print(request.data)
         if request.data['password'] == "":
             del request.data['password']
         return super().post(request, *args, **kwargs)
 
     
     def patch(self, request, *args, **kwargs):
-        print(request.data)
         if 'password' in request.data and request.data['password'] == "":
             del request.data['password']
         return super().patch(request, *args, **kwargs)   
@@ -859,7 +858,7 @@ class SystemPowerAPIView(MProvView):
 
 
     def _doPowerCmd(self, bmc, action="on"):
-        print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, pass: {bmc.password}, action: {action}")
+        print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, action: {action}")
         interface = pyipmi.interfaces.create_interface('rmcp', slave_address=0x81,
                                                host_target_address=0x20,
                                                keep_alive_interval=0)
@@ -877,10 +876,12 @@ class SystemPowerAPIView(MProvView):
         
             # XXX: bootdev is not implemented in python-ipmi(pyipmi)
             # so we will need to issue a raw ipmitool command.
-            ipmitool_cmd = f"/usr/bin/ipmitool -Ilanplus -U{bmc.username} -P{bmc.password} -H{bmc.ipaddress} chassis bootdev pxe {efiopt}"
+            # -E reads the password from IPMI_PASSWORD, keeping it out of the process list.
+            ipmitool_cmd = ["/usr/bin/ipmitool", "-Ilanplus", f"-U{bmc.username}", "-E", f"-H{bmc.ipaddress}", "chassis", "bootdev", "pxe"] + efiopt.split()
+            ipmitool_env = {**os.environ, "IPMI_PASSWORD": bmc.password or ""}
             print(ipmitool_cmd)
             try:
-                subprocess.run(args=ipmitool_cmd.split())
+                subprocess.run(args=ipmitool_cmd, env=ipmitool_env)
             except: 
                 print("Error Setting PXE.")
                 return
