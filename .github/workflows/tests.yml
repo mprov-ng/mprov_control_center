@@ -18,6 +18,9 @@ jobs:
 
       # Build the same image that ships, without pushing it, so the tests
       # run against the real dependencies.
+      # The layer cache lets most runs reuse the dnf layer and skip the
+      # mirrors. Only this workflow caches: the dev and release builds must
+      # run a fresh dnf update every time to pick up security updates.
       -
         name: Build Test Docker Image
         uses: docker/build-push-action@v7
@@ -25,6 +28,8 @@ jobs:
           tags: mpcc-test:ci
           load: true
           push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # Includes MigrationsTest, which fails if a model change has no
       # migration committed for it.
