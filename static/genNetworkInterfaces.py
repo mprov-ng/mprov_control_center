@@ -187,7 +187,7 @@ class mProvNetworkScriptGenerator():
       
       with open(f"/etc/hostname","w") as hostfile:
         hostfile.write(self.details['hostname'])
-      print(f"Name: {intf['name']}; MAC: {intf['mac']}; Gateway: {intf['gateway']};  IP: {intf['ipaddress']};, Netmask:{intf['netmask']}")
+      print(f"Name: {intf['name']}; MAC: {intf['mac']}; Gateway: {intf['gateway']}; IP: {intf['ipaddress']}; Netmask: {intf['netmask']}")
 
 def main():
   netGen = mProvNetworkScriptGenerator()

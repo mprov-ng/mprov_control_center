@@ -158,7 +158,7 @@ then
   echo
   # disable the error trap for the read
   trap ERR
-  read -p "Would you like an early shell? (y/n)" -s -n 1 -t 10 early_shell
+  read -p "Would you like an early shell? (y/n) " -s -n 1 -t 10 early_shell
   # reenable the error trap
   trap err_handler ERR
   if [ "$early_shell" == "y" ] || [ "$early_shell" == "Y" ] 
@@ -168,7 +168,7 @@ then
 
     echo
     echo
-    echo "Pressing Alt-F2 to access shell."
+    echo "Press Alt-F2 to access a shell."
     respawn
   fi
 fi
@@ -199,7 +199,7 @@ do
     break
   else
     echo "Unable to retreive image.  Retrying..."
-    echo "Pressing Alt-F2 to access shell."
+    echo "Press Alt-F2 to access a shell."
     sleep 5
   fi
 done
