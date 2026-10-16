@@ -48,15 +48,16 @@
     {% endif %}
 
     {% block extrastyle %} {% endblock %}
-    {% block extrahead %}
-        <script>
+    {% block extrahead %}{% endblock %}
+    {# Outside extrahead, so a child template that overrides it without {{ block.super }} keeps these. #}
+    <script>
         // Define the URL for job status changes endpoint
         const JOB_STATUS_CHANGES_URL = "/jobqueue/status-changes/";
     </script>
     <script src="{% static "admin/js/job_notifications.js" %}"></script>
     <script src="/static/textarea_tab.js"></script>
     <link rel="stylesheet" href="/static/css/mprov.css">
-    {% endblock %}</head>
+</head>
 <body class="hold-transition{% if not jazzmin_settings.show_sidebar %} no-sidebar{% else %} sidebar-mini{% endif %} {% sidebar_status request %} {% if is_popup %}popup {% endif %}{% block bodyclass %}{% endblock %} {{ jazzmin_ui.body_classes }} {% if jazzmin_ui.dark_mode_theme %}theme-dark{% endif %}" data-admin-utc-offset="{% now "Z" %}">
 
 <div class="wrapper">
