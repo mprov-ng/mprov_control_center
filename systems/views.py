@@ -834,7 +834,7 @@ Format returned:
         return super().get(request, format, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        if request.data['password'] == "":
+        if request.data.get('password') == "":
             del request.data['password']
         return super().post(request, *args, **kwargs)
 

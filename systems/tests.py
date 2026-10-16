@@ -96,6 +96,13 @@ class SystemBMCPasswordTests(TestCase):
     self.bmc.refresh_from_db()
     self.assertEqual(self.bmc.password, "new-secret")
 
+  def test_post_without_password(self):
+    other = System.objects.create(hostname="bmc-node2", created_by=self.user)
+    response = self.client.post("/systembmcs/", data=f'{{"system": {other.id}, "ipaddress": "10.0.1.7"}}',
+                                content_type="application/json")
+    self.assertEqual(response.status_code, 201, response.content)
+    self.assertEqual(SystemBMC.objects.get(system=other).ipaddress, "10.0.1.7")
+
   def test_admin_form_does_not_print_password(self):
     form = SystemBMCForm(data={"system": self.system.id, "ipaddress": "10.0.1.6", "password": "form-secret", "vlan": 0})
     out = io.StringIO()
