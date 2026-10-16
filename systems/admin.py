@@ -369,11 +369,9 @@ class SystemAdmin(admin.ModelAdmin):
               if f"update_{field_name}" not in request.POST:
                  continue
               cleaned_field_data = form.cleaned_data[field_name]
+              is_m2m = self.model._meta.get_field(field_name).many_to_many
               for item in queryset.all():
-                  fieldCheck = getattr(item, field_name)
-                  fieldCheck = fieldCheck
-                  print(fieldCheck.__class__.__name__)
-                  if fieldCheck.__class__.__name__ == "ManyRelatedManager": 
+                  if is_m2m:
                      item.clean()
                   else: 
                     try:
@@ -397,7 +395,7 @@ class SystemAdmin(admin.ModelAdmin):
                   )
 
               for item in queryset.all():
-                  if fieldCheck.__class__.__name__ == "ManyRelatedManager": 
+                  if is_m2m:
                      m2mfield = getattr(item, field_name)
                      m2mfield.set(cleaned_field_data)
                      item.save()
@@ -452,8 +450,8 @@ class SystemAdmin(admin.ModelAdmin):
                           else:
                               nic.bootable = False
                           nic.save()
-              self.message_user(request, f"Bootable NIC set on {bootable_updated} system(s).")
-              fieldsUpdated = True
+                self.message_user(request, f"Bootable NIC set on {bootable_updated} system(s).")
+                fieldsUpdated = True
 
             if fieldsUpdated is False:
               self.message_user(request, "No fields selected to update.")
