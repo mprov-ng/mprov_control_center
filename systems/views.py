@@ -512,7 +512,9 @@ class NetworkInterfaceAPIView(MProvView):
 
 ### Query Parameters
 - ?network=SLUG: GET returns the NICs on that network, either set directly on the NIC or
-    through the network of the NIC's switch port.
+    through the network of the NIC's switch port, or 404 if there is no such network.
+    The switch port's network takes precedence: those NICs are listed with this network,
+    and a NIC whose switch port is on another network is left out.
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 
 ### GET method (no parameters)
@@ -566,42 +568,24 @@ Format returned:
         
         if 'network' in self.request.query_params:
             network = self.request.query_params['network']
-            net = Network.objects.filter(slug=network)[0]
-        #   
-            # get the Network ID
-            # This should first query the switch for all ports on that network.
-            # It should also query all network interfaces for hard coded networks.
-            # Then reconcile ports <--> interfaces.  Switch port takes precedence, if set.
-            innerQ = SwitchPort.objects.filter(networks=net)
-            swportqueryset = NetworkInterface.objects.all().filter(switch_port__in=innerQ)
-            nicqueryset = NetworkInterface.objects.all().filter(network=net)
-            nics = list(nicqueryset)
-            print(swportqueryset.count())
-            if swportqueryset.count() > 0:
-                for portnic in swportqueryset:
-                    # find the nic in nics 
-                    # nics [ {nicobj} ]
-                    found=False
-                    for nic in nics:
-                        if nic.id == portnic.id:
-                            nic.network = portnic.network
-                            found=True
-                    if not found:
-                        nics.append(portnic)
-
-            # now we remove NICs that have a switch port that is not on this network
+            net = Network.objects.filter(slug=network).first()
+            if net is None:
+                return Response(None, status=404)
+            # Return the NICs on a switch port on this network, and the NICs
+            # set to this network directly.  Switch port takes precedence: a
+            # NIC whose port is on this network is listed with this network,
+            # and a NIC whose port is on another network is left out.
+            portnics = {nic.id: nic for nic in NetworkInterface.objects.filter(switch_port__networks=net)}
+            nics = []
+            for nic in NetworkInterface.objects.filter(network=net):
+                if nic.id in portnics:
+                    nics.append(portnics.pop(nic.id))
+                elif nic.switch_port is None:
+                    nics.append(nic)
+            nics.extend(portnics.values())
             for nic in nics:
-                found=False
-                if nic.switch_port is not None:
-                    for portnic in swportqueryset:
-                        if nic.id == portnic.id:
-                            found=True
-                            break
-                    if not found:
-                        nics.remove(nic)
-                
-                    
-                    
+                nic.network = net
+
             # now we have a list of nics return that as json
             return Response(NetworkInterfaceSerializer(nics, many=True).data)
         
