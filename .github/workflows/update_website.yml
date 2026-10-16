@@ -1,4 +1,4 @@
-name: Update website Informtion
+name: Update website Information
 on:
   push:
     branches:
