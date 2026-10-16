@@ -137,7 +137,33 @@ then
        python manage.py loaddata "${fixtures[@]}"
        /var/www/mprov_control_center/install_scripts/load_default_scripts.sh
        # before the self System below, as the fixture rows have fixed pks.
-       python manage.py loaddata systems/fixtures/*
+       # Leave out any script that isn't loaded (e.g. the mprov_scripts clone
+       # failed on an offline install), or the whole load fails.
+       cat <<'EOF' | python manage.py shell
+import glob, os, shutil, tempfile, yaml
+from django.core.management import call_command
+from scripts.models import Script
+
+known = set(Script.objects.values_list("pk", flat=True))
+tmpdir = tempfile.mkdtemp()
+files = []
+for path in sorted(glob.glob("systems/fixtures/*")):
+    with open(path) as f:
+        rows = yaml.safe_load(f) or []
+    for row in rows:
+        scripts = row.get("fields", {}).get("scripts")
+        if scripts:
+            missing = [s for s in scripts if s not in known]
+            if missing:
+                print(f"Warning: {row['model']} {row['pk']}: skipping scripts that aren't loaded: {', '.join(missing)}")
+            row["fields"]["scripts"] = [s for s in scripts if s in known]
+    out = os.path.join(tmpdir, os.path.basename(path))
+    with open(out, "w") as f:
+        yaml.safe_dump(rows, f)
+    files.append(out)
+call_command("loaddata", *files)
+shutil.rmtree(tmpdir)
+EOF
 
        # try to generate some interface commands based on ENV vars.
        IFACE_CMDS=""
