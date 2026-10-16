@@ -192,5 +192,5 @@ and make sure to add documentation to the class so that it can be displayed if a
                 continue
             if(not getattr(field, 'blank', False)):
                 print(f"DEBUG: {self.model}.{field.name} is {field.__class__} and is required")
-            jsonDataModel['fields'].update({field.name: {'type:': datatype, 'required': not getattr(field, 'blank', False) }})
+            jsonDataModel['fields'].update({field.name: {'type': datatype, 'required': not getattr(field, 'blank', False) }})
         return jsonDataModel
