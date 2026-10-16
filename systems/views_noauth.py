@@ -1,5 +1,4 @@
 
-import os
 from .models import SystemImage, NetworkInterface
 from django.shortcuts import redirect
 from rest_framework.exceptions import NotFound
@@ -173,95 +172,6 @@ left, a 404 is returned.
 
     def patch(self, request, *args, **kwargs):
         return HttpResponseNotAllowed(["GET"])
-
-class KernelImageAPIView(MProvView, generics.ListAPIView):
-      '''
-# /kernels/
-NOTE: This is a mimic of the /images/ function but specifically for serving 
-kernels to PXE.  This function may be merged into /images/ at some point.
-
-
-## Accepted HTTP Methods:
-- GET (with Primary Key, e.g. /kernels/compute/)
-
-## Documentation
-
-### GET (with primary key)
-- Will redirect (302) to the kernel (.vmlinuz) of the image requested on the least
-loaded jobserver hosting it, regardless of requested content type.
-
-    '''
-      model = SystemImage
-      authentication_classes = [] #disables authentication
-      permission_classes = [] #disables permission
-      serializer_class = SystemImageSerializer
-      def get(self, request, format=None, *args, **kwargs):
-        # result = self.checkContentType(request, format=format, kwargs=kwargs)
-        # if result is not None:
-        #     return result
-        if 'pk' in kwargs:
-          image, _= os.path.splitext(kwargs['pk'])
-          image = SystemImage.objects.get(pk=image)
-        else: 
-          result = self.checkContentType(request, format=format, kwargs=kwargs)
-          if result is not None:
-              return result 
-          # no pk in image, spit out a list then.
-          self.queryset = SystemImage.objects.all()
-          return(generics.ListAPIView.get(self, request, format=None))
-        # choose a jobserver with the lowest one minute load avg.
-        js_set = self.getJobservers(image)
-        js = js_set[0]
-        if ":" in js.address:
-          js.address=f"[{js.address}]"
-        imageURL = f"http://{js.address}:{str(js.port)}/images/{image.slug}/{image.slug}.vmlinuz"
-        
-        try: 
-          response = requests.head(imageURL,timeout=1)
-          statCode = response.status_code
-        except Exception as e:
-          print(f"Error: {e}")
-          statCode = 0
-        while ( statCode <= 199 or statCode >=400):
-          # jobserver gave a bad response, remove it and retry.
-          js_set.remove(js)
-          print("Removing Jobserver " + str(js) + ", URL: " + imageURL + " not accessible. Status: " + str(statCode))
-          image.jobservers.set(js_set)
-          image.save()
-          js_set = self.getJobservers(image)
-          js = js_set[0]
-          if ":" in js.address:
-            js.address=f"[{js.address}]"
-          imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug + ".vmlinuz"
-          #print(imageURL)
-          try: 
-            response = requests.head(imageURL,timeout=5)
-            statCode = response.status_code
-          except: 
-            statCode=0
-        print(f"Redirecting: {imageURL}")
-        return redirect(imageURL)        
-      def post(self, request, *args, **kwargs):
-        return HttpResponseNotAllowed(["GET"])
-
-      def delete(self, request, *args, **kwargs):
-          return HttpResponseNotAllowed(["GET"])
-
-      def put(self, request, *args, **kwargs):
-          return HttpResponseNotAllowed(["GET"])
-
-      def patch(self, request, *args, **kwargs):
-          return HttpResponseNotAllowed(["GET"])
-
-      def getJobservers(self, image):
-        # choose a jobserver with the lowest one minute load avg.
-        js_set = list(image.jobservers.all().order_by('one_minute_load'))
-        
-        if(len(js_set)==0):
-          # if there are no jobservers, return 404
-          raise NotFound(detail="Error 404, No Jobservers for Image", code=404)
-        print("Jobserver: " + str(js_set[0]))
-        return js_set
 
 class IPXEAPIView(MProvView):
     model = NetworkInterface
