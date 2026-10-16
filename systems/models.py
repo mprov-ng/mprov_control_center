@@ -239,7 +239,6 @@ class SystemBMCForm(ModelForm):
     password = self.cleaned_data['password']
     if not password or password == "":
       del self.cleaned_data['password']
-    print(self.cleaned_data)
     return self.cleaned_data
 
 class NetworkInterface(models.Model):

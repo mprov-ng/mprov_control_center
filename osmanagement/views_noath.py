@@ -6,6 +6,7 @@ from rest_framework.exceptions import NotFound
 import random
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect
+from django.utils.html import format_html
 from bs4 import BeautifulSoup
 
 
@@ -36,9 +37,9 @@ class OSRepoURLAPIView(MProvView, generics.ListAPIView):
               html="<br /><br /><h2>Repository List</h2><br /><ul>"
               for repo in list(self.queryset):
                 if repo.managed:
-                  html+=f"<li><a href='/osrepos/{repo.id}/'>{repo.name}</a><br></li>"
+                  html+=format_html("<li><a href='/osrepos/{}/'>{}</a><br></li>", repo.id, repo.name)
                 else:
-                  html+=f"<li><a href='{repo.repo_package_url}'>{repo.name}</a><br></li>"
+                  html+=format_html("<li><a href='{}'>{}</a><br></li>", repo.repo_package_url, repo.name)
               html+=f"</ul>"
               body.append(BeautifulSoup(html, features="html.parser"))
               result.content = str(bs).encode(result.charset)
