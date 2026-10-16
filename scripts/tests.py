@@ -1,9 +1,12 @@
+import os
 import tempfile
 
+from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import resolve
 
-from scripts.models import Script, ScriptType
+from scripts.models import AnsiblePlaybook, Script, ScriptType
 from scripts.views import ScriptAPIView
 
 
@@ -26,3 +29,11 @@ class ScriptSaveTests(TestCase):
   def test_save_without_a_file(self):
     Script(name="no file", slug="no-file", scriptType=self.script_type, content="echo hi").save()
     self.assertEqual(Script.objects.get(pk="no-file").name, "no file")
+
+  def test_playbook_dir_matches_the_stored_path(self):
+    playbook = AnsiblePlaybook(name="site", scriptType=self.script_type,
+                               filename=SimpleUploadedFile("site.yaml", b"- hosts: all\n"))
+    playbook.save()
+    self.assertEqual(playbook.filename.name, "post-boot/ansibleplaybooks/siteyaml-v1")
+    self.assertTrue(os.path.isfile(os.path.join(settings.MEDIA_ROOT, playbook.filename.name)))
+    self.assertFalse(os.path.exists(os.path.join(settings.MEDIA_ROOT, "ansibleplaybooks")))
