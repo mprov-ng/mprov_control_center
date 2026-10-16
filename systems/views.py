@@ -742,12 +742,13 @@ Format returned:
             # merge without duplicates
             print("Merging Array.")
             jobservers = list(set(jobservers + request.data['jobservers']))
-            # remove the jobservers from the kwargs.
-            del request.data['jobservers']
           else:
             print("Adding Jobserver")
             jobservers.append(request.data['jobservers'])
             # jobservers isn't a list, let's try to append our new jobserver.
+          # remove the jobservers from the request data, so the update below
+          # doesn't replace the merged list.
+          del request.data['jobservers']
           sysimage.jobservers.set(jobservers)
           sysimage.save()
         
