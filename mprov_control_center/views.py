@@ -37,7 +37,6 @@ interface.  It will give you documentation on how to use that section of the api
 
 
     """
-    template = 'docs.html'
     authentication_classes = [] #disables authentication
     permission_classes = [] #disables permission
 

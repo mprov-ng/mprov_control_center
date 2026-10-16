@@ -15,13 +15,13 @@ class OSType(models.Model):
 
  
 class OSDistro(models.Model):
+  """ This is where you would define what OS Distributions you would like the mPCC to manage."""
   ARCH = (
      ("x86_64", "x86_64"),
      ("aarch64", "aarch64"),
      ("ppc64le", "ppc64le"),
      ("s390x", "s390x"),
   )
-  """ This is where you would define what OS Distributions you would like the mPCC to manage."""
   endpoint="/distros/"
   name=models.CharField(max_length=100)
   vendor=models.CharField(max_length=100)
@@ -106,24 +106,6 @@ class OSRepo(models.Model):
     verbose_name='OS Repository'
     verbose_name_plural='OS Repositories'
 
-# remove unused code.
-# @receiver(pre_save, sender=OSDistro)
-# def OSDistroUpdateJob(sender, **kwargs):
-#   OSImageJobType = None
-#   # get or create the OSIMAGE_UPDATE job module in the DB
-#   # TODO get the jobtype, do nothing if it's not defined.
-#   try:
-#       OSImageJobType = JobModule.objects.get(slug='os-image-update')
-#   except:
-#       OSImageJobType = None
-#   print(OSImageJobType)
-#   if OSImageJobType is not None:
-#       # save a new job, if one doesn't already exist.
-#       Job.objects.update_or_create(
-#         name="Update OS Images", module=OSImageJobType,
-#         defaults={'status': JobStatus.objects.get(pk=1)}
-#       )
-    
 @receiver(post_save, sender=OSDistro)
 def OSDistroCreateRepos(sender, instance, **kwargs):
   if hasattr(instance, "_post_save"):
@@ -191,24 +173,6 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
   finally:
       del instance._post_save
 
-# remove unused code.
-# @receiver(pre_delete, sender=OSDistro)
-# def OSDistroDeleteJob(sender, **kwargs):
-#   OSImageJobType = None
-#   try:
-#       OSImageJobType = JobModule.objects.get(slug='os-image-delete')
-#   except:
-#       OSImageJobType = None
-#   print(OSImageJobType)
-#   # get or create the OSIMAGE_UPDATE job module in the DB
-#   # TODO get the jobtype, do nothing if it's not defined.
-#   if OSImageJobType is not None:
-#       # save a new job, if one doesn't already exist.
-#       Job.objects.update_or_create(
-#         name="Delete OS Images", module=OSImageJobType,
-#         defaults={'status': JobStatus.objects.get(pk=1)}
-#       )
-        
 @receiver(post_save, sender=OSRepo)
 def RepoUpdateJob(sender, instance, **kwargs):
   if hasattr(instance, '_post_save'):

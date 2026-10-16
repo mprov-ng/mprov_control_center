@@ -69,7 +69,6 @@ Format returned:
 
     '''    
     model = OSDistro 
-    template = 'osdistro_docs.html'
     serializer_class = OSDistroAPISerializer
     queryset = OSDistro.objects.all()
 
@@ -122,7 +121,6 @@ Format returned:
 
     '''   
     model = OSRepo
-    template = 'osrepo_docs.html'
     serializer_class = OSRepoAPISerializer
     queryset = OSRepo.objects.all()
 

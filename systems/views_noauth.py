@@ -189,7 +189,6 @@ kernels to PXE.  This function may be merged into /images/ at some point.
 
     '''
       model = SystemImage
-      # TODO: placeholder for now to test 302 redirects
       authentication_classes = [] #disables authentication
       permission_classes = [] #disables permission
       serializer_class = SystemImageSerializer

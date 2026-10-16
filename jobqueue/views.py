@@ -74,7 +74,6 @@ Format returned:
 
     '''
     model = Job
-    template = "jobs_docs.html"
     serializer_class = JobAPISerializer
     queryset = Job.objects.all()
     search_fields = ['module__slug']
@@ -179,7 +178,6 @@ Format returned:
 
     '''
     model = JobModule
-    template = "jobmodules_docs.html"
     serializer_class = JobModuleAPISerializer
     queryset = JobModule.objects.all()
     search_fields =['name', 'slug']
@@ -254,7 +252,6 @@ Format returned:
 
     '''
     model = JobServer
-    template = "jobservers_docs.html"
     serializer_class = JobServerAPISerializer
 
     # Redefine post to create_or_update.
