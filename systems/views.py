@@ -232,6 +232,7 @@ class SystemAPIView(MProvView):
 ### Query Parameters
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 - ?hostname=TEXT: GET only returns systems whose hostname contains the text, or 404 if none.
+    It can be combined with ?FIELD=VALUE filters.
 - ?detail: GET returns systems with nested details.
 - ?self: GET returns the system that owns the NIC with the requesting IP address, with
     nested details, or 404 if unknown.  POST with ?self and a body of {"netboot": ...}
@@ -363,20 +364,15 @@ Format returned:
             # someone is looking for a specific item.
             return self.retrieve(request, pk=kwargs['pk'])
          
-        # call the base class get()
-        # this does do some initial filtering.
-        super().get(request, format=None, **kwargs)
+        result = self.checkContentType(request, format=format)
+        if result is not None:
+            return result
 
-        # result = self.checkContentType(request, format=format, kwargs=kwargs)
-        # if result is not None:
-        #     return result
-        # if self.model == None:
-        #     return Response(None)
-        # if 'pk' in kwargs:
-        #     # someone is looking for a specific item.
-        #     return self.retrieve(self, request, format=None, pk=kwargs['pk'])
-        # self.serializer_class = SystemSerializer
-        # self.queryset = self.model.objects.all()
+        # ?FIELD=VALUE filters from the base class. hostname is a contains
+        # match instead, below.
+        self.queryset, error_body = self.filter_by_query_params(request, kwargs, skip=('hostname',))
+        if len(error_body) > 0:
+            return Response(error_body, status=400)
 
         # post-query filters and such.
         if 'detail' in request.query_params:
@@ -385,7 +381,6 @@ Format returned:
         if 'hostname' in request.query_params:
             # someone is looking for a specific item.
             print('Hostname query: ?hostname=' + request.query_params['hostname'])
-            self.queryset = self.model.objects.all()
             self.queryset = self.queryset.filter(hostname__contains=request.query_params['hostname'])
             if self.queryset.count() == 0:
                 return Response(None, status=404)
