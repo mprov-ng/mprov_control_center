@@ -43,7 +43,8 @@ Returns a JSON list of all objects of this type in the mPCC.  The list can be
 filtered with these optional query parameters:
 
 - module: A job module ID, or a JSON array of job module IDs (e.g. ?module=["repo-update","pxe-update"])
-- params: Filters with a JSON `contains` lookup of [value] against the job's params
+- params: A JSON object (e.g. ?params={"imageId":"compute"}); only jobs whose params
+    have each of its keys set to that value are returned.  Anything else returns 400.
 - jobserver: ID of the assigned job server
 - status: ID of the job's status
 
@@ -114,9 +115,17 @@ Format returned:
             else:
                 queryset = queryset.filter(module=jobmodule)
         params = self.request.query_params.get('params')
-        # print(params)
         if params is not None:
-            queryset = queryset.filter(params__contains=[(params)])
+            # match each key of a JSON object against the job's params.  Key
+            # lookups work on every database backend; contains doesn't on SQLite.
+            try:
+                params = json.loads(params)
+            except ValueError:
+                params = None
+            if not isinstance(params, dict):
+                return Response({'params': "Must be a JSON object, e.g. {\"imageId\": \"compute\"}."}, status=400)
+            for key, value in params.items():
+                queryset = queryset.filter(**{f"params__{key}": value})
         jobserver = self.request.query_params.get('jobserver')
         if jobserver is not None:
             queryset = queryset.filter(jobserver=jobserver)
