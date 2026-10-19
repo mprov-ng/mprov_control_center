@@ -17,7 +17,11 @@ however, you are looking for the documentation on how to use this API, you shoul
 one of the following links.   Each link is a section of the API that corresponds to a section of the admin 
 interface.  It will give you documentation on how to use that section of the API.
 
+* [/ansiblecollection/](/ansiblecollection/)
+* [/ansibleplaybook/](/ansibleplaybook/)
+* [/ansiblerole/](/ansiblerole/)
 * [/distros/](/distros/)
+* [/files/](/files/)
 * [/images/](/images/)
 * [/jobs/](/jobs/)
 * [/jobmodules/](/jobmodules/)

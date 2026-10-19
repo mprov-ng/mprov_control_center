@@ -78,6 +78,10 @@ urlpatterns = [
     path('jobs/', include('jobqueue.jobs_urls')),
     path('jobqueue/', include('jobqueue.urls')),
     path('scripts/', include('scripts.scripts_urls')),
+    path('files/', include('scripts.files_urls')),
+    path('ansibleplaybook/', include('scripts.ansibleplaybook_urls')),
+    path('ansiblerole/', include('scripts.ansiblerole_urls')),
+    path('ansiblecollection/', include('scripts.ansiblecollection_urls')),
 
     path('osrepos/', include('osmanagement.osrepos_urls')),
 
