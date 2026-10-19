@@ -205,6 +205,6 @@ class AnsibleCollection(models.Model):
 
 @receiver(post_delete, sender=Script)
 def DeleteScript(sender, instance, **kwargs):
-  # TODO: Delete scripts from the filesystem when
-  # they are removed in the admin interface.
-  pass
+  # Delete the script's file when the script is deleted.
+  if instance.filename:
+    instance.filename.delete(save=False)
