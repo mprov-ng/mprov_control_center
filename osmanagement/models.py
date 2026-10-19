@@ -114,10 +114,8 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
   if instance.update == False:
     # if we are not set to update, skip.
     return
-  baseURL=instance.baseurl
-  # remove trailing slash
-  if baseURL[:-1] == '/':
-     baseURL = baseURL[:-1]
+  # remove trailing slashes
+  baseURL=instance.baseurl.rstrip('/')
 
   genRepos = ['AppStream', 'BaseOS', 'extras' ]
   if float(instance.version) >= 9:
