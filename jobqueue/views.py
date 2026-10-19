@@ -271,7 +271,8 @@ Format returned:
     server with the given name.  It requires name, address, one_minute_load, and
     jobmodules (a list of job module IDs to register); port is optional and
     defaults to 8080.  It returns 200 with the job server's ID as a JSON-encoded
-    string, e.g. '{"pk": 3}', or a 500 error if a job module can't be found.
+    string, e.g. '{"pk": 3}', 400 if a required field is missing or the name is
+    blank, or a 500 error if a job module can't be found.
 
 - PATCH returns the updated object.
 
@@ -284,6 +285,11 @@ Format returned:
     # Redefine post to create_or_update.
     
     def post(self, request, format=None):
+        missing = [field for field in ('name', 'address', 'one_minute_load', 'jobmodules') if field not in request.data]
+        if missing:
+            return Response({field: "This field is required." for field in missing}, status=status.HTTP_400_BAD_REQUEST)
+        if not request.data['name']:
+            return Response({'name': "This field may not be blank."}, status=status.HTTP_400_BAD_REQUEST)
         if 'port' not in request.data:
             request.data['port'] = None
         defaults = {
@@ -296,20 +302,17 @@ Format returned:
         data = {}
         if defaults['port'] == None:
             defaults['port'] = 8080
-        if request.data['name']:
-            obj, created = JobServer.objects.update_or_create(
-                name=request.data['name'],
-                defaults=defaults,
-                
-            )
-            if obj is not None:
-                for i in request.data['jobmodules']:
-                    # look up the jobmodule
-                    try:
-                        obj.jobmodules.add(JobModule.objects.get(pk=i))
-                    except :
-                        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
-            obj.save()
+        obj, created = JobServer.objects.update_or_create(
+            name=request.data['name'],
+            defaults=defaults,
+        )
+        for i in request.data['jobmodules']:
+            # look up the jobmodule
+            try:
+                obj.jobmodules.add(JobModule.objects.get(pk=i))
+            except :
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
+        obj.save()
         data['pk'] = obj.pk
         return Response(status=status.HTTP_200_OK,data=json.dumps(data))
 
