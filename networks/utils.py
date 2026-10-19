@@ -6,71 +6,66 @@ from systems.models import SystemBMC, NetworkInterface
 
 def calculate_new_ip(old_ip, old_network, new_network):
     """
-    Calculate the new IP address by replacing whole leading octets of the
-    old IP with those of the new network, keeping the remaining octets.
+    Calculate the new IP address for old_ip when its network changes from
+    old_network to new_network: the new network's address plus the old
+    address's low bits, as many bits as the new netmask leaves for hosts.
 
-    The number of octets replaced is based on the new netmask: 3 for /24 and
-    longer, 2 for /16-/23, 1 for /8-/15, and none below /8.  If the resulting
-    address is not inside the new network (e.g. for masks that are not on an
-    octet boundary), the first host address of the new network is returned
-    instead.
+    So the same-size move 10.0.1.5 (10.0.1.0/24) -> 10.0.2.0/24 gives
+    10.0.2.5, and growing 172.16.1.5 (172.16.1.0/24) -> 10.1.0.0/16 gives
+    10.1.1.5.  Works for any netmask, IPv4 or IPv6.  When the new network is
+    smaller, different addresses can map to the same one; calculate_new_ips()
+    checks a whole network's addresses for that.
 
     Args:
         old_ip (str): Original IP address
-        old_network (Network): Original network object (currently unused)
+        old_network (Network): Original network object (not used; kept so
+            callers don't change)
         new_network (Network): New network object
 
     Returns:
-        str: New IP address in the new subnet, or None if an error occurred
+        str: New IP address in the new subnet, or None if it would be the
+        new network's network or broadcast address, or an error occurred
     """
     try:
-        # Parse the old IP address
-        old_ip_obj = ipaddress.IPv4Address(old_ip)
-        old_ip_parts = str(old_ip_obj).split('.')
-        
-        # Parse the new network to get the new network octets
-        new_net = ipaddress.IPv4Network(f"{new_network.subnet}/{new_network.netmask}", strict=False)
-        new_net_parts = str(new_net.network_address).split('.')
-        
-        # Determine how many octets are part of the network based on netmask
-        netmask = new_network.netmask
-        if netmask >= 24:
-            # /24 networks - first 3 octets are network
-            network_octets = 3
-        elif netmask >= 16:
-            # /16 networks - first 2 octets are network
-            network_octets = 2
-        elif netmask >= 8:
-            # /8 networks - first octet is network
-            network_octets = 1
-        else:
-            # /0 or invalid - treat as no network octets
-            network_octets = 0
-        
-        # Build the new IP by combining new network octets with old host octets
-        if network_octets > 0:
-            new_ip_parts = new_net_parts[:network_octets] + old_ip_parts[network_octets:]
-        else:
-            # If no network octets, just use the old IP
-            new_ip_parts = old_ip_parts
-        
-        new_ip = '.'.join(new_ip_parts)
-        
-        # Validate the new IP is within the new network
-        new_ip_obj = ipaddress.IPv4Address(new_ip)
-        if new_ip_obj not in new_net:
-            # If the calculated IP is not in the new network, 
-            # use the first available IP in the new network
-            new_ip_obj = list(new_net.hosts())[0] if list(new_net.hosts()) else new_net.network_address + 1
-            new_ip = str(new_ip_obj)
-        
-        return new_ip
-        
+        old_ip_obj = ipaddress.ip_address(old_ip)
+        new_net = ipaddress.ip_network(f"{new_network.subnet}/{int(new_network.netmask)}", strict=False)
+
+        # the old address's bits that the new netmask leaves for hosts.
+        host = int(old_ip_obj) & int(new_net.hostmask)
+        new_ip = new_net.network_address + host
+        if new_net.version == 4 and new_net.prefixlen < 31 and new_ip in (new_net.network_address, new_net.broadcast_address):
+            print(f"Error calculating new IP: {old_ip} maps to {new_ip}, the network or broadcast address of {new_net}")
+            return None
+        return str(new_ip)
+
     except Exception as e:
         print(f"Error calculating new IP: {e}")
         import traceback
         traceback.print_exc()
         return None
+
+
+def calculate_new_ips(old_ips, old_network, new_network):
+    """
+    Calculate new IP addresses for all of a network's addresses at once (see
+    calculate_new_ip).  An address that would end up the same as another
+    one's (possible when the new network is smaller) gets None, so it's
+    reported and left alone instead of silently duplicated.
+
+    Returns:
+        dict: old IP (str) -> new IP (str), or None if it couldn't be moved
+    """
+    new_ips = {ip: calculate_new_ip(ip, old_network, new_network) for ip in set(old_ips) if ip}
+    taken = {}
+    for ip, new_ip in new_ips.items():
+        if new_ip is not None:
+            taken.setdefault(new_ip, []).append(ip)
+    for new_ip, ips in taken.items():
+        if len(ips) > 1:
+            print(f"Error calculating new IP: {', '.join(sorted(ips))} would all become {new_ip}")
+            for ip in ips:
+                new_ips[ip] = None
+    return new_ips
 
 
 def get_associated_objects(network):
@@ -112,6 +107,8 @@ def update_associated_ips(network, old_subnet, old_netmask):
     
     # Get associated objects
     associated = get_associated_objects(network)
+    # NICs and BMCs share the network's address space, so map them together.
+    new_ips = calculate_new_ips([i.ipaddress for i in associated['interfaces']] + [b.ipaddress for b in associated['bmcs']], old_network, network)
     
     results = {
         'interfaces_updated': 0,
@@ -122,7 +119,7 @@ def update_associated_ips(network, old_subnet, old_netmask):
     # Update network interfaces
     for interface in associated['interfaces']:
         if interface.ipaddress:
-            new_ip = calculate_new_ip(interface.ipaddress, old_network, network)
+            new_ip = new_ips.get(interface.ipaddress)
             if new_ip:
                 old_ip = interface.ipaddress
                 interface.ipaddress = new_ip
@@ -135,7 +132,7 @@ def update_associated_ips(network, old_subnet, old_netmask):
     # Update BMCs
     for bmc in associated['bmcs']:
         if bmc.ipaddress:
-            new_ip = calculate_new_ip(bmc.ipaddress, old_network, network)
+            new_ip = new_ips.get(bmc.ipaddress)
             if new_ip:
                 old_ip = bmc.ipaddress
                 bmc.ipaddress = new_ip
