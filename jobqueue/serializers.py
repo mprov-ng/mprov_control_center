@@ -17,7 +17,7 @@ class JobModuleAPISerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class JobServerAPISerializer(serializers.ModelSerializer):
-    jobmodules = serializers.PrimaryKeyRelatedField(queryset=JobModule.objects.all())
+    jobmodules = serializers.PrimaryKeyRelatedField(many=True, queryset=JobModule.objects.all())
     network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all())
     class Meta:
         model = JobServer
