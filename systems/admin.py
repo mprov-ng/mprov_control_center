@@ -102,7 +102,7 @@ class BMCInline(admin.StackedInline):
   list_display_links = ['id', 'ipaddress']
   readonly_fields = ['ipv6ll']
   verbose_name="System BMC"
-  verbose_name="System BMCs"
+  verbose_name_plural="System BMCs"
   form = SystemBMCForm
   def get_formset(self, request, obj, **kwargs):
     formset =  super().get_formset(request, obj, **kwargs)
