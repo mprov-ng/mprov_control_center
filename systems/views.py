@@ -426,6 +426,7 @@ class SystemGroupAPIView(MProvView):
 - config_params: The configuration parameters for this entry
 - scripts: A list of scripts that will run on this group
 - ansibleplaybooks, ansibleroles, ansiblecollections: Ansible content for this group
+    (all four are returned as nested objects, and sent as arrays of IDs on POST and PATCH)
 - install_kernel_cmdline, tmpfs_root_size, initial_mods, prov_interface: boot options for this group
 - systems: array of system IDs in this group
 
@@ -632,7 +633,8 @@ class SystemImagesAPIView(MProvView):
 - timestamp: (Optional) The time this entry was created
 - created_by: The User that is creating this 
 - updated: (Auto) The time this entry was last updated
-- systemgroups: Array of system groups this system image is a part of
+- systemgroups: Array of system groups this system image is a part of (returned as
+    nested objects, sent as an array of IDs on POST and PATCH)
 - needs_rebuild: If the user is asking to rebuild this image.
 - version: used internally for tracking when an image changes
 - jobservers: array of jobservers actively serving this version of this image.
