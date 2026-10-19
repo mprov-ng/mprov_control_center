@@ -33,8 +33,9 @@ returned, or a JSON list of all images if the request content type is applicatio
 - Will redirect (302) to the image requested on the least loaded jobserver hosting it,
 regardless of requested content type.  A primary key ending in .initramfs or .vmlinuz
 redirects to that file, otherwise the .img is used.
-- Jobservers that fail to respond are removed from the image.  If no jobserver is
-left, a 404 is returned.
+- Jobservers registered by host name are skipped if the name doesn't resolve for the
+client's address family.  Jobservers that fail to respond are removed from the image.
+If no jobserver is left, a 404 is returned.
 
     '''
     model = SystemImage
@@ -100,9 +101,10 @@ left, a 404 is returned.
         statCode = 0
       while ( statCode <= 199 or statCode >=400):
         # jobserver gave a bad response, remove it and retry.
-        js_set.remove(js)
         print("Removing Jobserver " + str(js) + ", URL: " + imageURL + " not accessible. Status: " + str(statCode))
-        image.jobservers.set(js_set)
+        # remove only this jobserver; the ones getJobserver left out for
+        # this client may still serve others.
+        image.jobservers.remove(js)
         image.save()
         js_set = self.getJobserver(image, ip)
         js = None
@@ -126,42 +128,48 @@ left, a 404 is returned.
       return redirect(imageURL)        
 
     def getJobserver(self, image, clientIP=None):
-      # choose a jobserver with the lowest one minute load avg.
+      """
+      Returns the image's job servers, lowest one minute load avg. first,
+      leaving out any whose name doesn't resolve for the client's address
+      family (AAAA for an IPv6 client).  Job servers registered by IP
+      address are always kept.  Raises NotFound if none are left.
+      """
       print(clientIP)
-      
+
       js_set = list(image.jobservers.all().order_by('one_minute_load'),)
       print(js_set)
       if(len(js_set)==0):
         # if there are no jobservers, return 404
         raise NotFound(detail="Error 404, No Jobservers in mPCC for Image", code=404)
-      answer = None
+      if clientIP is None:
+        return js_set
 
-      try: 
-          tmp = ip_address(js_set[0].address)
-          # return the job server if a valid IP is found
-          return js_set
-      except ValueError: 
+      rdtype = "AAAA" if ":" in clientIP else "A"
+      resolvable = []
+      errors = []
+      for js in js_set:
+        try:
+          ip_address(js.address)
+          # a valid IP needs no lookup.
+          resolvable.append(js)
+          continue
+        except ValueError:
           # if not a valid ip, assume it's a host name
-         pass
-      
-      
-      if clientIP is not None:
-        if ":" in clientIP:
-          try:
-            answer = dns.resolver.resolve(str(js_set[0].address), "AAAA", search=True)
-          except:
-            raise NotFound(detail="Error 404, No resolvable IPv6 Jobservers for Image", code=404)
-        else:
-          try:
-            answer = dns.resolver.resolve(str(js_set[0].address), search=True)
-          except Exception as e:
-            raise NotFound(detail=f"Error 404, No Resolvable Jobservers for Image: {e}", code=404)
-        if answer is not None:
-          print("Addresses:")
-          for rr in answer.rrset:
-            print(f"    {rr}")
-      print("Jobserver: " + str(js_set[0]))
-      return js_set
+          pass
+        try:
+          answer = dns.resolver.resolve(str(js.address), rdtype, search=True)
+        except Exception as e:
+          errors.append(f"{js}: {e}")
+          continue
+        print(f"Jobserver {js} addresses:")
+        for rr in answer.rrset:
+          print(f"    {rr}")
+        resolvable.append(js)
+      if len(resolvable) == 0:
+        family = "IPv6 " if rdtype == "AAAA" else ""
+        raise NotFound(detail=f"Error 404, No resolvable {family}Jobservers for Image: {'; '.join(errors)}", code=404)
+      print("Jobserver: " + str(resolvable[0]))
+      return resolvable
 
     def post(self, request, *args, **kwargs):
       return HttpResponseNotAllowed(["GET"])
