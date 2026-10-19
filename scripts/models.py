@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
@@ -23,7 +24,8 @@ class Script(models.Model):
   endpoint="/scripts/"
   name=models.CharField(max_length=120, verbose_name=("Script Name"))
   slug=models.SlugField(unique=True, primary_key=True)
-  filename = models.FileField(upload_to='')
+  # optional: a script can be uploaded as a file or written as content.
+  filename = models.FileField(upload_to='', blank=True)
   content = models.TextField(blank=True, null=True)
   scriptType = models.ForeignKey(ScriptType, on_delete=models.SET_NULL, null=True)
   version = models.BigIntegerField(default=1)
@@ -32,9 +34,16 @@ class Script(models.Model):
   def __str__(self):
     return f"({self.scriptType.name[0]}) {self.name}"
 
+  def clean(self):
+    if not self.filename and not self.content:
+      raise ValidationError("Upload a script file or enter its content.")
+
   def save(self, *args, **kwargs):
+    # a file uploaded in this save, not yet written to storage.
+    new_upload = bool(self.filename) and not self.filename._committed
     if not self.slug:
-      self.slug = slugify(self.filename.name)
+      # an uploaded file names the script; a content-only script uses its name.
+      self.slug = slugify(self.filename.name) if self.filename else slugify(self.name)
     if not os.path.exists(settings.MEDIA_ROOT + '/' + self.scriptType.slug): 
       # make the dir
       try:
@@ -43,28 +52,25 @@ class Script(models.Model):
         print(f"Error: Unable to make script type dir: {settings.MEDIA_ROOT + '/' + self.scriptType.slug}")
         return
 
-    print(self.filename)
-    file_path = None
-    if self.filename:
+    if new_upload:
+      # An uploaded file replaces the content.  (The change form also copies
+      # the chosen file into the content box.)
+      try:
+        self.content = self.filename.read().decode('utf-8')
+      except Exception as e:
+        print(f"Error reading uploaded file {self.filename.name}: {e}")
 
-      # Set the filename path before saving
-      self.filename.name = self.scriptType.slug + '/' + self.slug + "-v" + str(self.version)
+    file_path = None
+    if self.filename or self.content:
+      # The script is stored as <type>/<slug>-v<version>.  Assigning the name
+      # as a string also stops storage from saving the upload under another
+      # name; the content is written there below.
+      self.filename = self.scriptType.slug + '/' + self.slug + "-v" + str(self.version)
       file_path = os.path.join(settings.MEDIA_ROOT, self.filename.name)
-    
-      # Check if this is a new file upload (file exists but content field may not match)
-      # If a file is uploaded, always override the content field with the file contents
-      if os.path.exists(file_path):
-        try:
-          with open(file_path, 'r', encoding='utf-8') as f:
-            file_content = f.read()
-            # If we have file content, always use it to override the content field
-            # This ensures uploaded files override the content field
-            if file_content:
-              self.content = file_content
-        except Exception as e:
-          print(f"Error reading file {file_path}: {e}")
-    
-    # Write content field back to file if it has content
+
+    # Write the content to the file: an upload, a content-only script, or an
+    # edit made in the admin.  No content (e.g. an API update that leaves it
+    # out) keeps the file as it is.
     if self.content and file_path is not None:
       try:
         # Ensure directory exists
@@ -74,7 +80,6 @@ class Script(models.Model):
       except Exception as e:
         print(f"Error writing content to file {file_path}: {e}")
     
-    print(file_path)
     if file_path is not None and os.path.exists(file_path):
       print("Converting file")
       os.system(f"dos2unix -n {file_path} {file_path}.new")
