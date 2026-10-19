@@ -897,7 +897,10 @@ class SystemPowerAPIView(MProvView):
                 results[str(bmc)] = self._doPowerCmd(bmc, kwargs['action'])
             return Response(results, status=200)
 
+        # otherwise act on the BMCs matching ?FIELD=VALUE filters on the BMC
+        # fields, up to 10 of them, like ?hostname=.
         error_body = {}
+        filtered = False
         for field in request.query_params:
             #print(field)
             if field == 'detail':
@@ -907,15 +910,24 @@ class SystemPowerAPIView(MProvView):
                 # we found a field.
                 try:
                     self.queryset = self.queryset.filter((field,request.query_params[field]))
+                    filtered = True
                 except BaseException as e:
                     error_body[field] = f"Error searching for {field}: {type(e)=}: {e=}"
             else: 
                 error_body[field] = f"Error searching for {field}: Field doesn't exist."
         if len(error_body) > 0:
             return Response(error_body, status=400)
+        if not filtered:
+            # never act on every BMC at once.
+            return Response("Bad Request: pass ?hostname=, ?id= or a BMC field filter.", status=400)
         if self.queryset.count() == 0:
             return Response(None, status=404)
-
+        if self.queryset.count() > 10:
+            print("WARN: Large BMC set returned, truncating.")
+        results = {}
+        for bmc in self.queryset[:10]:
+            results[str(bmc)] = self._doPowerCmd(bmc, kwargs['action'])
+        return Response(results, status=200)
 
     def _doPowerCmd(self, bmc, action="on"):
         print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, action: {action}")
