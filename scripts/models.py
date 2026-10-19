@@ -131,12 +131,14 @@ class AnsiblePlaybook(models.Model):
   def save(self, *args, **kwargs):
     if not self.slug:
       self.slug = slugify(self.filename.name)
-    if not os.path.exists(settings.MEDIA_ROOT + '/ansibleplaybooks/' + self.scriptType.slug): 
+    # the dir the playbook is stored in, below.
+    playbook_dir = settings.MEDIA_ROOT + '/' + self.scriptType.slug + '/ansibleplaybooks'
+    if not os.path.exists(playbook_dir):
       # make the dir
       try:
-        os.makedirs(settings.MEDIA_ROOT + '/ansibleplaybooks/' + self.scriptType.slug, exist_ok=True)
+        os.makedirs(playbook_dir, exist_ok=True)
       except: 
-        print(f"Error: Unable to make script type dir: {settings.MEDIA_ROOT + '/ansibleplaybooks/' + self.scriptType.slug}")
+        print(f"Error: Unable to make script type dir: {playbook_dir}")
         return
 
     self.filename.name = self.scriptType.slug + '/ansibleplaybooks/' + self.slug + "-v" + str(self.version)
