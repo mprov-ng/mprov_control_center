@@ -42,7 +42,9 @@ server hosts the repository.
         # if result is not None:
         #     return result
         if 'pk' in kwargs:
-          repo = OSRepo.objects.get(pk=kwargs['pk'])
+          repo = OSRepo.objects.filter(pk=kwargs['pk']).first()
+          if repo is None:
+            raise NotFound(detail="No such repository.", code=404)
         else: 
           result = self.checkContentType(request, format=format, kwargs=kwargs)
           # no pk in the request, spit out a list then.
