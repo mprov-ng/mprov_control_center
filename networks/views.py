@@ -98,7 +98,7 @@ Format returned:
         
         if 'pk' in kwargs:
             # someone is looking for a specific item.
-            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+            return self.retrieve(request, pk=kwargs['pk'])
 
         # Let's see if someone is looking for something specific.
         queryset = self.model.objects.all()

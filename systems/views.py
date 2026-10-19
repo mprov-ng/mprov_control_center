@@ -354,7 +354,7 @@ Format returned:
             self.serializer_class = SystemSerializer
 
             # someone is looking for a specific item.
-            return self.retrieve(self, request, format=None, pk=kwargs['pk'])
+            return self.retrieve(request, pk=kwargs['pk'])
          
         # call the base class get()
         # this does do some initial filtering.
