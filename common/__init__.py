@@ -132,9 +132,8 @@ def render_config(obj):
     tmpDict['params']['source'] = 'osdistro'
     tmpDict['params']['value'] = configDict['osdistro']['params']
     
-    if not configDict['osdistro']['ansibleplaybooks'].all():
-      tmpDict['ansibleplaybooks']['source'].append('osdistro')
-      tmpDict['ansibleplaybooks']['value'].append(configDict['osdistro']['ansibleplaybooks'])
+    tmpDict['ansibleplaybooks']['source'].append('osdistro')
+    tmpDict['ansibleplaybooks']['value'].append(configDict['osdistro']['ansibleplaybooks'])
 
     
     tmpDict['ansibleroles']['source'].append('osdistro')
