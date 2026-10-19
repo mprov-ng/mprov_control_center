@@ -60,7 +60,7 @@ class DataTypeView(View):
             self.model = request.GET['model']
             if self.model not in model_list:
                 self.model = None
-                return JsonResponse({'error': 'Unknown Model Requested'}, status=500)
+                return JsonResponse({'error': 'Unknown Model Requested'}, status=404)
         else:
             self.model = None
    
