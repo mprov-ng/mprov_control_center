@@ -43,7 +43,9 @@ class NetworkAPIView(MProvView):
 
 ### GET method (no parameters)
 Returns a JSON list of all networks in the mPCC.  The list can be filtered
-with the optional ?isdhcp= and ?managedns= query parameters (True/False or 1/0).
+with the optional ?isdhcp= and ?managedns= query parameters (true/false in any
+case, or 1/0), and by any other field with ?FIELD=VALUE (exact match).  An
+invalid filter returns 400; no matches returns an empty list.
 
 Format returned:
 
@@ -101,17 +103,22 @@ Format returned:
             return self.retrieve(request, pk=kwargs['pk'])
 
         # Let's see if someone is looking for something specific.
-        queryset = self.model.objects.all()
-        isdhcp = self.request.query_params.get('isdhcp')
-        if isdhcp is not None:
-            queryset = queryset.filter(isdhcp=isdhcp)
-        if self.request.query_params.get('managedns') is not None:
-            queryset = queryset.filter(managedns=self.request.query_params.get('managedns'))
-
-        
+        queryset, error_body = self.filter_by_query_params(request, kwargs, skip=('isdhcp', 'managedns'))
+        for field in ('isdhcp', 'managedns'):
+            value = self.request.query_params.get(field)
+            if value is None:
+                continue
+            value = {'true': True, '1': True, 'false': False, '0': False}.get(value.lower())
+            if value is None:
+                error_body[field] = f"{field} must be true, false, 1 or 0."
+            else:
+                queryset = queryset.filter(**{field: value})
+        if len(error_body) > 0:
+            return Response(error_body, status=400)
         self.queryset=queryset
-        # return the super call for get.
-        return generics.ListAPIView.get(self, request, format=None);
+        # return the super call for get.  No match is an empty list, not 404:
+        # the jobserver's dnsmasq plugins loop over this list.
+        return generics.ListAPIView.get(self, request, format=None)
 
 class NetworkTypeAPIView(MProvView):
     '''
