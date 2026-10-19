@@ -44,6 +44,7 @@ class Script(models.Model):
         return
 
     print(self.filename)
+    file_path = None
     if self.filename:
 
       # Set the filename path before saving
@@ -64,7 +65,7 @@ class Script(models.Model):
           print(f"Error reading file {file_path}: {e}")
     
     # Write content field back to file if it has content
-    if self.content:
+    if self.content and file_path is not None:
       try:
         # Ensure directory exists
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -74,7 +75,7 @@ class Script(models.Model):
         print(f"Error writing content to file {file_path}: {e}")
     
     print(file_path)
-    if os.path.exists(file_path):
+    if file_path is not None and os.path.exists(file_path):
       print("Converting file")
       os.system(f"dos2unix -n {file_path} {file_path}.new")
       os.system(f"/bin/mv -v {file_path}.new {file_path}")
