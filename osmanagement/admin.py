@@ -16,7 +16,10 @@ def mark_update(modeladmin, request, queryset):
       # do nothing if the jobtype isn't defined.
       return
 
-  for instance in queryset:
+  # Like RepoUpdateJob, only managed repos are synced by the job servers.
+  # An unmanaged repo's version must not change: repo_sync would try to
+  # mirror it from /osrepos/<id>/, which no job server hosts.
+  for instance in queryset.filter(managed=True):
     # queue a repo-update job.
     queue_job(JobType, { 'repo_id': instance.id})
 
