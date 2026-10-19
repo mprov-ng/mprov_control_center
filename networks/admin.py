@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.shortcuts import render, redirect
 from django.urls import path, reverse
 from django.utils.html import format_html
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, QueryDict
 from .models import Network, NetworkType, Switch, SwitchPort
 from .utils import get_associated_objects, calculate_new_ips
 
@@ -77,23 +77,15 @@ class NetworkAdmin(admin.ModelAdmin):
                   old_subnet = update_data['old_subnet']
                   old_netmask = update_data['old_netmask']
                   
-                  # Update the network with new values
-                  network.subnet = update_data['new_subnet']
-                  network.netmask = int(update_data['new_netmask'])
-                  
-                  # Update other fields from form data
-                  form_data = update_data['form_data']
-                  network.name = form_data.get('name', [network.name])[0] if form_data.get('name') else network.name
-                  network.gateway = form_data.get('gateway', [None])[0] if form_data.get('gateway') else None
-                  network.nameserver1 = form_data.get('nameserver1', [None])[0] if form_data.get('nameserver1') else None
-                  network.domain = form_data.get('domain', [''])[0] if form_data.get('domain') else ''
-                  network.isdhcp = 'isdhcp' in form_data
-                  network.managedns = 'managedns' in form_data
-                  network.isbootable = 'isbootable' in form_data
-                  network.dhcpstart = form_data.get('dhcpstart', [None])[0] if form_data.get('dhcpstart') else None
-                  network.dhcpend = form_data.get('dhcpend', [None])[0] if form_data.get('dhcpend') else None
-                  
-                  network.save()
+                  # Apply the stored edit through the admin form, so every
+                  # field on the form is saved, not just the subnet.
+                  form_data = QueryDict(mutable=True)
+                  for field, values in update_data['form_data'].items():
+                      form_data.setlist(field, values)
+                  form = self.get_form(request, network, change=True)(form_data, instance=network)
+                  if not form.is_valid():
+                      raise ValueError(form.errors.as_text())
+                  network = form.save()
                   
                   # Update associated IPs
                   from .utils import update_associated_ips
@@ -109,10 +101,9 @@ class NetworkAdmin(admin.ModelAdmin):
                       success_msg += f'Updated {results["interfaces_updated"]} network interfaces. '
                   if results['bmcs_updated'] > 0:
                       success_msg += f'Updated {results["bmcs_updated"]} BMCs. '
-                  if results['errors']:
-                      success_msg += f'Errors: {"; ".join(results["errors"])}'
-                  
                   messages.success(request, success_msg)
+                  if results['errors']:
+                      messages.warning(request, f'Errors updating IPs: {"; ".join(results["errors"])}')
                   return redirect(reverse('admin:networks_network_changelist'))
                   
               except Exception as e:
