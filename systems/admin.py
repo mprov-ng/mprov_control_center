@@ -3,11 +3,11 @@ import traceback
 from django.contrib import admin
 from django.forms import BaseInlineFormSet
 from django.utils.html import mark_safe
-from django.utils.text import slugify
 from jobqueue.models import JobModule, JobStatus, Job
 from django import forms
 from django.urls import reverse
 from django.db.models.query import QuerySet
+from django.db.models import F
 
 from django.shortcuts import render
 from django.core.exceptions import ValidationError
@@ -526,33 +526,26 @@ class SystemLocationAdmin(admin.ModelAdmin):
 @admin.action(description="Mark images as needing rebuild")
 def mark_rebuild(modeladmin, request, queryset):
   queryset.update(needs_rebuild=True)
-  for instance in queryset:
-    if not instance.needs_rebuild: 
+  try:
+      JobType = JobModule.objects.get(slug='image-update')
+  except JobModule.DoesNotExist:
+      # do nothing if the jobtype isn't defined.
       return
-    instance.slug = slugify(instance.name)
 
-    JobType = None
-    try:
-        JobType = JobModule.objects.get(slug='image-update')
-    except:
-        JobType = None
-    # print(str(JobType) + " post")
+  for instance in queryset:
+    # create a new image-update job.
+    params = { 'imageId': instance.slug}
+    Job.objects.create( name=JobType.name,
+        module=JobType,
+        status=JobStatus.objects.get(pk=1),
+        params = params,
+    )
 
-    # get the jobtype, do nothing if it's not defined.
-    if JobType is not None:
-
-        # create a new image-update job.
-        params = { 'imageId': instance.slug}
-        Job.objects.create( name=JobType.name, 
-            module=JobType, 
-            status=JobStatus.objects.get(pk=1), 
-            params = params,
-        )
-
-        # Increment version number and clear out jobservers field.
-        # NOTE: instance is not saved here, so only the jobservers clear persists.
-        instance.jobservers.clear()
-        instance.version = instance.version + 1
+    # Increment version number and clear out jobservers field.
+    # update() saves the version without firing UpdateSystemImages, which
+    # would queue a second job and clear needs_rebuild.
+    instance.jobservers.clear()
+    SystemImage.objects.filter(pk=instance.pk).update(version=F('version') + 1)
 
 class SystemImageAdmin(admin.ModelAdmin):
   list_display = ['slug', 'name', 'version', 'registered_jobservers']
