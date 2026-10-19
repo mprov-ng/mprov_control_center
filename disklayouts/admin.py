@@ -34,7 +34,7 @@ class DiskLayoutAdmin(AdminWizardModel):
   inlines = [DiskPartitionInline]
   step_fields = [['dtype'],None]
   readonly_fields = ['dtype', 'slug']
-  list_fields = ['name', 'dtype', 'diskname']
+  list_display = ['name', 'dtype', 'diskname']
   exclude=['slug']
   def get_queryset(self, request):
     qs = super(DiskLayoutAdmin, self).get_queryset(request)
