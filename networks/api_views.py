@@ -107,12 +107,13 @@ def update_network_with_confirmation(request, pk):
         temp_network = Network(subnet=new_subnet, netmask=new_netmask)
         old_network = Network(subnet=old_subnet, netmask=old_netmask)
         
-        from .utils import calculate_new_ip
+        from .utils import calculate_new_ips
+        new_ips = calculate_new_ips([i.ipaddress for i in associated['interfaces']] + [b.ipaddress for b in associated['bmcs']], old_network, temp_network)
         
         proposed_interfaces = []
         for interface in associated['interfaces']:
             if interface.ipaddress:
-                proposed_ip = calculate_new_ip(interface.ipaddress, old_network, temp_network)
+                proposed_ip = new_ips.get(interface.ipaddress)
                 if proposed_ip:
                     proposed_interfaces.append({
                         'id': interface.id,
@@ -125,7 +126,7 @@ def update_network_with_confirmation(request, pk):
         proposed_bmcs = []
         for bmc in associated['bmcs']:
             if bmc.ipaddress:
-                proposed_ip = calculate_new_ip(bmc.ipaddress, old_network, temp_network)
+                proposed_ip = new_ips.get(bmc.ipaddress)
                 if proposed_ip:
                     proposed_bmcs.append({
                         'id': bmc.id,
@@ -214,12 +215,13 @@ def preview_subnet_changes(request, pk):
     temp_network = Network(subnet=new_subnet, netmask=new_netmask)
     old_network = Network(subnet=network.subnet, netmask=network.netmask)
     
-    from .utils import calculate_new_ip
+    from .utils import calculate_new_ips
+    new_ips = calculate_new_ips([i.ipaddress for i in associated['interfaces']] + [b.ipaddress for b in associated['bmcs']], old_network, temp_network)
     
     proposed_interfaces = []
     for interface in associated['interfaces']:
         if interface.ipaddress:
-            proposed_ip = calculate_new_ip(interface.ipaddress, old_network, temp_network)
+            proposed_ip = new_ips.get(interface.ipaddress)
             if proposed_ip:
                 proposed_interfaces.append({
                     'id': interface.id,
@@ -232,7 +234,7 @@ def preview_subnet_changes(request, pk):
     proposed_bmcs = []
     for bmc in associated['bmcs']:
         if bmc.ipaddress:
-            proposed_ip = calculate_new_ip(bmc.ipaddress, old_network, temp_network)
+            proposed_ip = new_ips.get(bmc.ipaddress)
             if proposed_ip:
                 proposed_bmcs.append({
                     'id': bmc.id,

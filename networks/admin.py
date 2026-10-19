@@ -4,7 +4,7 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 from django.http import HttpResponseRedirect
 from .models import Network, NetworkType, Switch, SwitchPort
-from .utils import get_associated_objects, calculate_new_ip
+from .utils import get_associated_objects, calculate_new_ips
 
 
 class NetworkAdmin(admin.ModelAdmin):
@@ -139,6 +139,7 @@ class NetworkAdmin(admin.ModelAdmin):
       from .models import Network as NetworkModel
       temp_network = NetworkModel(subnet=new_subnet, netmask=int(new_netmask))
       old_network = NetworkModel(subnet=old_subnet, netmask=int(old_netmask))
+      new_ips = calculate_new_ips([i.ipaddress for i in associated['interfaces']] + [b.ipaddress for b in associated['bmcs']], old_network, temp_network)
       
       proposed_interfaces = []
       for interface in associated['interfaces']:
@@ -147,7 +148,7 @@ class NetworkAdmin(admin.ModelAdmin):
               print(f"  Current IP: {interface.ipaddress}")
               print(f"  Old network: {old_network.subnet}/{old_network.netmask}")
               print(f"  New network: {temp_network.subnet}/{temp_network.netmask}")
-              proposed_ip = calculate_new_ip(interface.ipaddress, old_network, temp_network)
+              proposed_ip = new_ips.get(interface.ipaddress)
               print(f"  Proposed IP: {proposed_ip}")
               if proposed_ip:
                   proposed_interfaces.append({
@@ -161,7 +162,7 @@ class NetworkAdmin(admin.ModelAdmin):
       proposed_bmcs = []
       for bmc in associated['bmcs']:
           if bmc.ipaddress:
-              proposed_ip = calculate_new_ip(bmc.ipaddress, old_network, temp_network)
+              proposed_ip = new_ips.get(bmc.ipaddress)
               if proposed_ip:
                   proposed_bmcs.append({
                       'id': bmc.id,
