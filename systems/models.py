@@ -390,7 +390,8 @@ def UpdateGenders (sender, instance, **kwarg):
 @receiver(pre_save, sender=SystemBMC)
 def UpdateSystemAttributes(sender, instance, **kwargs):
   
-  if sender == SystemImage or sender == System:
+  # SystemImage isn't a sender here; UpdateSystemImages sets its created_by.
+  if sender == System:
     import inspect
     for frame_record in inspect.stack():
         if frame_record[3]=='get_response':
