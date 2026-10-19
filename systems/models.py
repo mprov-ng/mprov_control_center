@@ -65,6 +65,11 @@ class SystemModel(models.Model):
     super(SystemModel, self).save(*args, **kwargs)
 
 
+def has_content(value):
+  """ True if value has a line that isn't blank or a # comment, so an
+  inherited field set to only comments doesn't override the layer below. """
+  return any(line.strip() and not line.lstrip().startswith("#") for line in value.split("\n"))
+
 class System(models.Model):
   """ Systems are physical or virtual machines that will run an OS in RAM or have an OS installed on them.  This is the endpoint for the mPCC's
   provisioning system."""
@@ -149,12 +154,7 @@ class System(models.Model):
               sysgrpfield = getattr(systemgroup, field)
               if type(sysgrpfield) == str:
                 if sysgrpfield != "" :
-                  lines = sysgrpfield.split("\n")
-                  for line in lines:
-                    if line.startswith("#"):
-                      lines.remove(line)
-                  filteredfield = "\n".join(lines)
-                  if filteredfield != "":
+                  if has_content(sysgrpfield):
                     if field == 'install_kernel_cmdline' or field == 'initial_mods':
                       if sysgrpfield[0] == "=":
                         # user is asking us to overwrite the field here.
@@ -183,12 +183,7 @@ class System(models.Model):
         sysfield = getattr(self, field)
         if type(sysfield) == str:
           if sysfield != "" :
-            lines = sysfield.split("\n")
-            for line in lines:
-              if line.startswith("#"):
-                lines.remove(line)
-            filteredfield = "\n".join(lines)
-            if filteredfield != "":
+            if has_content(sysfield):
               if field == 'install_kernel_cmdline' or field == 'initial_mods':
                 if sysfield[0] == "=":
                   # user is asking us to overwrite the field here.
