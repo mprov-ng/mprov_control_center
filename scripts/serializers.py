@@ -27,19 +27,35 @@ class ScriptAPISerializer(serializers.ModelSerializer):
         return attrs
 
 class AnsiblePlaybookAPISerializer(serializers.ModelSerializer):
-    scriptType = ScriptTypeAPISerializer()
+    # read as a nested object, written as an ID.
+    scriptType = NestedPrimaryKeyRelatedField(ScriptTypeAPISerializer, queryset=ScriptType.objects.all())
     class Meta:
         model = AnsiblePlaybook
         fields = '__all__'
+        # save() makes the slug if it's not given.
+        extra_kwargs = {'slug': {'required': False}}
 
 class AnsibleRoleAPISerializer(serializers.ModelSerializer):
-    scriptType = ScriptTypeAPISerializer()
+    # read as a nested object, written as an ID.
+    scriptType = NestedPrimaryKeyRelatedField(ScriptTypeAPISerializer, queryset=ScriptType.objects.all())
     class Meta:
         model = AnsibleRole
         fields = '__all__'
+        # save() makes the slug if it's not given.
+        extra_kwargs = {'slug': {'required': False}}
 
 class AnsibleCollectionAPISerializer(serializers.ModelSerializer):
-    scriptType = ScriptTypeAPISerializer()
+    # read as a nested object, written as an ID.
+    scriptType = NestedPrimaryKeyRelatedField(ScriptTypeAPISerializer, queryset=ScriptType.objects.all())
     class Meta:
         model = AnsibleCollection
         fields = '__all__'
+        # save() makes the slug if it's not given.
+        extra_kwargs = {'slug': {'required': False}}
+
+class FileAPISerializer(serializers.ModelSerializer):
+    class Meta:
+        model = File
+        fields = '__all__'
+        # File.save() makes the slug from the file name if it's not given.
+        extra_kwargs = {'slug': {'required': False}}
