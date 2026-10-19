@@ -176,14 +176,17 @@ NADS Packet:
         if sysnic.count() > 0:
             return Response(None, status=200)
         else: 
+            # mac is unique, so it's the only lookup field; a known MAC seen on
+            # a new switch or port updates the existing entry.
             nadssys = NADSSystem.objects.update_or_create(
                 mac=request.data['mac'],
-                switch=request.data['switch'],
-                port=request.data['port'],
-                vendor=request.data['vendor'],
-                model=request.data['model'],
-                # XXX Future: serial=request.data['serial']
-                )
+                defaults={
+                    'switch': request.data['switch'],
+                    'port': request.data['port'],
+                    'vendor': request.data['vendor'],
+                    'model': request.data['model'],
+                    # XXX Future: 'serial': request.data['serial']
+                })
         print(sysnic)
    
         # TODO insert MAC ban code here if needed.
