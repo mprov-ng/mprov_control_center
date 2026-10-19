@@ -66,7 +66,9 @@ left, a 404 is returned.
             isKernel=True
             isInitRamFS=False
 
-        image = SystemImage.objects.get(pk=imgName)
+        image = SystemImage.objects.filter(pk=imgName).first()
+        if image is None:
+          raise NotFound(detail="No such image.", code=404)
       else: 
         # no pk in image, spit out a list then.
         result = self.checkContentType(request, format=format, kwargs=kwargs)
