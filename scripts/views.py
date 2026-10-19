@@ -23,7 +23,8 @@ class ScriptAPIView(MProvView):
 - filename: The URL where you can get this script
 - content: Always empty; the script body is stored in the file, not the database
 - version: The version, used for tracking script changes
-- scriptType: The script type, as a nested object with its name and slug (e.g. "image-gen" or "post-boot")
+- scriptType: The script type, as a nested object with its name and slug (e.g. "image-gen" or "post-boot").
+    Send the slug on POST and PATCH.
 - dependsOn: Array of other scripts' slugs this script depends on.
 
 ### GET method (no primary key)
