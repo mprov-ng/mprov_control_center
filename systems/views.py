@@ -885,7 +885,10 @@ class SystemPowerAPIView(MProvView):
             else :
                 return Response(None, status=404)
         if 'id' in request.query_params:
-            system_results= System.objects.get(id=request.query_params['id'])
+            try:
+                system_results= System.objects.filter(id=request.query_params['id']).first()
+            except ValueError:
+                return Response({'id': "Must be a system ID."}, status=400)
             if system_results is None:
                 return Response(None, status=404)
             self.queryset = self.model.objects.filter(system=system_results.id)
