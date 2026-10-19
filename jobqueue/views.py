@@ -143,7 +143,7 @@ class JobModulesAPIView(MProvView):
 ## Documentation
 
 ### Class Attributes
-- slug: The ID of the job module
+- slug: The ID of the job module.  Required on POST; it can't be changed afterwards.
 - name: A human-readable name for the job module
 - active: Unused, will be removed in future updates
     
