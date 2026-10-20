@@ -181,7 +181,7 @@ def RepoUpdateJob(sender, instance, **kwargs):
   # get the jobtype, do nothing if it's not defined.
   try:
       RepoJobType = JobModule.objects.get(slug='repo-update')
-  except:
+  except JobModule.DoesNotExist:
       RepoJobType = None
   if RepoJobType is not None and instance.update and instance.id is not None:
       if instance.managed:
@@ -200,7 +200,7 @@ def RepoDeleteJob(sender, **kwargs):
   RepoJobType = None
   try:
       RepoJobType = JobModule.objects.get(slug='repo-delete')
-  except:
+  except JobModule.DoesNotExist:
       RepoJobType = None
   print(RepoJobType)
   # get the jobtype, do nothing if it's not defined.
@@ -218,7 +218,7 @@ def DeleteJobserver(sender, instance, **kwargs):
     # get the jobtype, do nothing if it's not defined.
     try:
         RepoJobType = JobModule.objects.get(slug='repo-update')
-    except:
+    except JobModule.DoesNotExist:
         RepoJobType = None
     
     if RepoJobType is not None:

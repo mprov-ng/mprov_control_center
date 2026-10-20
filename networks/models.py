@@ -123,7 +123,7 @@ def UpdateNetwork(sender, instance, **kwargs):
     JobType = None
     try:
         JobType = JobModule.objects.get(slug=slug)
-    except:
+    except JobModule.DoesNotExist:
         JobType = None
     print(JobType)
     # look up the pxe/dns/dhcp-update job module in the DB
@@ -142,7 +142,7 @@ def DeleteNetwork(sender, instance, **kwargs):
     JobType = None
     try:
         JobType = JobModule.objects.get(slug=slug)
-    except:
+    except JobModule.DoesNotExist:
         JobType = None
     print(JobType)
     # look up the pxe/dns/dhcp-delete job module in the DB

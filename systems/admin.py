@@ -86,7 +86,7 @@ class NetworkInterfaceInline(admin.StackedInline):
     fields.remove('ipv6gua')
     try:
       ipv4idx = fields.index('ipaddress')
-    except:
+    except ValueError:
       ipv4idx = 0
 
     fields.insert(ipv4idx + 1, 'ipv6ll') #can also use insert
@@ -293,7 +293,7 @@ class SystemAdmin(admin.ModelAdmin):
           ipmitool_env = {**os.environ, "IPMI_PASSWORD": bmc.password or ""}
           try:
             subprocess.run(args=ipmitool_cmd, env=ipmitool_env)
-          except: 
+          except OSError:
             print("Error Setting PXE.")
             return
           # force a reset
@@ -302,7 +302,7 @@ class SystemAdmin(admin.ModelAdmin):
           try: 
              print("Issue power up... ")
              ipmi.chassis_control_power_up()
-          except:
+          except Exception:
              pass
         
         print(f"IPMI Power Action{action}")     
@@ -316,7 +316,7 @@ class SystemAdmin(admin.ModelAdmin):
             try:
               print("Issue hard_reset ... ")
               ipmi.chassis_control_hard_reset()
-            except:
+            except Exception:
               print("Issue power cycle ... ")
 
               ipmi.chassis_control_power_cycle()

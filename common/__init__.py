@@ -14,7 +14,7 @@ def parse_config_params(params_obj):
             yaml_merged.update(dict_entry)
         else: 
             yaml_merged.update(tmpYamlDict)
-      except:
+      except (TypeError, ValueError):
         pass
     
   if hasattr(params_obj, 'systemgroups'):
@@ -27,7 +27,7 @@ def parse_config_params(params_obj):
               yaml_merged.update(dict_entry)
           else: 
               yaml_merged.update(tmpYamlDict)
-        except:
+        except (TypeError, ValueError):
           pass
 
   if hasattr(params_obj, 'config_params'):
@@ -43,7 +43,7 @@ def parse_config_params(params_obj):
             yaml_merged.update(dict_entry)
         else: 
           yaml_merged.update(tmpYamlDict)
-      except:
+      except (TypeError, ValueError):
         pass
       
   return yaml_merged

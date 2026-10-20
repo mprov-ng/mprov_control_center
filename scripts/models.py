@@ -48,7 +48,7 @@ class Script(models.Model):
       # make the dir
       try:
         os.makedirs(settings.MEDIA_ROOT + '/' + self.scriptType.slug, exist_ok=True)
-      except: 
+      except OSError:
         print(f"Error: Unable to make script type dir: {settings.MEDIA_ROOT + '/' + self.scriptType.slug}")
         return
 
@@ -106,7 +106,7 @@ class File(models.Model):
       # make the dir
       try:
         os.makedirs(settings.MEDIA_ROOT + '/files/', exist_ok=True)
-      except: 
+      except OSError:
         print(f"Error: Unable to make files dir: {settings.MEDIA_ROOT + '/files/'}")
         return
 
@@ -143,7 +143,7 @@ class AnsiblePlaybook(models.Model):
       # make the dir
       try:
         os.makedirs(playbook_dir, exist_ok=True)
-      except: 
+      except OSError:
         print(f"Error: Unable to make script type dir: {playbook_dir}")
         return
 
