@@ -16,7 +16,8 @@ class NetworkInterfaceNetworkFilterTests(TestCase):
     self.mgmt = Network.objects.create(name="Mgmt", net_type=net_type, subnet="10.0.0.0", netmask=8)
     switch = Switch.objects.create(hostname="sw1", mgmt_ip="10.0.0.1", mgmt_mac="de:ad:be:ef:00:01", created_by=self.user)
     self.system = System.objects.create(hostname="node", created_by=self.user)
-    port = lambda name, net: SwitchPort.objects.create(name=name, switch=switch, networks=net)
+    def port(name, net):
+      return SwitchPort.objects.create(name=name, switch=switch, networks=net)
     self.nic("direct", self.lan, None)
     self.nic("other-port-1", self.lan, port("1", self.mgmt))
     self.nic("other-port-2", self.lan, port("2", self.mgmt))

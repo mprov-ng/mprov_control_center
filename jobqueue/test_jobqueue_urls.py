@@ -1,4 +1,3 @@
-import json
 
 from common.testing import APITestCase
 from jobqueue.models import JobModule

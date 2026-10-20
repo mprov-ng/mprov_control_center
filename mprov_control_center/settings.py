@@ -180,7 +180,6 @@ SESSION_EXPIRE_SECONDS = float(os.environ.get('SESSION_EXPIRE_SECONDS', '1800'))
 SESSION_TIMEOUT_REDIRECT = '/admin/login/'
 SESSION_EXPIRE_AFTER_LAST_ACTIVITY = True
 ROOT_URLCONF = 'mprov_control_center.urls'
-TIME_ZONE = os.environ.get('TIME_ZONE', 'UTC')
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

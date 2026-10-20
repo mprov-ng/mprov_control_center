@@ -34,5 +34,5 @@ python manage.py loaddata scripts/fixtures/*
 python manage.py loaddata ${tempdir}/mprov_scripts/mpcc_scripts.yaml
 
 cd /tmp
-rm -rf $tempdir
+rm -rf "$tempdir"
 

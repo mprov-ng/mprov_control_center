@@ -11,7 +11,7 @@ class DiskPartitionAPISerializer(serializers.ModelSerializer):
     depth=2
 
 
-class  RaidLayoutAPISerializer(serializers.ModelSerializer):
+class RaidLayoutAPISerializer(serializers.ModelSerializer):
   # systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
 
   class Meta:

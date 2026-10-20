@@ -1,5 +1,4 @@
 from unittest import mock
-import json
 
 from rest_framework.request import Request
 from rest_framework.response import Response

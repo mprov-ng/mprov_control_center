@@ -1,5 +1,3 @@
-from array import array
-from pyexpat import model
 from systems.models import NetworkInterface, SystemImage, System, SystemGroup, SystemBMC, SystemModel
 from rest_framework import serializers
 from jobqueue.models import JobServer

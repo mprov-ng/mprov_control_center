@@ -10,7 +10,8 @@ class CalculateNewIPTests(SimpleTestCase):
   """ calculate_new_ip keeps the address bits the new netmask leaves for hosts. """
 
   def new_ip(self, ip, old, new):
-    net = lambda cidr: Network(subnet=cidr.split("/")[0], netmask=int(cidr.split("/")[1]))
+    def net(cidr):
+      return Network(subnet=cidr.split("/")[0], netmask=int(cidr.split("/")[1]))
     return calculate_new_ip(ip, net(old), net(new))
 
   def test_octet_boundary(self):

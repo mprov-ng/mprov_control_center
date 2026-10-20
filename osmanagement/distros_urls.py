@@ -1,5 +1,5 @@
 from django.urls import path
-from osmanagement.views import OSDistroAPIView, OSRepoAPIView
+from osmanagement.views import OSDistroAPIView
 
 urlpatterns = [
     path('<int:pk>/', OSDistroAPIView.as_view()),

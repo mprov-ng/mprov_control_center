@@ -1,8 +1,7 @@
 from django.contrib import admin, messages
 from django.shortcuts import render, redirect
 from django.urls import path, reverse
-from django.utils.html import format_html
-from django.http import HttpResponseRedirect, QueryDict
+from django.http import QueryDict
 from .models import Network, NetworkType, Switch, SwitchPort
 from .utils import get_associated_objects, calculate_new_ips
 
@@ -96,7 +95,7 @@ class NetworkAdmin(admin.ModelAdmin):
                       del request.session['network_update_data']
                   
                   # Show success message
-                  success_msg = f'Network updated successfully. '
+                  success_msg = 'Network updated successfully. '
                   if results['interfaces_updated'] > 0:
                       success_msg += f'Updated {results["interfaces_updated"]} network interfaces. '
                   if results['bmcs_updated'] > 0:

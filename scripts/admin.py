@@ -1,8 +1,6 @@
 from django.contrib import admin
-from django.dispatch import receiver
 from django.conf import settings
 from .models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection, File
-from djangocodemirror.widgets import CodeMirrorAdminWidget
 import os
 
 class ScriptAdmin(admin.ModelAdmin):

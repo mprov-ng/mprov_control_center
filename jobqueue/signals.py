@@ -1,8 +1,6 @@
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from django.contrib.sessions.models import Session
 from .models import Job
-import json
 import time
 
 # Dictionary to store old status values during pre_save

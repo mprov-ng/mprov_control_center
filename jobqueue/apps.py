@@ -7,4 +7,4 @@ class JobqueueConfig(AppConfig):
     verbose_name="mProv Job Management"
 
     def ready(self):
-        import jobqueue.signals
+        import jobqueue.signals  # noqa: F401 (registers the signal handlers)

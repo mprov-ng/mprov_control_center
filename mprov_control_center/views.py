@@ -1,7 +1,5 @@
 from common.views import MProvView
 from django.apps import apps
-from rest_framework.response import Response
-from rest_framework import serializers
 from django.views import View
 from django.http import JsonResponse
 # Default view for the index.

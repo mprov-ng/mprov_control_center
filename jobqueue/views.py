@@ -135,7 +135,7 @@ Format returned:
         
         self.queryset=queryset
         # return the super call for get.
-        return generics.ListAPIView.get(self, request, format=None);
+        return generics.ListAPIView.get(self, request, format=None)
 
 
 class JobModulesAPIView(MProvView):
@@ -327,7 +327,6 @@ class JobStatusChangesView(View):
         if not (request.user.is_active and request.user.is_staff):
             return JsonResponse({'detail': "Authentication required."}, status=403)
         # Get recent job status changes from cache
-        from django.core.cache import cache
         
         recent_changes_key = "recent_job_status_changes"
         recent_changes = cache.get(recent_changes_key, [])

@@ -344,7 +344,7 @@ class SystemLocation(models.Model):
     super(SystemLocation, self).save(*args, **kwargs)
   
 @receiver(post_save, sender=NADSSystem)
-def AssignSystem(sender, instance, **kwarg):
+def AssignSystem(sender, instance, **kwargs):
   if instance.system != None:
     # Save the MAC to the interface marked as bootable on the system 
     sysnic = NetworkInterface.objects.all()
@@ -361,7 +361,7 @@ def AssignSystem(sender, instance, **kwarg):
 @receiver(post_save, sender=System)
 @receiver(post_save, sender=SystemImage)
 @receiver(post_save, sender=SystemGroup)
-def UpdateGenders (sender, instance, **kwarg):
+def UpdateGenders (sender, instance, **kwargs):
   JobType = None
   try:
       JobType = JobModule.objects.get(slug="libgenders")

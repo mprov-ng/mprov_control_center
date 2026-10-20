@@ -56,7 +56,7 @@ def render_config(obj):
   print(type(obj).__name__)
   if type(obj).__name__ == 'System':
     if obj.systemimage is not None:
-      setattr(obj, 'osdistro', obj.systemimage.osdistro)
+      obj.osdistro = obj.systemimage.osdistro
 
 
   # collect distro config
@@ -105,7 +105,6 @@ def render_config(obj):
   tmpDict['ansibleplaybooks'] = dict()
   tmpDict['ansibleroles'] = dict()
   tmpDict['ansiblecollections'] = dict()
-  tmpDict['install_kernel_cmdline'] = dict()
   tmpDict['install_kernel_cmdline'] = dict()
   tmpDict['tmpfs_root_size'] = dict()
   tmpDict['initial_mods'] = dict()

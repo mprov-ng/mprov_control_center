@@ -1,5 +1,5 @@
 from django.urls import path
-from osmanagement.views import OSDistroAPIView, OSRepoAPIView
+from osmanagement.views import OSRepoAPIView
 
 # This file holds the API endpoints for repos/ in the mPCC
 

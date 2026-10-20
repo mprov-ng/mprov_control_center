@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from common.views import MProvView
 from .models import Script, File, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 from .serializers import (

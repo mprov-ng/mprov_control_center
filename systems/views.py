@@ -16,7 +16,6 @@ from rest_framework.response import Response
 
 from common.views import MProvView
 from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, NADSSystem
-from rest_framework.response import Response
 from networks.models import SwitchPort, Network, Switch
 from rest_framework import generics
 from jobqueue.models import Job, JobModule, JobStatus
@@ -182,7 +181,7 @@ NADS Packet:
         else: 
             # mac is unique, so it's the only lookup field; a known MAC seen on
             # a new switch or port updates the existing entry.
-            nadssys = NADSSystem.objects.update_or_create(
+            NADSSystem.objects.update_or_create(
                 mac=request.data['mac'],
                 defaults={
                     'switch': request.data['switch'],
@@ -340,13 +339,13 @@ Format returned:
                 systemObj = System.objects.get(pk=kwargs['pk'])
                 bmcObj = SystemBMC.objects.filter(system=systemObj)
                 if bmcObj.count() != 1:
-                    return redirect(f"/static/images/power_unknown.svg")
+                    return redirect("/static/images/power_unknown.svg")
 
                 try:
                     bmcStatus = func_timeout(1, SystemPowerAPIView()._doPowerCmd, [bmcObj[0], "status"])
                 except FunctionTimedOut:
                     print("IPMI Command Timed Out")
-                    return redirect(f"/static/images/power_unknown.svg")
+                    return redirect("/static/images/power_unknown.svg")
 
                 # TODO: Serve the image file based on status
                 if bmcStatus['chassis_status'] == "unknown":
@@ -356,7 +355,7 @@ Format returned:
                 return redirect(f"/static/images/power_{bmcStatus}.svg")
 
             else:
-                return redirect(f"/static/images/power_unknown.svg")
+                return redirect("/static/images/power_unknown.svg")
         
         if 'pk' in kwargs:
             self.serializer_class = SystemSerializer
