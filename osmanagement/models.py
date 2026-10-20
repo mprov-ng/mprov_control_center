@@ -55,19 +55,19 @@ class OSDistro(models.Model):
     default="# None", 
     blank=True, 
     null=True,
-    verbose_name="Configuration\nParameters",
+    verbose_name="Configuration Parameters",
   )
   scripts = models.ManyToManyField(Script, blank=True, )
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks" )
   ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles" )
   ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
   
-  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
+  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel.", blank=True)
   # install kernel parameters.
-  tmpfs_root_size = models.IntegerField(default=8, help_text="Size of the root tmpfs filesystem in Gibabytes")
-  initial_mods = models.CharField(default="e1000,tg3", help_text="Comma separated list of modules to load.", max_length=255)
+  tmpfs_root_size = models.IntegerField(default=8, help_text="Size of the root tmpfs filesystem in Gigabytes.")
+  initial_mods = models.CharField(default="e1000,tg3", help_text="Comma-separated list of modules to load.", max_length=255)
   prov_interface = models.CharField(default="eth0", help_text="Interface name to provision over.", max_length=255)
-  rootpw = models.CharField(default="changeme", help_text="Root Password for the image", max_length=255, verbose_name="Root Password", blank=True)
+  rootpw = models.CharField(default="changeme", help_text="Root password for the image.", max_length=255, verbose_name="Root Password", blank=True)
   rootsshkeys=models.TextField(verbose_name="Root SSH Keys", help_text="Keys to add to the authorized keys file.", blank=True)
   class Meta:
     ordering=['name']

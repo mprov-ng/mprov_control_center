@@ -7,7 +7,7 @@ class DiskPartition(models.Model):
   """ 
   Disk partitions are partitions that will show up in a disk layout.  They are the base unit for building a disk geometry. 
   """
-  partnum = models.PositiveIntegerField(verbose_name="Part. Number", validators=[MinValueValidator(1)],default=1)
+  partnum = models.PositiveIntegerField(verbose_name="Partition Number", validators=[MinValueValidator(1)],default=1)
   mount=models.CharField(verbose_name="Mount Point", max_length=4096, help_text="The directory this partition will mount to or 'raid' if it is a Software RAID member.")
   size=models.BigIntegerField(verbose_name="Size (in MB)")
   fill=models.BooleanField(default=False, verbose_name="Grow to fill?")
