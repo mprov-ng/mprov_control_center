@@ -83,7 +83,7 @@ NADS Packet:
         return HttpResponseNotAllowed(["POST"])
 
     def mac2LL(self, mac=None):
-        if mac == None:
+        if mac is None:
             return None
         mac_octets = mac.split(":")
         # take the first octet and invert the 2nd to last bit.
@@ -730,7 +730,7 @@ Format returned:
         if 'pk' in kwargs:
 
           sysimage = self.model.objects.get(pk=kwargs['pk'])
-        if sysimage == None:
+        if sysimage is None:
           return Response(None, status=404)
         if 'needs_rebuild' in request.data:
             sysimage.needs_rebuild = request.data['needs_rebuild']
@@ -739,7 +739,7 @@ Format returned:
         if 'jobservers' in request.data:
           
           jobservers = list(sysimage.jobservers.all().values_list('id', flat=True))  
-          if type(request.data['jobservers']) == list:
+          if type(request.data['jobservers']) is list:
             # merge without duplicates
             print("Merging Array.")
             jobservers = list(set(jobservers + request.data['jobservers']))

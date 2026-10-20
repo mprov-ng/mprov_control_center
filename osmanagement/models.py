@@ -111,7 +111,7 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
   if hasattr(instance, "_post_save"):
     # if we are fired off from a previous post_save call, skip.
     return
-  if instance.update == False:
+  if not instance.update:
     # if we are not set to update, skip.
     return
   # remove trailing slashes

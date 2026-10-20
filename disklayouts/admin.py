@@ -42,7 +42,7 @@ class DiskLayoutAdmin(AdminWizardModel):
 
   def get_form(self, request, obj=None, change=False, **kwargs):
     form = super().get_form(request, obj, change, **kwargs)
-    if self.wizard_step == 0 and obj==None:
+    if self.wizard_step == 0 and obj is None:
       # we are displaying the type form
       # Software RAID is done in a separate list.
       if ('mdrd', 'Software RAID') in form.base_fields['dtype'].choices:

@@ -1,6 +1,6 @@
-from osmanagement.models import *
-from scripts.models import *
-from jobqueue.models import *
+from osmanagement.models import OSDistro, OSRepo, OSType
+from scripts.models import Script
+from jobqueue.models import JobServer
 
 from rest_framework import serializers
 

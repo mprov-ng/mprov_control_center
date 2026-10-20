@@ -94,7 +94,7 @@ Format returned:
         
         # if we are 'application/json' return an empty 200 response if
         # model is not set.
-        if self.model == None:
+        if self.model is None:
             return Response(None)
         
         if 'pk' in kwargs:
@@ -301,7 +301,7 @@ Format returned:
             'one_minute_load': request.data['one_minute_load']
         }
         data = {}
-        if defaults['port'] == None:
+        if defaults['port'] is None:
             defaults['port'] = 8080
         obj, created = JobServer.objects.update_or_create(
             name=request.data['name'],

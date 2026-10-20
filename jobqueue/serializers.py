@@ -1,6 +1,6 @@
-from jobqueue.models import *
+from jobqueue.models import Job, JobModule, JobServer, JobStatus
 from rest_framework import serializers
-from networks.models import *
+from networks.models import Network
 
 
 class JobAPISerializer(serializers.ModelSerializer):

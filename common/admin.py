@@ -94,7 +94,7 @@ class AdminWizardModel(admin.ModelAdmin):
       return form
     
     # if step_fields is not set, don't act like a wizard.
-    if self.step_fields == None:
+    if self.step_fields is None:
       self.readonly_fields=deepcopy(self.base_readonly_fields)
       self.inlines = deepcopy(self.base_inlines)
       form = super().get_form(request, obj=obj, change=change, **kwargs)
@@ -143,7 +143,7 @@ class AdminWizardModel(admin.ModelAdmin):
 
       if self.wizard_step < len(self.step_fields):
         for field in self.base_readonly_fields:
-          if self.step_fields[self.wizard_step] == None:
+          if self.step_fields[self.wizard_step] is None:
             if field in form.base_fields:
               form.base_fields[field].widget = forms.HiddenInput()
               
