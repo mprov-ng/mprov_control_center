@@ -92,7 +92,7 @@ Format returned:
         if result is not None:
             return result
         
-        # if we are 'application/json' return null (None) if
+        # if we are 'application/json' return an empty 200 response if
         # model is not set.
         if self.model == None:
             return Response(None)
@@ -223,7 +223,8 @@ class JobServersAPIView(MProvView):
 - heartbeat_time: The time of the last heartbeat from the job server
 - jobmodules: array of job module IDs that this job server handles.
 - one_minute_load: The job server's 1 minute load average
-- network: (Optional) ID of the network the job server is on
+- network: (Optional) ID of the network the job server is on.  POST ignores it;
+    set it with PATCH.
 
     
 ### GET method (no primary key)

@@ -117,7 +117,7 @@ and make sure to add documentation to the class so that it can be displayed if a
         result = self.checkContentType(request, format=format)
         if result is not None:
             return result
-        # if we are 'application/json' return null (None) if
+        # if we are 'application/json' return an empty 200 response if
         # model is not set.
         if self.model == None:
             return Response(None)
