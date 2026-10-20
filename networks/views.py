@@ -93,7 +93,7 @@ Format returned:
         result = self.checkContentType(request, format=format, kwargs=kwargs)
         if result is not None:
             return result
-        # if we are 'application/json' return an empty dict if
+        # if we are 'application/json' return an empty 200 response if
         # model is not set.
         if self.model == None:
             return Response(None)

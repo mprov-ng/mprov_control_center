@@ -233,7 +233,7 @@ class SystemAPIView(MProvView):
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 - ?hostname=TEXT: GET only returns systems whose hostname contains the text, or 404 if none.
     It can be combined with ?FIELD=VALUE filters.
-- ?detail: GET returns systems with nested details.
+- ?detail: GET (no primary key) returns systems with nested details.
 - ?self: GET returns the system that owns the NIC with the requesting IP address, with
     nested details, or 404 if unknown.  POST with ?self and a body of {"netboot": ...}
     sets bootable to false on all of the requesting system's NICs; any other key returns 403.
