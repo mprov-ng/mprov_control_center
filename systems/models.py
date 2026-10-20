@@ -355,7 +355,6 @@ def AssignSystem(sender, instance, **kwargs):
     sysnic = sysnic[0]
     sysnic.mac=instance.mac
     sysnic.save()
-    print(sysnic)
     instance.delete()
     
 @receiver(post_save, sender=System)
@@ -407,7 +406,6 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
         JobType = JobModule.objects.get(slug=slug)
     except JobModule.DoesNotExist:
         JobType = None
-    # print(JobType)
     # look up the pxe/dns/dhcp update job module in the DB
     # get the jobtype, do nothing if it's not defined.
     if JobType is not None:
@@ -424,7 +422,6 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
 def DeleteSystemImage(sender, instance, **kwargs):
   # grab a copy of the jobservers.
   jobservers = list(instance.jobservers.all())
-  # print(jobservers)
   # now clear this so everyone stops serving it.
   instance.jobservers.clear()
 
@@ -440,7 +437,6 @@ def DeleteSystemImage(sender, instance, **kwargs):
     # the list of jobservers this image is hosted on
     params = { 'imageId': instance.slug}
     for jobserver in jobservers:
-      print("Job for " + str(jobserver))
       Job.objects.create( name=JobType.name, 
         module=JobType, 
         status=JobStatus.objects.get(pk=1), 
@@ -473,7 +469,6 @@ def UpdateSystemImages(sender, instance, **kwargs):
       JobType = JobModule.objects.get(slug='image-update')
   except JobModule.DoesNotExist:
       JobType = None
-  # print(str(JobType) + " post")
 
   # get the jobtype, do nothing if it's not defined.
   if JobType is not None:

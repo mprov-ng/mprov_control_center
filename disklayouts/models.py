@@ -47,11 +47,6 @@ class DiskLayout(models.Model):
   def save(self, *args, **kwargs):
     if not self.slug:
       self.slug = slugify(self.name)
-    print(self.dtype)
-    # if 'dtype' in self.request.POST:
-    #   print(self.request.POST['dtype'])
-    # else :
-    #   print ("No dtype?!")
     super(DiskLayout, self).save(*args, **kwargs)
 
 class RaidLayout(DiskLayout):

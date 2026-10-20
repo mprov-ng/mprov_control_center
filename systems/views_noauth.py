@@ -76,7 +76,6 @@ If no jobserver is left, a 404 is returned.
             return result  
         # no pk in image, spit out a list then.
         self.queryset = SystemImage.objects.all()
-        #print(self.queryset)
         return(generics.ListAPIView.get(self, request, format=None)) 
       # choose a jobserver with the lowest one minute load avg.
       js_set = self.getJobserver(image, ip)
@@ -133,10 +132,8 @@ If no jobserver is left, a 404 is returned.
       family (AAAA for an IPv6 client).  Job servers registered by IP
       address are always kept.  Raises NotFound if none are left.
       """
-      print(clientIP)
 
       js_set = list(image.jobservers.all().order_by('one_minute_load'),)
-      print(js_set)
       if(len(js_set)==0):
         # if there are no jobservers, return 404
         raise NotFound(detail="Error 404, No Jobservers in mPCC for Image", code=404)
@@ -156,13 +153,11 @@ If no jobserver is left, a 404 is returned.
           # if not a valid ip, assume it's a host name
           pass
         try:
-          answer = dns.resolver.resolve(str(js.address), rdtype, search=True)
+          # only checks that the name resolves.
+          dns.resolver.resolve(str(js.address), rdtype, search=True)
         except Exception as e:
           errors.append(f"{js}: {e}")
           continue
-        print(f"Jobserver {js} addresses:")
-        for rr in answer.rrset:
-          print(f"    {rr}")
         resolvable.append(js)
       if len(resolvable) == 0:
         family = "IPv6 " if rdtype == "AAAA" else ""
@@ -199,7 +194,6 @@ class IPXEAPIView(MProvView):
         else:
             ip = request.META.get('REMOTE_ADDR')
         #ip="172.16.10.1"
-        # print(ip)
         # now try to grab the nic for this IP
         queryset = self.model.objects.all()
         queryset = queryset.filter(ipaddress=ip)
@@ -229,7 +223,6 @@ class IPXEAPIView(MProvView):
         else:
           # here we should have a system
 
-          # print(queryset)
           # the kernel cmdline is rendered as a template further below, allowing recursive templating.
           if qscnt > 1:
             print(f"WARN: More than 1 NIC for IP {ip}.  Using the first bootable one.")
@@ -267,7 +260,6 @@ class IPXEAPIView(MProvView):
            # no distro on the image, so use a blank one to get the defaults.
            nic.system.systemimage.osdistro = OSDistro()
         template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
-        # print(nic)
         context = Context(dict(nic=nic))
 
         # check for the __nads__ image, which means a N.A.D.S. boot.
@@ -297,9 +289,7 @@ class IPXEAPIView(MProvView):
         
         rendered: str = template.render(context)
         nic.system.systemimage.osdistro.install_kernel_cmdline = rendered + rescue_param
-        print(nic.system.systemimage.osdistro.install_kernel_cmdline)
         print("PXE Request from: " + ip)
-        # print(context['nics'])
         context= {
           'nic': nic,
         }

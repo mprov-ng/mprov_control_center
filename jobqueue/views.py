@@ -106,7 +106,6 @@ Format returned:
         jobmodule = self.request.query_params.get('module')
         
         if jobmodule is not None:
-            # print(jobmodule)
             if jobmodule[0] == "[":
                 # we are being passed an array
                 # convert the string to an array

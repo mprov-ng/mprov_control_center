@@ -93,7 +93,6 @@ NADS Packet:
 
 
     def post(self, request, *args, **kwargs):
-        print(request.data)
         missing = [field for field in ('vendor', 'model', 'switch', 'port', 'mac') if field not in request.data]
         if missing:
             return Response({field: "This field is required." for field in missing}, status=400)
@@ -115,16 +114,11 @@ NADS Packet:
                 port = None
         else:
             port = None
-        #print(port)
         if port is not None:
             nicQueryset = NetworkInterface.objects.all()
             nicQueryset = nicQueryset.filter(mac=None, switch_port=port)
-            #print(nicQueryset)
             if nicQueryset is not None and len(nicQueryset) > 0:
                 system = System.objects.get(pk=nicQueryset[0].system.pk)
-                # print(model_slug)
-                # print(system)
-                # print(system.systemmodel.slug)
                 if hasattr(system.systemmodel, "slug"):
                     if system.systemmodel.slug != model_slug:
                         system=None
@@ -137,11 +131,8 @@ NADS Packet:
 
                         # attempt to set a GUA if a subnet is set on the port.
                         subnet = None
-                        print(f"Port: {port}")
                         if port.networks is not None:
-                            print(f"Net: {port.networks}")
                             if ":" in port.networks.subnet:
-                                print(f"Subnet: {port.networks.subnet}")
                                 subnet = port.networks.subnet
                         if subnet is not None:
                             # assign a GUA based off the LL
@@ -158,7 +149,6 @@ NADS Packet:
                             JobType = JobModule.objects.get(slug='pxe-update')
                         except JobModule.DoesNotExist:
                             JobType = None
-                        # print(JobType)
                         # look up the job module in the DB
                         # get the jobtype, do nothing if it's not defined.
                         if JobType is not None:
@@ -190,7 +180,6 @@ NADS Packet:
                     'model': request.data['model'],
                     # XXX Future: 'serial': request.data['serial']
                 })
-        print(sysnic)
    
         # TODO insert MAC ban code here if needed.
         return Response(None, status=200)
@@ -312,7 +301,6 @@ Format returned:
             if nicQueryset.count() == 0:
                 return Response(None, status=404)
             system = nicQueryset[0].system
-            # print(system)
             for arg in request.data:
                 if arg == "netboot":
                     # we should only be working on disabling netboot.
@@ -379,7 +367,6 @@ Format returned:
 
         if 'hostname' in request.query_params:
             # someone is looking for a specific item.
-            print('Hostname query: ?hostname=' + request.query_params['hostname'])
             self.queryset = self.queryset.filter(hostname__contains=request.query_params['hostname'])
             if self.queryset.count() == 0:
                 return Response(None, status=404)
@@ -719,14 +706,11 @@ Format returned:
         return result
 
     def patch(self, request, *args, **kwargs):
-      print(f"Query params: {request.query_params}")
       if 'addjs' in request.query_params:
         # if 'addjs' is in the query string, we are appending a jobserver to the 
         # jobserver array.
-        print("Updating, not removing, via internal merge.")
         # first let's get the image in question
         sysimage = None
-        print(f"data: {request.data}")
         if 'pk' in kwargs:
 
           sysimage = self.model.objects.get(pk=kwargs['pk'])
@@ -741,10 +725,8 @@ Format returned:
           jobservers = list(sysimage.jobservers.all().values_list('id', flat=True))  
           if type(request.data['jobservers']) is list:
             # merge without duplicates
-            print("Merging Array.")
             jobservers = list(set(jobservers + request.data['jobservers']))
           else:
-            print("Adding Jobserver")
             jobservers.append(request.data['jobservers'])
             # jobservers isn't a list, let's try to append our new jobserver.
           # remove the jobservers from the request data, so the update below
@@ -888,7 +870,6 @@ class SystemPowerAPIView(MProvView):
         error_body = {}
         filtered = False
         for field in request.query_params:
-            #print(field)
             if field == 'detail':
                 # ignore the detail flag.
                 continue
@@ -937,7 +918,6 @@ class SystemPowerAPIView(MProvView):
             # -E reads the password from IPMI_PASSWORD, keeping it out of the process list.
             ipmitool_cmd = ["/usr/bin/ipmitool", "-Ilanplus", f"-U{bmc.username}", "-E", f"-H{bmc.ipaddress}", "chassis", "bootdev", "pxe"] + efiopt.split()
             ipmitool_env = {**os.environ, "IPMI_PASSWORD": bmc.password or ""}
-            print(ipmitool_cmd)
             try:
                 subprocess.run(args=ipmitool_cmd, env=ipmitool_env)
             except OSError:

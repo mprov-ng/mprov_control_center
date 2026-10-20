@@ -81,7 +81,6 @@ class Script(models.Model):
         print(f"Error writing content to file {file_path}: {e}")
     
     if file_path is not None and os.path.exists(file_path):
-      print("Converting file")
       os.system(f"dos2unix -n {file_path} {file_path}.new")
       os.system(f"/bin/mv -v {file_path}.new {file_path}")
 
@@ -112,7 +111,6 @@ class File(models.Model):
 
     self.filename.name = 'files/' + self.slug + "-v" + str(self.version)
     super(File, self).save(*args, **kwargs)
-    print(os.path.join(settings.MEDIA_ROOT, self.filename.name))
 
 class AnsiblePlaybook(models.Model):
   """
@@ -149,9 +147,7 @@ class AnsiblePlaybook(models.Model):
 
     self.filename.name = self.scriptType.slug + '/ansibleplaybooks/' + self.slug + "-v" + str(self.version)
     super(AnsiblePlaybook, self).save(*args, **kwargs)
-    print(os.path.join(settings.MEDIA_ROOT, self.filename.name))
     if os.path.exists(os.path.join(settings.MEDIA_ROOT, self.filename.name)):
-      print("Converting file")
       os.system("dos2unix " + os.path.join(settings.MEDIA_ROOT, self.filename.name))
 
 class AnsibleRole(models.Model):

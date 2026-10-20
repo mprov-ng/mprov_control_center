@@ -134,12 +134,7 @@ class NetworkAdmin(admin.ModelAdmin):
       proposed_interfaces = []
       for interface in associated['interfaces']:
           if interface.ipaddress:
-              print(f"DEBUG: Calculating IP for {interface.system.hostname}.{interface.name}")
-              print(f"  Current IP: {interface.ipaddress}")
-              print(f"  Old network: {old_network.subnet}/{old_network.netmask}")
-              print(f"  New network: {temp_network.subnet}/{temp_network.netmask}")
               proposed_ip = new_ips.get(interface.ipaddress)
-              print(f"  Proposed IP: {proposed_ip}")
               if proposed_ip:
                   proposed_interfaces.append({
                       'id': interface.id,

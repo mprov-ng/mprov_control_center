@@ -125,7 +125,6 @@ def UpdateNetwork(sender, instance, **kwargs):
         JobType = JobModule.objects.get(slug=slug)
     except JobModule.DoesNotExist:
         JobType = None
-    print(JobType)
     # look up the pxe/dns/dhcp-update job module in the DB
     # get the jobtype, do nothing if it's not defined.
     if JobType is not None:
@@ -144,7 +143,6 @@ def DeleteNetwork(sender, instance, **kwargs):
         JobType = JobModule.objects.get(slug=slug)
     except JobModule.DoesNotExist:
         JobType = None
-    print(JobType)
     # look up the pxe/dns/dhcp-delete job module in the DB
     # get the jobtype, do nothing if it's not defined.
     if JobType is not None:

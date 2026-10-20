@@ -156,7 +156,6 @@ and make sure to add documentation to the class so that it can be displayed if a
         # check our query and see if we can get filters based on the query
         error_body = {}
         for field in request.query_params:
-            #print(field)
             filter_value = request.query_params[field]
             if field in kwargs:
                 filter_value = kwargs[field]
@@ -166,7 +165,6 @@ and make sure to add documentation to the class so that it can be displayed if a
             if any(x for x in self.model._meta.get_fields() if x.name == field):
                 # we found a field.
                 try:
-                    # print(f"{field}: {filter_value}")
                     queryset = queryset.filter((field,filter_value))
                 except BaseException as e:
                     error_body[field] = f"Error searching for {field}: {type(e)=}: {e=}"
@@ -208,7 +206,5 @@ and make sure to add documentation to the class so that it can be displayed if a
                 print(f"WARN: Unmapped field type {field.__class__}; please open a ticket to have it added. Defaulting to string.")
             if "reverse" in field.__class__.__module__:
                 continue
-            if(not getattr(field, 'blank', False)):
-                print(f"DEBUG: {self.model}.{field.name} is {field.__class__} and is required")
             jsonDataModel['fields'].update({field.name: {'type': datatype, 'required': not getattr(field, 'blank', False) }})
         return jsonDataModel
