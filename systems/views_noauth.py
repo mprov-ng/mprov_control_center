@@ -10,7 +10,6 @@ from django.template import Template, Context
 from django.shortcuts import render
 import requests
 import dns.resolver
-import platform
 from ipaddress import ip_address
 from osmanagement.models import OSDistro
 
@@ -210,12 +209,13 @@ class IPXEAPIView(MProvView):
             try:
                 imgQs = SystemImage.objects.get(name='__nads__')
             except:
-                print(f"Error: You are missing a system image of the name '__nads__' so autodetection will fail.")
-                raise NotFound(detail="No __nads__ image.", code=404)
+                print("Error: You are missing a system image of the name '__nads__' so autodetection will fail.")
+                raise NotFound(detail="No __nads__ image.", code=404) from None
             if type(imgQs) is SystemImage:  
                 # there is a __nads__ image, let's serve that.
                 # spoof a NIC object
-                class Obj: pass
+                class Obj:
+                    pass
                 system=Obj()
                 system.systemimage = imgQs
                 # setattr(system, 'systemima?ge', imgQs)
@@ -250,7 +250,7 @@ class IPXEAPIView(MProvView):
             
              
           if nic.system.systemimage == None:
-            print(f"Error: System has no image assigned, netbooting not possible.")
+            print("Error: System has no image assigned, netbooting not possible.")
             raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
         nic.bootserver=f"{request.scheme}://{request.META.get('SERVER_NAME')}:{request.META.get('SERVER_PORT')}"
         

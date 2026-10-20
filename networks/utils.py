@@ -1,5 +1,4 @@
 import ipaddress
-from django.db.models import Q
 from .models import Network
 from systems.models import SystemBMC, NetworkInterface
 

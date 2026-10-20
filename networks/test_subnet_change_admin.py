@@ -1,6 +1,6 @@
 from unittest import mock
 
-from networks.models import Network, NetworkType
+from networks.models import NetworkType
 from networks.testing import NetworkTestCase
 
 

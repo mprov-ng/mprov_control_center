@@ -62,7 +62,7 @@ server hosts the repository.
                   html+=format_html("<li><a href='/osrepos/{}/'>{}</a><br></li>", repo.id, repo.name)
                 else:
                   html+=format_html("<li><a href='{}'>{}</a><br></li>", repo.repo_package_url, repo.name)
-              html+=f"</ul>"
+              html+="</ul>"
               body.append(BeautifulSoup(html, features="html.parser"))
               result.content = str(bs).encode(result.charset)
               return result 

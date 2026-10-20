@@ -1,5 +1,4 @@
 
-from yaml import serialize
 
 from rest_framework import serializers
 from .models import Network, Switch, NetworkType, SwitchPort

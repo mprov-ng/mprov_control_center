@@ -37,7 +37,7 @@ class OSRepoAdmin(admin.ModelAdmin):
   actions = [mark_update]
 
 class OSDistroAdmin(admin.ModelAdmin):
-  model = OSDistro,
+  model = OSDistro
   form = OSDistro_form
   #inlines = [RepoInline]
   list_display=['id', 'name', 'vendor', 'version']

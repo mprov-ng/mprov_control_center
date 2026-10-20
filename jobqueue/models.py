@@ -119,6 +119,6 @@ class JobServer(models.Model):
 
 
 @receiver(pre_save, sender=JobServer)
-def convertJobServerTS(sender, instance, **kwarg):
+def convertJobServerTS(sender, instance, **kwargs):
     if not is_aware(instance.heartbeat_time):
         instance.heartbeat_time = make_aware(instance.heartbeat_time)

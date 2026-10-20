@@ -1,6 +1,5 @@
 from django.test import SimpleTestCase
 
-from systems.models import System
 
 
 class BMCInlineTests(SimpleTestCase):

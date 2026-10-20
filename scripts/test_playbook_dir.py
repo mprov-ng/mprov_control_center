@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 
-from scripts.models import AnsiblePlaybook, Script, ScriptType
+from scripts.models import AnsiblePlaybook, ScriptType
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())

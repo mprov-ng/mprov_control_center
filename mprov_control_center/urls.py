@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.views.generic import RedirectView
-from django.urls import path, include, re_path
+from django.urls import path, include
 from .views import DataTypeView, IndexAPIView
 from systems.views import (
     SystemAPIView,
@@ -25,7 +25,6 @@ from networks.api_views import (
     preview_subnet_changes
 )
 
-from osmanagement.views_noauth import OSRepoURLAPIView
 
 from django.conf import settings
 from django.conf.urls.static import static
