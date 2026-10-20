@@ -1,9 +1,8 @@
 #!/usr/bin/python3
 
-import json
 import socket
 import uuid
-import yaml, os, sys, glob, time
+import yaml, os, sys, time
 import parted
 import requests
 import sh
@@ -86,7 +85,7 @@ class mProvStatefulInstaller():
       try:
         getattr(self, config_entry)
         setattr(self, config_entry, self.config_data['global'][config_entry])
-      except:
+      except AttributeError:
         # ignore unused keys
         pass
     pass
@@ -101,7 +100,7 @@ class mProvStatefulInstaller():
     # connect to the mPCC
     try:
       response = self.session.get(self.mprovURL, stream=True)
-    except:
+    except Exception:
       print("Error: Communication error to the server.", file=sys.stderr)
       self.sessionOk = False
       time.sleep(self.heartbeatInterval)
@@ -120,7 +119,6 @@ class mProvStatefulInstaller():
   def buildDisks(self):
     self._getDiskLayout()
     disks = "" 
-    hasRAID=False
 
     # disks with boot partitions.
     # This is an array because more than
@@ -156,7 +154,7 @@ class mProvStatefulInstaller():
     sh.mdadm(['--stop', '--scan'])
     try:
       os.unlink("/tmp/fstab")
-    except:
+    except OSError:
       pass
     partnum=1
     print(f"Boot Disk: {self.bootdisk}")
@@ -381,7 +379,7 @@ class mProvStatefulInstaller():
                       self.modules = argvalue.replace(",", " ")
                   continue
               newcmdline.append(arg)
-          except:
+          except Exception:
               pass
 
       # check for auto-detected modules
@@ -403,7 +401,7 @@ class mProvStatefulInstaller():
               grubfileLines = grubfile.readlines()
 
       # remove the GRUB_CMDLINE_LINUX entry
-      grubfileNew = [line for line in grubfileLines if not 'GRUB_CMDLINE_LINUX=' in line]
+      grubfileNew = [line for line in grubfileLines if 'GRUB_CMDLINE_LINUX=' not in line]
 
       # now add our new commandline
       grubfileNew.append(f"GRUB_CMDLINE_LINUX=\"{' '.join(newcmdline)} root={self.rootpartUUID}\"")
@@ -412,10 +410,10 @@ class mProvStatefulInstaller():
       with open("/newroot/etc/default/grub", "w") as grubfileout:
           grubfileout.writelines(grubfileNew)
 
-      print(f"Regenerating initial ramdisk... ")
+      print("Regenerating initial ramdisk... ")
       try:
           sh.chroot(["/newroot", "mount", "-t", "proc", "none", "/proc"])
-      except:
+      except Exception:
           pass
       dracut_cmd = ["/newroot", "dracut", "--regenerate-all", "-f", "-vvv", "--mdadmconf", "--force-add", "mdraid"]
       print(dracut_cmd)
@@ -423,17 +421,17 @@ class mProvStatefulInstaller():
       with open("/newroot/tmp/dracut.out", "w") as out:
           out.writelines(result)
 
-      print(f"Installing boot loader...")
+      print("Installing boot loader...")
       # Check [ -d /sys/firmware/efi ] && echo UEFI || echo BIOS
       if os.path.exists("/sys/firmware/efi"):
           print("Configuring GRUB2 EFI Setup...")
           try:
               sh.chroot(["/newroot", "dnf", "-y", "install", "shim", "grub2-efi-*", "grub2-common", "efibootmgr"])
-          except:
+          except Exception:
               pass
-          sh.chroot(["/newroot", "dnf", "-y", f"reinstall", "shim", "grub2-efi-*", "grub2-common", "efibootmgr"])
-          sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/etc/grub2-efi.cfg"])
-          sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/boot/grub2/grub2-efi.cfg"])
+          sh.chroot(["/newroot", "dnf", "-y", "reinstall", "shim", "grub2-efi-*", "grub2-common", "efibootmgr"])
+          sh.chroot(["/newroot", "grub2-mkconfig", "-o", "/etc/grub2-efi.cfg"])
+          sh.chroot(["/newroot", "grub2-mkconfig", "-o", "/boot/grub2/grub2-efi.cfg"])
 
           # ---- register the boot entry in firmware NVRAM ----
           # grub2-efi's RPM %posttrans scriptlet normally does this on a live
@@ -496,13 +494,13 @@ class mProvStatefulInstaller():
           with open("/newroot/etc/default/grub", "a") as gd:
               gd.write("\nGRUB_ENABLE_BLSCFG=false")
           sh.chroot([
-              f"/newroot",
+              "/newroot",
               "grub2-install",
               "--boot-directory=/boot",
               "--recheck",
               "--verbose",
               bootdisk ])
-          sh.chroot([f"/newroot", f"grub2-mkconfig", f"-o", "/etc/grub2.cfg"])
+          sh.chroot(["/newroot", "grub2-mkconfig", "-o", "/etc/grub2.cfg"])
 
   def cleanupAndSwitchroot(self):
     # disable netboot
@@ -548,7 +546,7 @@ class mProvStatefulInstaller():
     # shutdown the net.
     try:
       sh.pkill(['udhcp'])
-    except:
+    except Exception:
       pass
 
     # autorelabel
@@ -580,7 +578,7 @@ class mProvStatefulInstaller():
     if response.status_code == 200:
       try:
         systemDetails = response.json()[0]
-      except:
+      except Exception:
         print("Error: Unable to parse server response.")
         sys.exit(1)
       self.disklayout = systemDetails['disks']
@@ -606,7 +604,7 @@ class mProvStatefulInstaller():
     if part['filesystem'] == 'linux-swap':
       part['filesystem'] = 'linux-swap(v1)'
     if part['filesystem'] == 'raid'  \
-      or part['filesystem'] == None \
+      or part['filesystem'] is None \
       or part['filesystem'] == 'efi' \
       or part['filesystem'] == 'biosboot':
       # part['filesystem'] = None
@@ -676,7 +674,7 @@ class mProvStatefulInstaller():
             ['blkid', '-o', 'value', '--match-tag=UUID', f"{pdisk['diskname']}{partprefix}{part['partnum']}"],
             text=True, capture_output=True
             ).stdout.split("\n")[0]
-        except:
+        except Exception:
           pass
         # here we check if we got a string back from the blkid, if so, assume it's formatted
         # and return the UUID.  If not, format.
@@ -705,7 +703,7 @@ class mProvStatefulInstaller():
       
     else:
       print(f"Building {part['filesystem']} file system on {pdisk['diskname']}{partprefix}{part['partnum']}...")
-      sh.mkfs(f"-t", f"{part['filesystem']}", f"{part['force']}", f"{part['uuidopt']}", f"{part['uuid']}", f"{pdisk['diskname']}{partprefix}{part['partnum']}")
+      sh.mkfs("-t", f"{part['filesystem']}", f"{part['force']}", f"{part['uuidopt']}", f"{part['uuid']}", f"{pdisk['diskname']}{partprefix}{part['partnum']}")
     return partuuid
 
 def main():

@@ -7,9 +7,9 @@ mount -t devtmpfs devtmpfs /dev >/dev/null 2>&1
 mount -t tmpfs tmpfs /run >/dev/null 2>&1
 respawn() {
   echo "Press 'r' to restart the mProv Boot System."
-  while [ 1 ]
+  while true
   do
-    read -n 1 -s key
+    read -r -n 1 -s key
     if [ "$key" == "r" ] || [ "$key" == "R" ]
     then
       echo "Restarting..."
@@ -35,12 +35,14 @@ export -f err_handler
 
 
 get_kcmdline_opt(){
-  for i in  `cat /proc/cmdline`
+  # the kernel cmdline is split into words on purpose.
+  # shellcheck disable=SC2013
+  for i in $(cat /proc/cmdline)
   do
-    tmp_str=`echo $i | grep $1`
+    tmp_str=$(echo "$i" | grep "$1")
     if [ "$tmp_str" != "" ]
     then
-      echo $tmp_str | awk -F= '{print $NF}'
+      echo "$tmp_str" | awk -F= '{print $NF}'
     fi
   done
 
@@ -49,12 +51,13 @@ get_kcmdline_opt(){
 
 
 # grab some of our variables from the kernel cmdline.
-export MPROV_TMPFS_SIZE=`get_kcmdline_opt mprov_tmpfs_size`
-export MPROV_IMAGE_URL=`get_kcmdline_opt mprov_image_url`
-export MPROV_INITIAL_MODS=`get_kcmdline_opt mprov_initial_mods`
-export MPROV_PROV_INTF=`get_kcmdline_opt mprov_prov_intf`
-export MPROV_STATEFUL=`get_kcmdline_opt mprov_stateful`
-export MPROV_RESCUE=`get_kcmdline_opt mprov_rescue`
+MPROV_TMPFS_SIZE=$(get_kcmdline_opt mprov_tmpfs_size)
+MPROV_IMAGE_URL=$(get_kcmdline_opt mprov_image_url)
+MPROV_INITIAL_MODS=$(get_kcmdline_opt mprov_initial_mods)
+MPROV_PROV_INTF=$(get_kcmdline_opt mprov_prov_intf)
+MPROV_STATEFUL=$(get_kcmdline_opt mprov_stateful)
+MPROV_RESCUE=$(get_kcmdline_opt mprov_rescue)
+export MPROV_TMPFS_SIZE MPROV_IMAGE_URL MPROV_INITIAL_MODS MPROV_PROV_INTF MPROV_STATEFUL MPROV_RESCUE
 # load our initial modules
 echo -n "" > /tmp/init_mods
 trap err_handler EXIT
@@ -62,19 +65,20 @@ trap err_handler ERR
 echo -n "Loading network drivers... "
 echo -n "virtio_net," | tee -a /tmp/init_mods
 modprobe virtio_net
-for i in `ls -1 /sys/bus/pci/devices/`
+for dev in /sys/bus/pci/devices/*
 do
-	if [ -e /sys/bus/pci/devices/$i/class ]
+	i=${dev##*/}
+	if [ -e "/sys/bus/pci/devices/$i/class" ]
 	then
-		class=`cat /sys/bus/pci/devices/$i/class | cut -c -4`
+		class=$(cut -c -4 "/sys/bus/pci/devices/$i/class")
 		if [ "$class" == "0x02" ]
 		then
 			# if we are class 0x02, it's a network device.
 			# let's see if we can find a driver.
-			modalias=`cat /sys/bus/pci/devices/$i/modalias`
+			modalias=$(cat "/sys/bus/pci/devices/$i/modalias")
       trap ERR
-			echo -n "`modprobe -R $modalias`," | tee -a /tmp/init_mods
-			modprobe $modalias
+			echo -n "$(modprobe -R "$modalias")," | tee -a /tmp/init_mods
+			modprobe "$modalias"
       MPROV_INITIAL_MODS="${MPROV_INITIAL_MODS},${modalias}"
       trap err_handler ERR
 	fi	fi
@@ -93,19 +97,20 @@ echo -n "virtio_scsi," | tee -a /tmp/init_mods
 modprobe virtio_scsi
 echo -n "virtio_blk," | tee -a /tmp/init_mods
 modprobe virtio_blk
-for i in `ls -1 /sys/bus/pci/devices/`
+for dev in /sys/bus/pci/devices/*
 do
-	if [ -e /sys/bus/pci/devices/$i/class ]
+	i=${dev##*/}
+	if [ -e "/sys/bus/pci/devices/$i/class" ]
 	then
-		class=`cat /sys/bus/pci/devices/$i/class | cut -c -4`
+		class=$(cut -c -4 "/sys/bus/pci/devices/$i/class")
 		if [ "$class" == "0x01" ]
 		then
 			# if we are class 0x01, it's a storage device.
 			# let's see if we can find a driver.
-			modalias=`cat /sys/bus/pci/devices/$i/modalias `
+			modalias=$(cat "/sys/bus/pci/devices/$i/modalias")
       trap ERR
-			echo -n "`modprobe -R $modalias  | tail -n1`," | tee -a /tmp/init_mods
-			modprobe $modalias
+			echo -n "$(modprobe -R "$modalias" | tail -n1)," | tee -a /tmp/init_mods
+			modprobe "$modalias"
       MPROV_INITIAL_MODS="${MPROV_INITIAL_MODS},${modalias}"
       trap err_handler ERR
 	fi	fi
@@ -120,7 +125,7 @@ export PATH=$PATH:/sbin:/usr/sbin
 # get the interface name
 MAC=$MPROV_PROV_INTF
 # this works for interface names OR MAC addresses, which is nice.
-MPROV_PROV_INTF=`ip link show | grep -i -B1 "$MAC"| grep -v link | awk -F": " '{print $2}'`
+MPROV_PROV_INTF=$(ip link show | grep -i -B1 "$MAC"| grep -v link | awk -F": " '{print $2}')
 if [ "$MPROV_PROV_INTF" == "" ]
 then
   echo
@@ -132,15 +137,14 @@ fi
 
 echo "Bringing up $MPROV_PROV_INTF if it's available..."
 # reset the network stack
-ip addr flush dev $MPROV_PROV_INTF > /dev/null 2>&1
-ip link set $MPROV_PROV_INTF down > /dev/null 2>&1
-ip link set $MPROV_PROV_INTF up > /dev/null 2>&1
+ip addr flush dev "$MPROV_PROV_INTF" > /dev/null 2>&1
+ip link set "$MPROV_PROV_INTF" down > /dev/null 2>&1
+ip link set "$MPROV_PROV_INTF" up > /dev/null 2>&1
 # wait a couple of seconds for the link
 sleep 5
-udhcpc -s /bin/default.script -b -B -i $MPROV_PROV_INTF
+udhcpc -s /bin/default.script -b -B -i "$MPROV_PROV_INTF"
 
-ip route | grep default > /dev/null
-if [ "$?" != "0" ]
+if ! ip route | grep default > /dev/null
 then
   echo
   echo "Error: Unable to obtain an IP address via DHCP on $MPROV_PROV_INTF"
@@ -157,7 +161,7 @@ then
   echo
   # disable the error trap for the read
   trap ERR
-  read -p "Would you like an early shell? (y/n) " -s -n 1 -t 10 early_shell
+  read -r -p "Would you like an early shell? (y/n) " -s -n 1 -t 10 early_shell
   # re-enable the error trap
   trap err_handler ERR
   if [ "$early_shell" == "y" ] || [ "$early_shell" == "Y" ] 
@@ -175,7 +179,7 @@ fi
 echo
 echo -n "Creating image directory at /image... "
 mkdir -p /image
-mount -t tmpfs -o size=$MPROV_TMPFS_SIZE tmpfs /image
+mount -t tmpfs -o "size=$MPROV_TMPFS_SIZE" tmpfs /image
 mkdir -p /image/tmp
 date > /image/tmp/boot_timing
 mkdir -p /image/etc/dracut.conf.d/
@@ -189,11 +193,10 @@ sleep 5
 echo; echo "Downloading and extracting image to image directory... "
 echo "Retrieving $MPROV_IMAGE_URL"
 trap ERR
-while [ 1 ]
+while true
 do
-  cd /image
-  wget $MPROV_IMAGE_URL -O - | gunzip -c | tar -x
-  if [ "$?" == "0" ]
+  cd /image || exit 1
+  if wget "$MPROV_IMAGE_URL" -O - | gunzip -c | tar -x
   then 
     break
   else
@@ -223,9 +226,9 @@ then
     
   echo "Generating Network Interface files"
   # not a typo, strips 2 entries off the end of the IMAGE url.
-  mprovURL=`dirname $MPROV_IMAGE_URL`
-  mprovURL=`dirname $mprovURL`
-  wget -q -O /image/tmp/mprov_genNetworkInterfaces.py ${mprovURL}/static/genNetworkInterfaces.py
+  mprovURL=$(dirname "$MPROV_IMAGE_URL")
+  mprovURL=$(dirname "$mprovURL")
+  wget -q -O /image/tmp/mprov_genNetworkInterfaces.py "${mprovURL}/static/genNetworkInterfaces.py"
   /bin/chmod 755 /image/tmp/mprov_genNetworkInterfaces.py
   chroot /image/ /usr/bin/python3 /tmp/mprov_genNetworkInterfaces.py
 fi
@@ -237,8 +240,8 @@ then
   echo "Stateful Installation"
  
   # copy the stateful installer to the /image root
-  wget -q -O /image/tmp/mprov_stateful.py ${mprovURL}/static/mprov_stateful.py
-  wget -q -O /image/tmp/mprov_stateful.sh ${mprovURL}/static/mprov_stateful.sh
+  wget -q -O /image/tmp/mprov_stateful.py "${mprovURL}/static/mprov_stateful.py"
+  wget -q -O /image/tmp/mprov_stateful.sh "${mprovURL}/static/mprov_stateful.sh"
   /bin/chmod 755 /image/tmp/mprov_stateful.py /image/tmp/mprov_stateful.sh
   
   if [ ! -f /image/etc/resolv.conf ]
