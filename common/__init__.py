@@ -1,5 +1,4 @@
 
-from .views import *
 import yaml
 
 

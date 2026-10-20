@@ -112,7 +112,7 @@ def UpdateSwitch(sender, instance, **kwargs):
     else:
         request = None
     if request is not None:
-      if type(request.user) == AnonymousUser:
+      if type(request.user) is AnonymousUser:
           instance.created_by = User.objects.get(pk=1)
       else:
         instance.created_by = request.user

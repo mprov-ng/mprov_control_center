@@ -67,6 +67,6 @@ class DataTypeView(View):
             self.model = None
    
 
-        if self.model == None:
+        if self.model is None:
             return JsonResponse({'datamodels': model_list})
         return JsonResponse(MProvView().getJSONDataStructure(self.model))

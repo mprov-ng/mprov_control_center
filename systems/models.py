@@ -152,7 +152,7 @@ class System(models.Model):
             if field in self.inheritableFields:
               # system groups are higher inheritance than OS distro.
               sysgrpfield = getattr(systemgroup, field)
-              if type(sysgrpfield) == str:
+              if type(sysgrpfield) is str:
                 if sysgrpfield != "" :
                   if has_content(sysgrpfield):
                     if field == 'install_kernel_cmdline' or field == 'initial_mods':
@@ -170,7 +170,7 @@ class System(models.Model):
                     else: 
                       # everything else overwrites.
                       self.config[field] = sysgrpfield
-              elif type(sysgrpfield) == int:
+              elif type(sysgrpfield) is int:
                 if sysgrpfield != 0:
                   self.config[field] = sysgrpfield
           
@@ -181,7 +181,7 @@ class System(models.Model):
       if field in self.inheritableFields:
         # system attr are highest inheritance
         sysfield = getattr(self, field)
-        if type(sysfield) == str:
+        if type(sysfield) is str:
           if sysfield != "" :
             if has_content(sysfield):
               if field == 'install_kernel_cmdline' or field == 'initial_mods':
@@ -199,7 +199,7 @@ class System(models.Model):
               else: 
                 # everything else overwrites.
                 self.config[field] = sysfield
-        elif type(sysfield) == int:
+        elif type(sysfield) is int:
           if sysfield != 0:
             
             self.config[field] = sysfield
@@ -345,7 +345,7 @@ class SystemLocation(models.Model):
   
 @receiver(post_save, sender=NADSSystem)
 def AssignSystem(sender, instance, **kwargs):
-  if instance.system != None:
+  if instance.system is not None:
     # Save the MAC to the interface marked as bootable on the system 
     sysnic = NetworkInterface.objects.all()
     sysnic = sysnic.filter(system=instance.system, bootable=True)
@@ -395,7 +395,7 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
     else:
         request = None
     if request is not None:
-      if type(request.user) == AnonymousUser:
+      if type(request.user) is AnonymousUser:
           instance.created_by = User.objects.get(pk=1)
       else:
         instance.created_by = request.user
@@ -461,7 +461,7 @@ def UpdateSystemImages(sender, instance, **kwargs):
   else:
       request = None
   if request is not None:
-      if type(request.user) == AnonymousUser:
+      if type(request.user) is AnonymousUser:
           instance.created_by = User.objects.get(pk=1)
       else:
         instance.created_by = request.user

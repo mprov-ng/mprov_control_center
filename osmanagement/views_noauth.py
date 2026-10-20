@@ -1,5 +1,5 @@
 from .models import OSRepo
-from common import MProvView
+from common.views import MProvView
 from rest_framework import generics
 from .serializers import OSRepoAPISerializer
 from rest_framework.exceptions import NotFound

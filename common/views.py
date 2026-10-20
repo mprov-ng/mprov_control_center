@@ -3,7 +3,15 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_api_key.permissions import HasAPIKey
 from rest_framework import mixins, generics
-from django.db.models import *
+from django.db.models import (
+    AutoField, BigAutoField, BigIntegerField, BooleanField, CharField,
+    CommaSeparatedIntegerField, DateField, DateTimeField, DecimalField,
+    DurationField, EmailField, Field, FileField, FilePathField, FloatField,
+    ForeignKey, GenericIPAddressField, ImageField, IntegerField,
+    ManyToManyField, NullBooleanField, OneToOneField, PositiveIntegerField,
+    PositiveSmallIntegerField, SlugField, SmallIntegerField, TextField,
+    TimeField, URLField, UUIDField,
+)
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.contrib.auth.models import AnonymousUser, User
@@ -80,7 +88,7 @@ and make sure to add documentation to the class so that it can be displayed if a
     
     def checkContentType(self,request,*args, **kwargs):
         if(request.content_type != 'application/json'):
-            if self.__doc__ == "" or self.__doc__ == None :
+            if self.__doc__ == "" or self.__doc__ is None :
                 message = "#" + self.__class__.__name__  + "\n\n"
                 message += "Documentation pending. \n\n"
                 message += "[Home](/)"
@@ -119,7 +127,7 @@ and make sure to add documentation to the class so that it can be displayed if a
             return result
         # if we are 'application/json' return an empty 200 response if
         # model is not set.
-        if self.model == None:
+        if self.model is None:
             return Response(None)
         
         if 'pk' in kwargs:
@@ -178,12 +186,12 @@ and make sure to add documentation to the class so that it can be displayed if a
         return HttpResponseNotAllowed(["GET","POST","PATCH","DELETE"])
 
     def patch(self, request, *args, **kwargs):
-        if(type(request.user) == AnonymousUser ):
+        if(type(request.user) is AnonymousUser ):
             request.user = User.objects.get(username='admin')
         return self.partial_update(request, args, kwargs)
 
     def getJSONDataStructure(self, model):
-        if model == None:
+        if model is None:
             return ""
         
         app, _, modelName = model.split(".")

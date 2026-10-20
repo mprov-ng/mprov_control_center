@@ -240,7 +240,7 @@ class IPXEAPIView(MProvView):
              if s_nic.bootable:
                 nic = s_nic
                 break
-          if nic==None:
+          if nic is None:
             # no bootable nic, so hand the template the first one and let it
             # fall through to the local boot branch.
             context= {
@@ -249,7 +249,7 @@ class IPXEAPIView(MProvView):
             return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
             
              
-          if nic.system.systemimage == None:
+          if nic.system.systemimage is None:
             print("Error: System has no image assigned, netbooting not possible.")
             raise NotFound(detail="Error: System has no image assigned, netbooting not possible.", code=404)
         nic.bootserver=f"{request.scheme}://{request.META.get('SERVER_NAME')}:{request.META.get('SERVER_PORT')}"
@@ -288,7 +288,7 @@ class IPXEAPIView(MProvView):
 
         
 
-        if not nic.system.systemimage.customIPXE == "" and not nic.system.systemimage.customIPXE == None:
+        if not nic.system.systemimage.customIPXE == "" and nic.system.systemimage.customIPXE is not None:
            # let's just serve up the custom IPXE script.
            template = Template(nic.system.systemimage.customIPXE)
            context = Context(dict(nic=nic))

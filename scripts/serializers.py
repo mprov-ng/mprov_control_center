@@ -2,7 +2,7 @@
 from rest_framework import serializers
 
 from common.serializers import NestedPrimaryKeyRelatedField
-from .models import *
+from .models import AnsibleCollection, AnsiblePlaybook, AnsibleRole, File, Script, ScriptType
 
 class ScriptTypeAPISerializer(serializers.ModelSerializer):
     class Meta:

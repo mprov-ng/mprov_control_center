@@ -95,7 +95,7 @@ Format returned:
             return result
         # if we are 'application/json' return an empty 200 response if
         # model is not set.
-        if self.model == None:
+        if self.model is None:
             return Response(None)
         
         if 'pk' in kwargs:
