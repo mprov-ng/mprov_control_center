@@ -311,7 +311,7 @@ Format returned:
             # look up the jobmodule
             try:
                 obj.jobmodules.add(JobModule.objects.get(pk=i))
-            except :
+            except JobModule.DoesNotExist:
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
         obj.save()
         data['pk'] = obj.pk

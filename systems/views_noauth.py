@@ -121,7 +121,7 @@ If no jobserver is left, a 404 is returned.
         try: 
           response = requests.head(imageURL,timeout=1)
           statCode = response.status_code
-        except: 
+        except requests.RequestException:
           statCode=0
       print(f"Redirecting client to: {imageURL}")
       return redirect(imageURL)        
@@ -208,7 +208,7 @@ class IPXEAPIView(MProvView):
         if qscnt == 0:
             try:
                 imgQs = SystemImage.objects.get(name='__nads__')
-            except:
+            except SystemImage.DoesNotExist:
                 print("Error: You are missing a system image of the name '__nads__' so autodetection will fail.")
                 raise NotFound(detail="No __nads__ image.", code=404) from None
             if type(imgQs) is SystemImage:  

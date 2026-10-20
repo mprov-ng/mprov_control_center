@@ -198,7 +198,7 @@ and make sure to add documentation to the class so that it can be displayed if a
         self.model = apps.get_app_config(app).get_model(modelName)
         try:
             jsonDataModel = {'endpoint': self.model.endpoint, 'fields':{}}
-        except:
+        except AttributeError:
             jsonDataModel = {'fields':{}}
         for field in self.model._meta.get_fields():
             datatype="string"

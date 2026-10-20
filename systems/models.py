@@ -365,7 +365,7 @@ def UpdateGenders (sender, instance, **kwargs):
   JobType = None
   try:
       JobType = JobModule.objects.get(slug="libgenders")
-  except:
+  except JobModule.DoesNotExist:
       JobType = None
   if JobType is not None:
     # save a new job, if one doesn't already exist.
@@ -405,7 +405,7 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
     JobType = None
     try:
         JobType = JobModule.objects.get(slug=slug)
-    except:
+    except JobModule.DoesNotExist:
         JobType = None
     # print(JobType)
     # look up the pxe/dns/dhcp update job module in the DB
@@ -432,7 +432,7 @@ def DeleteSystemImage(sender, instance, **kwargs):
   JobType = None
   try:
       JobType = JobModule.objects.get(slug='image-delete')
-  except:
+  except JobModule.DoesNotExist:
       JobType = None
   # get the jobtype, do nothing if it's not defined.
   if JobType is not None:
@@ -471,7 +471,7 @@ def UpdateSystemImages(sender, instance, **kwargs):
   JobType = None
   try:
       JobType = JobModule.objects.get(slug='image-update')
-  except:
+  except JobModule.DoesNotExist:
       JobType = None
   # print(str(JobType) + " post")
 

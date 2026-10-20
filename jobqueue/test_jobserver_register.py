@@ -20,6 +20,12 @@ class JobServerRegisterTests(APITestCase):
     self.assertEqual(server.port, 8080)
     self.assertEqual(list(server.jobmodules.values_list("slug", flat=True)), ["nads"])
 
+  def test_unknown_module_is_500(self):
+    # the jobserver can't register a module the mPCC doesn't know (#256).
+    response = self.post({"name": "js1", "address": "10.0.0.1", "one_minute_load": 0.5, "jobmodules": ["no-such-module"]})
+    self.assertEqual(response.status_code, 500)
+    self.assertIn("Error locating jobmodule: no-such-module", json.loads(response.json())["msg"])
+
   def test_blank_name_is_400(self):
     response = self.post({"name": "", "address": "10.0.0.1", "one_minute_load": 0.5, "jobmodules": []})
     self.assertEqual(response.status_code, 400)

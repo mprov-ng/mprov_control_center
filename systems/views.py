@@ -101,7 +101,7 @@ NADS Packet:
         if request.data['switch'] is not None:
             try:
                 switch = Switch.objects.get(hostname=request.data['switch'])
-            except:
+            except (Switch.DoesNotExist, Switch.MultipleObjectsReturned):
                 switch = None
         else:
             switch = None
@@ -111,7 +111,7 @@ NADS Packet:
         if request.data['port'] is not None:
             try:
                 port= SwitchPort.objects.get(name=request.data['port'], switch=switch)
-            except:
+            except (SwitchPort.DoesNotExist, SwitchPort.MultipleObjectsReturned):
                 port = None
         else:
             port = None
@@ -156,7 +156,7 @@ NADS Packet:
                         JobType = None
                         try:
                             JobType = JobModule.objects.get(slug='pxe-update')
-                        except:
+                        except JobModule.DoesNotExist:
                             JobType = None
                         # print(JobType)
                         # look up the job module in the DB
@@ -940,7 +940,7 @@ class SystemPowerAPIView(MProvView):
             print(ipmitool_cmd)
             try:
                 subprocess.run(args=ipmitool_cmd, env=ipmitool_env)
-            except: 
+            except OSError:
                 print("Error Setting PXE.")
                 return
             # force a reset
