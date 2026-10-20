@@ -79,7 +79,7 @@ class JobServer(models.Model):
     name = models.CharField(max_length=255, unique=True)
     address = models.CharField(max_length=1024, default="mprov")
     port = models.IntegerField(verbose_name="Port", default=8080, )
-    heartbeat_time = models.DateTimeField(default=timezone.now, verbose_name="Last Heart Beat")
+    heartbeat_time = models.DateTimeField(default=timezone.now, verbose_name="Last Heartbeat")
     jobmodules=models.ManyToManyField(JobModule, verbose_name="Handled Job Modules")
     one_minute_load=models.FloatField(verbose_name="1 Minute Load Avg.", default=0.00, null=True)
     network=models.ForeignKey('networks.Network', blank=True, null=True, on_delete=models.SET_NULL)

@@ -23,8 +23,8 @@ class SystemGroup(models.Model):
   ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
   install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
   # install kernel parameters.
-  tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gibabytes, 0 inherits from parent Group/Distro")
-  initial_mods = models.CharField(default="", help_text="Comma separated list of modules to load.", max_length=255, blank=True)
+  tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gigabytes, 0 inherits from parent Group/Distro")
+  initial_mods = models.CharField(default="", help_text="Comma-separated list of modules to load.", max_length=255, blank=True)
   prov_interface = models.CharField(default="", help_text="Interface name to provision over.", max_length=255, blank=True)
   systems = models.ManyToManyField("System", blank=True)
   
@@ -53,7 +53,7 @@ class SystemModel(models.Model):
   vendor = models.CharField(verbose_name="Vendor Name", max_length=255)
 
   class Meta:
-    verbose_name = "System Models"
+    verbose_name = "System Model"
     verbose_name_plural = "System Models"
 
   def __str__(self) -> str:
@@ -81,7 +81,7 @@ class System(models.Model):
     on_delete=models.SET(1),
     verbose_name="Created By"
   )
-  updated=models.DateTimeField(default=timezone.now, verbose_name="Lasted Updated")
+  updated=models.DateTimeField(default=timezone.now, verbose_name="Last Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True, through=SystemGroup.systems.through)
   scripts = models.ManyToManyField(Script, blank=True, )
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
@@ -89,26 +89,26 @@ class System(models.Model):
   ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
     
   config_params = models.TextField(
-    default="# Inherit from System Group or Distribtion.",
-    verbose_name="Configuration\nParameters",
+    default="# Inherit from System Group or Distribution.",
+    verbose_name="Configuration Parameters",
     blank=True,
     null=True,
   )
   install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
   # install kernel parameters.
-  tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gibabytes, 0 inherits from parent Group/Distro")
-  initial_mods = models.CharField(default="", help_text="Comma separated list of modules to load.", max_length=255, blank=True)
+  tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gigabytes, 0 inherits from parent Group/Distro")
+  initial_mods = models.CharField(default="", help_text="Comma-separated list of modules to load.", max_length=255, blank=True)
   prov_interface = models.CharField(default="", help_text="Interface name to provision over.", max_length=255, blank=True)
 
   systemimage = models.ForeignKey('SystemImage', blank=True, null=True, on_delete=models.SET_NULL, verbose_name="System Image")
   systemmodel = models.ForeignKey('SystemModel', blank=True, null=True, on_delete=models.SET_NULL, verbose_name="System Model")
   disks = models.ManyToManyField('disklayouts.Disklayout', blank=True, through=DiskLayout.systems.through)
   # bootdisk = models.ForeignKey(DiskLayout, blank=True, null=True, on_delete=models.SET_NULL, verbose_name="Boot Disk Layout", help_text="Boot disk layout for stateful installs")
-  stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system use images to disk?")
+  stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system install its image to disk?")
   location = models.ForeignKey('SystemLocation', blank=True, null=True, on_delete=models.SET_NULL,  )
   class Meta:
     ordering = ['hostname']
-    verbose_name = 'Systems'
+    verbose_name = 'System'
     verbose_name_plural = 'Systems'
   
   inheritableFields=['install_kernel_cmdline', 'tmpfs_root_size', 'initial_mods', 'prov_interface', 'config_params']
@@ -207,13 +207,13 @@ class System(models.Model):
 class SystemBMC(models.Model):
   endpoint="/systembmcs/"
   system = models.ForeignKey(System, on_delete=models.CASCADE)
-  ipaddress=models.GenericIPAddressField(verbose_name="IP Address ")
+  ipaddress=models.GenericIPAddressField(verbose_name="IP Address")
   mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)
   username=models.CharField(max_length=255, verbose_name="BMC User", blank=True, null=True)
   password=models.CharField(max_length=100, verbose_name="BMC Password", blank=True, null=True)
   switch_port=models.ForeignKey(SwitchPort, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Switch Port")
   network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Network")
-  ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address ", blank=True, null=True)
+  ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address", blank=True, null=True)
   vlan=models.IntegerField(verbose_name='VLAN ID', default=0)
   class Meta:
     verbose_name = 'Power Management'
@@ -241,9 +241,9 @@ class NetworkInterface(models.Model):
   system = models.ForeignKey(System, on_delete=models.CASCADE)
   name=models.CharField(max_length=50, verbose_name="Iface. Name",)
   hostname=models.CharField(max_length=255, blank=True, null=True)
-  hostaliases=models.CharField(max_length=4096, help_text="A space separated list of alternate hostnames.", null=True, blank=True)
-  ipaddress=models.GenericIPAddressField(verbose_name="IP Address ", blank=True, null=True)
-  isgateway=models.BooleanField(verbose_name="Gateway Nic?", default=True)
+  hostaliases=models.CharField(max_length=4096, help_text="A space-separated list of alternate hostnames.", null=True, blank=True)
+  ipaddress=models.GenericIPAddressField(verbose_name="IP Address", blank=True, null=True)
+  isgateway=models.BooleanField(verbose_name="Gateway NIC?", default=True)
   ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address", blank=True, null=True)
   mtu = models.IntegerField(verbose_name="MTU", default=1500)
   mac=models.CharField(max_length=100, verbose_name="MAC Address", blank=True, null=True)
@@ -269,7 +269,7 @@ class SystemImage(models.Model):
     on_delete=models.SET(1),
     verbose_name="Created By",
   )
-  updated=models.DateTimeField(default=timezone.now, verbose_name="Lasted Updated")
+  updated=models.DateTimeField(default=timezone.now, verbose_name="Last Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
   scripts = models.ManyToManyField(Script, blank=True, default="install_mprov_script_runner_sh")
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
@@ -280,14 +280,14 @@ class SystemImage(models.Model):
   version = models.BigIntegerField(default=1, verbose_name="Image Version")
   jobservers = models.ManyToManyField(JobServer, verbose_name="Hosted By", blank=True)
   config_params = models.TextField(
-    default="# Inherit from System Group or Distribtion.",
-    verbose_name="Configuration\nParameters",
+    default="# Inherit from System Group or Distribution.",
+    verbose_name="Configuration Parameters",
     blank=True,
     null=True,
   )
   customIPXE = models.TextField(
-    verbose_name="Custom IPXE Script",
-    help_text="Leave blank to let mProv manage the image.  Entering text disables image building.",
+    verbose_name="Custom iPXE Script",
+    help_text="Leave blank to use the iPXE script mProv generates. Any text here is served instead of it, and job servers won't register as hosts of this image.",
     blank=True,
     null=True,
   )
@@ -324,8 +324,8 @@ class NADSSystem(models.Model):
     return self.mac
 
   class Meta:
-    verbose_name="N.A.D.S Discovered"
-    verbose_name_plural="N.A.D.S Discovered"
+    verbose_name="N.A.D.S. Discovered"
+    verbose_name_plural="N.A.D.S. Discovered"
 
 class SystemLocation(models.Model):
   slug=models.SlugField(max_length=255, unique=True, editable=False, verbose_name='Location ID', primary_key=True)

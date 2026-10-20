@@ -53,10 +53,10 @@ class Network(models.Model):
   isdhcp = models.BooleanField(default=False, verbose_name="Enable DHCP Server?")
 
   # Add Enable DNS?
-  managedns = models.BooleanField(default=False, verbose_name="Manage DNS for network?")
+  managedns = models.BooleanField(default=False, verbose_name="Manage DNS?")
   
   # Add Enable Network Booting?
-  isbootable = models.BooleanField(default=False, verbose_name="Enable network booting?")
+  isbootable = models.BooleanField(default=False, verbose_name="Enable Network Booting?")
 
   # dhcp net dynamic start
   dhcpstart = models.GenericIPAddressField(blank=True, null=True, verbose_name="DHCP Range Start")
@@ -83,7 +83,7 @@ class Switch(models.Model):
     verbose_name="Created By"
   )
   updated=models.DateTimeField(default=timezone.now, verbose_name="Last Updated")
-  network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Management\nNetwork')
+  network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Management Network')
   mgmt_ip=models.GenericIPAddressField(verbose_name="Management IP")
   mgmt_mac=models.CharField(max_length=100, verbose_name="Management MAC")
   class Meta:
