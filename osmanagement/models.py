@@ -202,7 +202,6 @@ def RepoDeleteJob(sender, **kwargs):
       RepoJobType = JobModule.objects.get(slug='repo-delete')
   except JobModule.DoesNotExist:
       RepoJobType = None
-  print(RepoJobType)
   # get the jobtype, do nothing if it's not defined.
   if RepoJobType is not None:
       # save a new job, if one doesn't already exist.

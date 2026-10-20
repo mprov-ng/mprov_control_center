@@ -35,7 +35,6 @@ def parse_config_params(params_obj):
       tmpYamlDict = params_obj.config_params
     else:
       tmpYamlDict = yaml.safe_load(params_obj.config_params)
-    # print(tmpYamlDict)
     if tmpYamlDict is not None:
       try:
         if type(tmpYamlDict) is list:
@@ -52,7 +51,6 @@ def render_config(obj):
   configDict = {}
   tmpDict = {}
 
-  print(type(obj).__name__)
   if type(obj).__name__ == 'System':
     if obj.systemimage is not None:
       obj.osdistro = obj.systemimage.osdistro
@@ -236,6 +234,5 @@ def render_config(obj):
     tmpDict['prov_interface']['value'] = configDict['object']['prov_interface']
  
 
-  print(tmpDict)
   return tmpDict
 

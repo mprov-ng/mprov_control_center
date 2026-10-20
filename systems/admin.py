@@ -177,7 +177,6 @@ class SystemAdmin(admin.ModelAdmin):
         return super().response_change(request, obj)
   def getBMClink(self,obj):
     bmcq = SystemBMC.objects.filter(system=obj)
-    print(bmcq)
     if bmcq is not None:
       if type(bmcq) is QuerySet and len(bmcq) != 0:
         bmcq = bmcq[0]
@@ -190,7 +189,6 @@ class SystemAdmin(admin.ModelAdmin):
     query = NetworkInterface.objects.filter(system=obj).select_related('switch_port')
     netstr = ""
     for netinf in query:
-      # print(netinf)
       netstr += netinf.name + ": [" + str(netinf.mac) + "]<br />"
     return mark_safe(netstr)
 
