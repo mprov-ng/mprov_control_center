@@ -1,0 +1,12 @@
+# Keep the GitHub Actions used by the workflows up to date.  All action
+# updates come as one pull request a week.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
