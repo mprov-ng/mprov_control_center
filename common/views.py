@@ -18,6 +18,17 @@ from django.contrib.auth.models import AnonymousUser, User
 import markdown
 from bs4 import BeautifulSoup
 from django.apps import apps
+from functools import lru_cache
+
+@lru_cache(maxsize=None)
+def depth3_serializer(serializer_class):
+    '''
+    Returns a subclass of serializer_class that nests relations to depth 3.
+    A subclass, so the depth never leaks into serializer_class itself.
+    '''
+    class Meta(serializer_class.Meta):
+        depth = 3
+    return type(serializer_class.__name__ + 'Depth3', (serializer_class,), {'Meta': Meta})
 
 class MProvView( 
                 generics.ListAPIView,
@@ -35,9 +46,17 @@ It should be versatile enough to be used in just about any way as long as you se
 attributes right, set up a urls.py file to pass 'pk' in for GET, PATCH, and DELETE,
 and make sure to add documentation to the class so that it can be displayed if anyone hits it.
 
+## Details for a GET
+A GET with a primary key (/ENDPOINT/PK/) or with ?detail (/ENDPOINT/?detail) returns
+relations nested, using detail_serializer_class.  If a view doesn't set one, it gets
+serializer_class nested to depth 3.  Lists without ?detail, and every write, use
+serializer_class as it is, so relations are plain IDs and can be written.  A view
+with its own get() only gets this by calling super().get().
 
     '''
     serializer_class = None
+    detail_serializer_class = None
+    serve_detail = False
     queryset = None
     model = None
     filter_backends = [DjangoFilterBackend]
@@ -85,7 +104,14 @@ and make sure to add documentation to the class so that it can be displayed if a
         if self.model is not None:
             self.queryset = self.model.objects.all()
         super().__init__(**kwargs)
-    
+
+    def get_serializer_class(self):
+        # serve_detail is only set by get() below, so views with their own
+        # get() that never call it keep serializer_class.
+        if self.serve_detail:
+            return self.detail_serializer_class or depth3_serializer(self.serializer_class)
+        return super().get_serializer_class()
+
     def checkContentType(self,request,*args, **kwargs):
         if(request.content_type != 'application/json'):
             if self.__doc__ == "" or self.__doc__ is None :
@@ -129,9 +155,9 @@ and make sure to add documentation to the class so that it can be displayed if a
         # model is not set.
         if self.model is None:
             return Response(None)
-        
+
+        self.serve_detail = 'pk' in kwargs or 'detail' in request.query_params
         if 'pk' in kwargs:
-            self.serializer_class.Meta.depth = 3
             # someone is looking for a specific item.
             return self.retrieve(request, pk=kwargs['pk'])
         

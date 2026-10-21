@@ -697,13 +697,7 @@ Format returned:
     model = SystemImage
     queryset = SystemImage.objects.all()
     serializer_class = SystemImageSerializer
-    
-    def get(self, request, format=None, **kwargs):
-
-        result = super().get(request, format, **kwargs)
-        if 'pk' in kwargs:
-            self.serializer_class = SystemImageDetailsSerializer
-        return result
+    detail_serializer_class = SystemImageDetailsSerializer
 
     def patch(self, request, *args, **kwargs):
       if 'addjs' in request.query_params:
@@ -797,7 +791,8 @@ Format returned:
     collection URL without a primary key.  POST requires ALL required fields.  PATCH
     will only update the fields passed, required fields can be omitted if unchanged.
 
-- GET returns the object specified with a retrieval depth of 3 or 404
+- GET returns the object specified, with its system, switch port and network
+    nested one level, or 404
 
 - POST returns the new object created or a 400 error if validation fails
 
@@ -808,13 +803,8 @@ Format returned:
     '''
     model = SystemBMC
     serializer_class = SystemBMCSerializer
+    detail_serializer_class = SystemBMCDetailSerializer
     queryset = None
-    def get(self, request, format=None, **kwargs):
-        if 'pk' in kwargs:
-            self.serializer_class = SystemBMCDetailSerializer
-        if 'detail' in request.query_params:
-            self.serializer_class = SystemBMCDetailSerializer
-        return super().get(request, format, **kwargs)
 
     def post(self, request, *args, **kwargs):
         if request.data.get('password') == "":
