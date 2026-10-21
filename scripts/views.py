@@ -32,6 +32,9 @@ class ScriptAPIView(MProvView):
     Send the slug on POST and PATCH.
 - dependsOn: Array of other scripts' slugs this script depends on.
 
+### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+
 ### GET method (no primary key)
 Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
 none.  Any field of this type can be passed as a query parameter to filter the
@@ -66,7 +69,7 @@ Format returned:
     key) and will Create a new entry; it requires ALL required fields.  PATCH
     will only update the fields passed; fields that are not changing can be omitted.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created, or a 400 error if validation fails
 
@@ -99,6 +102,9 @@ class FileAPIView(MProvView):
 - filename: The uploaded file; GET returns the URL where you can get it.  Send it as a multipart upload.
 - version: The version, used for tracking file changes
 
+### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+
 ### GET method (no primary key)
 Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
 none.  Any field of this type can be passed as a query parameter to filter the
@@ -110,7 +116,7 @@ list (e.g. ?name=example).
     key) and will Create a new entry; it requires ALL required fields.  PATCH
     will only update the fields passed; fields that are not changing can be omitted.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created, or a 400 error if validation fails
 
@@ -146,6 +152,9 @@ class AnsiblePlaybookAPIView(MProvView):
 - version: The version, used for tracking playbook changes
 - dependsOn: Array of the slugs of other entries of this type that this one depends on.
 
+### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+
 ### GET method (no primary key)
 Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
 none.  Any field of this type can be passed as a query parameter to filter the
@@ -157,7 +166,7 @@ list (e.g. ?name=example).
     key) and will Create a new entry; it requires ALL required fields.  PATCH
     will only update the fields passed; fields that are not changing can be omitted.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created, or a 400 error if validation fails
 
@@ -193,6 +202,9 @@ class AnsibleRoleAPIView(MProvView):
 - version: The version, used for tracking role changes
 - dependsOn: Array of the slugs of other entries of this type that this one depends on.
 
+### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+
 ### GET method (no primary key)
 Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
 none.  Any field of this type can be passed as a query parameter to filter the
@@ -204,7 +216,7 @@ list (e.g. ?name=example).
     key) and will Create a new entry; it requires ALL required fields.  PATCH
     will only update the fields passed; fields that are not changing can be omitted.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created, or a 400 error if validation fails
 
@@ -240,6 +252,9 @@ class AnsibleCollectionAPIView(MProvView):
 - version: The version, used for tracking collection changes
 - dependsOn: Array of the slugs of other entries of this type that this one depends on.
 
+### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+
 ### GET method (no primary key)
 Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
 none.  Any field of this type can be passed as a query parameter to filter the
@@ -251,7 +266,7 @@ list (e.g. ?name=example).
     key) and will Create a new entry; it requires ALL required fields.  PATCH
     will only update the fields passed; fields that are not changing can be omitted.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created, or a 400 error if validation fails
 

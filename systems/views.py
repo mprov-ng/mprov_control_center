@@ -419,6 +419,7 @@ class SystemGroupAPIView(MProvView):
 - systems: array of system IDs in this group
 
 ### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 
 ### GET method (no parameters)
@@ -456,7 +457,7 @@ Format returned:
     collection URL without a primary key.  POST requires ALL required fields.  PATCH
     will only update the fields passed, required fields can be omitted if unchanged.
 
-- GET returns the object specified with a retrieval depth of 3 or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created or a 400 error if validation fails
 
@@ -502,6 +503,8 @@ class NetworkInterfaceAPIView(MProvView):
     through the network of the NIC's switch port, or 404 if there is no such network.
     The switch port's network takes precedence: those NICs are listed with this network,
     and a NIC whose switch port is on another network is left out.
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+    Not with ?network, which always returns plain IDs.
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 
 ### GET method (no parameters)
@@ -540,7 +543,7 @@ Format returned:
     collection URL without a primary key.  POST requires ALL required fields.  PATCH
     will only update the fields passed, required fields can be omitted if unchanged.
 
-- GET returns the object specified with a retrieval depth of 3 or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created or a 400 error if validation fails
 
@@ -618,6 +621,7 @@ class SystemImagesAPIView(MProvView):
 - customIPXE: (Optional) a custom iPXE script served instead of the generated one
 
 ### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 - ?addjs: PATCH merges the passed jobservers (a list or a single ID) into the
     existing jobservers instead of replacing them.
@@ -684,7 +688,7 @@ Format returned:
     collection URL without a primary key.  POST requires ALL required fields.  PATCH
     will only update the fields passed, required fields can be omitted if unchanged.
 
-- GET returns the object specified, with retrieval depth of 3 or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created or a 400 error if validation fails
 
@@ -697,13 +701,7 @@ Format returned:
     model = SystemImage
     queryset = SystemImage.objects.all()
     serializer_class = SystemImageSerializer
-    
-    def get(self, request, format=None, **kwargs):
-
-        result = super().get(request, format, **kwargs)
-        if 'pk' in kwargs:
-            self.serializer_class = SystemImageDetailsSerializer
-        return result
+    detail_serializer_class = SystemImageDetailsSerializer
 
     def patch(self, request, *args, **kwargs):
       if 'addjs' in request.query_params:
@@ -770,7 +768,8 @@ class SystemBMCAPIView(MProvView):
 - vlan: The VLAN ID of the entry
 
 ### Query Parameters
-- ?detail: GET returns entries with nested details.
+- ?detail: GET (no primary key) returns entries with their system, switch port and network nested
+    one level, and the password.
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 
 ### GET method (no parameters)
@@ -797,7 +796,8 @@ Format returned:
     collection URL without a primary key.  POST requires ALL required fields.  PATCH
     will only update the fields passed, required fields can be omitted if unchanged.
 
-- GET returns the object specified with a retrieval depth of 3 or 404
+- GET returns the object specified, with its system, switch port and network
+    nested one level, or 404
 
 - POST returns the new object created or a 400 error if validation fails
 
@@ -808,13 +808,8 @@ Format returned:
     '''
     model = SystemBMC
     serializer_class = SystemBMCSerializer
+    detail_serializer_class = SystemBMCDetailSerializer
     queryset = None
-    def get(self, request, format=None, **kwargs):
-        if 'pk' in kwargs:
-            self.serializer_class = SystemBMCDetailSerializer
-        if 'detail' in request.query_params:
-            self.serializer_class = SystemBMCDetailSerializer
-        return super().get(request, format, **kwargs)
 
     def post(self, request, *args, **kwargs):
         if request.data.get('password') == "":
