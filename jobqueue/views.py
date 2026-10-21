@@ -155,6 +155,9 @@ class JobModulesAPIView(MProvView):
 - name: A human-readable name for the job module
 - active: Unused, will be removed in future updates
     
+### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+
 ### GET method (no primary key)
 Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
 none.  Any field of this type can be passed as a query parameter to filter the
@@ -186,7 +189,7 @@ Format returned:
     key) and will Create a new entry; it requires ALL required fields.  PATCH
     will only update the fields passed; fields that are not changing can be omitted.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created, or a 400 error if validation fails
 
@@ -226,6 +229,9 @@ class JobServersAPIView(MProvView):
     set it with PATCH.
 
     
+### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+
 ### GET method (no primary key)
 Returns a JSON list of all objects of this type in the mPCC, or 404 if there are
 none.  Any field of this type can be passed as a query parameter to filter the
@@ -265,7 +271,7 @@ Format returned:
     Delete that entry in the database.  PATCH will only update the fields passed;
     fields that are not changing can be omitted.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST is sent to the base URL (no primary key) and creates or updates the job
     server with the given name.  It requires name, address, one_minute_load, and

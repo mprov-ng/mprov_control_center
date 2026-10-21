@@ -138,6 +138,9 @@ class NetworkTypeAPIView(MProvView):
 - name: A human-readable name for the network type
 - description: (Optional) A human-readable explanation of this network type
 
+### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+
 ### GET method (no parameters)
 Returns a JSON list of all network types in the mPCC
 
@@ -162,7 +165,7 @@ Format returned:
     primary key, will Create a new entry and requires ALL required fields.  PATCH
     will only update the fields passed; required fields can be omitted if unchanged.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created, or 400 with the validation errors
 
@@ -200,6 +203,8 @@ class SwitchAPIView(MProvView):
 ### Query Parameters
 - ?network=SLUG: GET only returns switches on the network with that slug, or 404 if
     there is no such network.  A network with no switches returns an empty list.
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+    Not with ?network, which always returns plain IDs.
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
     Without ?network=, an empty result returns 404.
 
@@ -227,7 +232,7 @@ Format returned:
     primary key, will Create a new entry and requires ALL required fields.  PATCH
     will only update the fields passed; required fields can be omitted if unchanged.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created, or 400 with the validation errors
 
@@ -278,6 +283,9 @@ class SwitchPortAPIView(MProvView):
 - switch: ID of the switch this port is associated with
 - networks: ID of the network for this port.
     
+### Query Parameters
+- ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
+
 ### GET method (no parameters)
 Returns a JSON list of all objects of this type in the mPCC
 
@@ -310,7 +318,7 @@ Format returned:
     primary key, will Create a new entry and requires ALL required fields.  PATCH
     will only update the fields passed; required fields can be omitted if unchanged.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created, or 400 with the validation errors
 
