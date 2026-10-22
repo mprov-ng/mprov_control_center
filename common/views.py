@@ -232,5 +232,8 @@ with its own get() only gets this by calling super().get().
                 print(f"WARN: Unmapped field type {field.__class__}; please open a ticket to have it added. Defaulting to string.")
             if "reverse" in field.__class__.__module__:
                 continue
-            jsonDataModel['fields'].update({field.name: {'type': datatype, 'required': not getattr(field, 'blank', False) }})
+            # Like a DRF ModelSerializer: a field the server fills in, from a
+            # default or itself, isn't required.
+            required = not (getattr(field, 'blank', False) or field.has_default() or not field.editable)
+            jsonDataModel['fields'].update({field.name: {'type': datatype, 'required': required }})
         return jsonDataModel
