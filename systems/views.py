@@ -834,7 +834,7 @@ class SystemPowerAPIView(MProvView):
         # check our query and see if we can get filters based on the query
         if 'hostname' in request.query_params:
             # someone is searching by hostname
-            system_results= System.objects.filter(hostname__contains=request.query_params['hostname'])
+            system_results= System.objects.filter(hostname=request.query_params['hostname'])
             if system_results.count() > 0:
                 if system_results.count() > 10: 
                     print("WARN: Large node set returned, truncating.")
