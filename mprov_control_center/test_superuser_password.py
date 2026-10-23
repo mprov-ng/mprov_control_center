@@ -17,17 +17,17 @@ class NoBakedSuperuserPasswordTests(unittest.TestCase):
 
   def test_dockerfile_does_not_bake_superuser_password(self):
     # no assignment of any value to the password var (comments may explain why)
-    self.assertNotIn("DJANGO_SUPERUSER_PASSWORD=", read("Dockerfile"))
+    self.assertNotIn("MPROV_SUPERUSER_PASSWORD=", read("Dockerfile"))
 
   def test_entrypoint_does_not_write_default_password(self):
-    self.assertNotIn("DJANGO_SUPERUSER_PASSWORD=admin",
+    self.assertNotIn("MPROV_SUPERUSER_PASSWORD=admin",
                      read("install_scripts", "init_mpcc.sh"))
 
   def test_entrypoint_resolves_password_before_creating_superuser(self):
     text = read("install_scripts", "init_mpcc.sh")
     self.assertIn("superuser_password.sh", text)
     self.assertLess(text.index("superuser_password.sh"),
-                    text.index("createsuperuser"))
+                    text.index("MPROV_SUPERUSER_PASSWORD"))
 
   def test_image_env_has_no_default_password(self):
     env_path = os.path.join(REPO_ROOT, ".env")
@@ -35,7 +35,7 @@ class NoBakedSuperuserPasswordTests(unittest.TestCase):
       self.skipTest(".env only exists inside the built image")
     for line in open(env_path):
       name, _, value = line.strip().partition("=")
-      if name == "DJANGO_SUPERUSER_PASSWORD":
+      if name == "MPROV_SUPERUSER_PASSWORD":
         self.assertNotEqual(value.strip("'\""), "admin",
                             "the built image bakes a default superuser password")
 
@@ -47,13 +47,13 @@ class SuperuserPasswordScriptTests(unittest.TestCase):
   def run_script(self, etc_dir, extra_env=None):
     env = dict(os.environ)
     env["MPROV_ETC_DIR"] = etc_dir
-    env.pop("DJANGO_SUPERUSER_PASSWORD", None)
+    env.pop("MPROV_SUPERUSER_PASSWORD", None)
     if extra_env:
       env.update(extra_env)
     # init_mpcc.sh sources the script, so exercise that exact contract:
-    # after sourcing, DJANGO_SUPERUSER_PASSWORD must be exported.
+    # after sourcing, MPROV_SUPERUSER_PASSWORD must be exported.
     return subprocess.run(
-      ["bash", "-c", '. "$1" && printf %s "$DJANGO_SUPERUSER_PASSWORD"',
+      ["bash", "-c", '. "$1" && printf %s "$MPROV_SUPERUSER_PASSWORD"',
        "init_mpcc_sh", PASSWORD_SCRIPT],
       capture_output=True, text=True, env=env)
 
@@ -90,7 +90,7 @@ class SuperuserPasswordScriptTests(unittest.TestCase):
 
   def test_operator_password_wins_and_saves_nothing(self):
     with tempfile.TemporaryDirectory() as etc:
-      proc = self.run_script(etc, {"DJANGO_SUPERUSER_PASSWORD": "operator-secret-1"})
+      proc = self.run_script(etc, {"MPROV_SUPERUSER_PASSWORD": "operator-secret-1"})
       self.assertEqual(proc.stdout, "operator-secret-1")
       self.assertFalse(os.path.exists(os.path.join(etc, "superuser_password")))
 
