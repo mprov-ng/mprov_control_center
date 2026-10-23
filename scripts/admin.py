@@ -1,10 +1,17 @@
 from django.contrib import admin
 from django.conf import settings
+from django.db import models
 from .models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection, File
 import os
 
+# version is a BigIntegerField, so its input gets min=-2**63.  A number input
+# steps from its min, and browsers can't step by 1 from there in floating
+# point, so the spinner arrows did nothing (#172).  Versions start at 1.
+VERSION_OVERRIDES = {models.BigIntegerField: {'min_value': 1}}
+
 class ScriptAdmin(admin.ModelAdmin):
   model = Script
+  formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
   list_display = ['name', 'filename', 'scriptType']
   exclude = ('slug',)
@@ -29,12 +36,14 @@ class ScriptAdmin(admin.ModelAdmin):
 
 class FileAdmin(admin.ModelAdmin):
   model = File
+  formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
   list_display = ['name', 'filename']
   exclude = ('slug',)
 
 class AnsiblePlaybookAdmin(admin.ModelAdmin):
   model = AnsiblePlaybook
+  formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
   list_display = ['name', 'filename', 'scriptType']
   exclude = ('slug',)
@@ -42,12 +51,14 @@ class AnsiblePlaybookAdmin(admin.ModelAdmin):
   
 class AnsibleRoleAdmin(admin.ModelAdmin):
   model = AnsibleRole
+  formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
   list_display = ['name', 'roleurl', 'scriptType']
   exclude = ('slug',)
 
 class AnsibleCollectionAdmin(admin.ModelAdmin):
   model = AnsibleCollection
+  formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
   list_display = ['name', 'collectionurl', 'scriptType']
   exclude = ('slug',)
