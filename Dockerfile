@@ -92,15 +92,23 @@ RUN wget -q -O static/busybox https://busybox.net/downloads/binaries/1.35.0-x86_
 # copy in the mprov_control_center apache config    
 COPY static/configs/mprov_control_center.conf /etc/httpd/conf.d/mprov_control_center.conf
 
-# change default logging to /dev/stdout
-RUN sed -i 's/^ErrorLog.*$/ErrorLog \/dev\/stdout/' /etc/httpd/conf/httpd.conf
-RUN sed -i 's/^CustomLog (.*) /CustomLog \/dev\/stdout/ ' /etc/httpd/conf/httpd.conf
-RUN sed -i 's/^TransferLog.*$/TransferLog \/dev\/stdout/' /etc/httpd/conf/httpd.conf
-RUN sed -i 's/^ErrorLog.*$/ErrorLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.conf
-RUN sed -i 's/^TransferLog.*$/TransferLog \/dev\/stdout/' /etc/httpd/conf.d/ssl.conf
-RUN sed -i 's/^CustomLog (.*) /CustomLog \/dev\/stdout/ ' /etc/httpd/conf.d/ssl.conf
-RUN echo 'LogFormat "%h %l %u %t \"%r\" %>s %b" common' > /etc/httpd/conf.d/containerlog.conf
-RUN echo "CustomLog /dev/stdout common" >> /etc/httpd/conf.d/containerlog.conf
+# Send all of Apache's logs to stdout, so docker logs has them, and log each
+# request once, in the combined format, on both ports:
+# - httpd.conf (port 80): the error log, and the indented access log
+#   CustomLog, which is the only access log for the main server.
+# - ssl.conf (port 443, its own vhost): the error log; the vhost's TransferLog
+#   becomes the combined CustomLog, and its two-line ssl_request_log CustomLog,
+#   which wrote to a file in the container, is removed.
+RUN sed -i -e 's|^ErrorLog .*$|ErrorLog /dev/stdout|' \
+        -e 's|^\( *\)CustomLog "logs/access_log" combined$|\1CustomLog /dev/stdout combined|' \
+        /etc/httpd/conf/httpd.conf && \
+    sed -i -e 's|^ErrorLog .*$|ErrorLog /dev/stdout|' \
+        -e 's|^TransferLog .*$|CustomLog /dev/stdout combined|' \
+        -e '/^CustomLog logs\/ssl_request_log \\$/,+1d' \
+        /etc/httpd/conf.d/ssl.conf && \
+    grep -q '^ *CustomLog /dev/stdout combined$' /etc/httpd/conf/httpd.conf && \
+    grep -q '^CustomLog /dev/stdout combined$' /etc/httpd/conf.d/ssl.conf && \
+    ! grep -q 'ssl_request_log' /etc/httpd/conf.d/ssl.conf
 RUN rm -f /etc/httpd/logs /etc/httpd/run /etc/httpd/state
 RUN mkdir -p /etc/httpd/logs /etc/httpd/run /etc/httpd/state
 RUN chown apache:apache /etc/httpd/logs /etc/httpd/run /etc/httpd/state
