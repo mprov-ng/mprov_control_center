@@ -106,7 +106,7 @@ class System(models.Model):
   # bootdisk = models.ForeignKey(DiskLayout, blank=True, null=True, on_delete=models.SET_NULL, verbose_name="Boot Disk Layout", help_text="Boot disk layout for stateful installs")
   stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system install its image to disk?")
   location = models.ForeignKey('SystemLocation', blank=True, null=True, on_delete=models.SET_NULL,  )
-  provision = models.BooleanField(default=True, verbose_name="Provision?", help_text="Should this system be provisioned?")
+  provision = models.BooleanField(default=True, verbose_name="Provision?", help_text="Should this system be provisioned (installed or netbooted) on its next PXE boot? The stateful installer clears this once it has installed.")
   class Meta:
     ordering = ['hostname']
     verbose_name = 'System'
@@ -120,6 +120,16 @@ class System(models.Model):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)
     self.flatten_config()
+
+  def enable_provisioning(self):
+    """ Set provision so the next PXE boot provisions this system.  Returns
+    False, and changes nothing, if the system has no bootable NIC to boot from. """
+    if not NetworkInterface.objects.filter(system=self, bootable=True).exists():
+      return False
+    if not self.provision:
+      self.provision = True
+      self.save()
+    return True
 
   
   def flatten_config(self):
@@ -258,6 +268,9 @@ class NetworkInterface(models.Model):
   def save(self, *args, **kwargs):
     self.hostname = self.system.hostname
     super(NetworkInterface, self).save(*args, **kwargs)
+    if self.bootable:
+      # a system boots from at most one NIC.
+      NetworkInterface.objects.filter(system=self.system, bootable=True).exclude(pk=self.pk).update(bootable=False)
 
 class SystemImage(models.Model):
   """ System Images are filesystems that are managed by the mPCC's configuration management, built into .img files, and synced out to Systems."""

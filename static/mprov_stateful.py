@@ -16,7 +16,7 @@ import subprocess
 # - mount all of the new filesystems under /newroot
 # - rsync the RAM image to the disk and update /newroot/etc/fstab
 # - install the boot loader from inside the /newroot chroot
-# - mark the system's NICs as not bootable to indicate it's provisioned
+# - clear the system's provision flag (POST systems/?self {"netboot": false}) so it boots from disk
 # - exit, after which mprov_boot_init.sh reboots the system
 
 

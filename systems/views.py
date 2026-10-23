@@ -1,4 +1,3 @@
-import json
 import os
 import subprocess
 from django.http import HttpResponseNotAllowed
@@ -224,8 +223,10 @@ class SystemAPIView(MProvView):
     It can be combined with ?FIELD=VALUE filters.
 - ?detail: GET (no primary key) returns systems with nested details.
 - ?self: GET returns the system that owns the NIC with the requesting IP address, with
-    nested details, or 404 if unknown.  POST with ?self and a body of {"netboot": ...}
-    sets bootable to false on all of the requesting system's NICs; any other key returns 403.
+    nested details, or 404 if unknown.  POST with ?self and a body of {"netboot": false}
+    clears the requesting system's provision flag, so it boots locally; {"netboot": true}
+    sets it and makes the requesting NIC the system's bootable NIC.  Any other key returns
+    403 and a non-boolean value 400, without changing anything.
 - ?powerstate: GET with a primary key redirects to a power_on, power_off, or power_unknown
     status image.
 
@@ -300,21 +301,25 @@ Format returned:
             nicQueryset = NetworkInterface.objects.all()
             nicQueryset = nicQueryset.filter(ipaddress=ip)
             if nicQueryset.count() == 0:
-                return Response(json.dumps({"ipaddr": ip}), status=404)
-            system = nicQueryset[0].system
+                return Response({"detail": f"No network interface has the IP address {ip}."}, status=404)
+            nic = nicQueryset[0]
+            system = nic.system
             for arg in request.data:
-                if arg == "netboot":
-                    # we should only be working on disabling netboot.
-                    # Instead of changing the NIC's bootable property, 
-                    # set the system's provision field to False
-                    
-                    system.provision = False
-                    system.save()
-                else:
+                if arg != "netboot":
                     # Unsupported, return 403 forbidden
                     return Response(None, status=403)
-            # done with the for loop, return status 200
-            return Response(json.dumps(f"IP: {ip} updated to provsion=False"), status=200)
+            netboot = request.data.get("netboot")
+            if isinstance(netboot, str) and netboot.lower() in ("true", "false"):
+                netboot = netboot.lower() == "true"
+            if not isinstance(netboot, bool):
+                return Response({"netboot": "Must be true or false."}, status=400)
+            if netboot:
+                # boot from the NIC that asked; saving it clears bootable on the others.
+                nic.bootable = True
+                nic.save()
+            system.provision = netboot
+            system.save()
+            return Response({"provision": system.provision, "bootable_nic": nic.name}, status=200)
 
         self.serializer_class = SystemSerializer
         return super().post(request, *args, **kwargs)
@@ -494,7 +499,8 @@ class NetworkInterfaceAPIView(MProvView):
 - mac: The MAC address of this interface
 - mtu: The MTU of this interface
 - isgateway: Is this the gateway NIC?
-- bootable: Is this NIC bootable?
+- bootable: Does the system PXE boot from this NIC?  A system has at most one bootable
+    NIC; saving one as bootable clears it on the others.
 - system: The system ID this NIC is associated with
 - switch_port: The switch port ID this NIC is connected to.
 - network: The network ID this NIC is on.
@@ -843,7 +849,7 @@ class SystemPowerAPIView(MProvView):
                 self.queryset=self.model.objects.filter(system__in=system_results)
                 results = {}
                 for bmc in self.queryset:
-                    results[str(bmc)] = self._doPowerCmd(bmc, kwargs['action'])
+                    results[str(bmc)] = self._powerAction(bmc, kwargs['action'])
                 
                 return Response(results, status=200) 
             else :
@@ -855,6 +861,8 @@ class SystemPowerAPIView(MProvView):
                 return Response({'id': "Must be a system ID."}, status=400)
             if system_results is None:
                 return Response(None, status=404)
+            if kwargs['action'] in self.PXE_ACTIONS and not system_results.enable_provisioning():
+                return Response(self._noBootableNIC(system_results), status=409)
             self.queryset = self.model.objects.filter(system=system_results.id)
             results = {}
             for bmc in self.queryset:
@@ -889,8 +897,19 @@ class SystemPowerAPIView(MProvView):
             print("WARN: Large BMC set returned, truncating.")
         results = {}
         for bmc in self.queryset[:10]:
-            results[str(bmc)] = self._doPowerCmd(bmc, kwargs['action'])
+            results[str(bmc)] = self._powerAction(bmc, kwargs['action'])
         return Response(results, status=200)
+
+    PXE_ACTIONS = ("pxe", "pxeefi")
+
+    def _noBootableNIC(self, system):
+        return {'details': f"{system} has no bootable network interface, so it can't PXE boot.  It was not reset.", 'status': 409, 'chassis_status': 'unknown'}
+
+    def _powerAction(self, bmc, action):
+        # a PXE boot provisions the system, which needs a bootable NIC to boot from.
+        if action in self.PXE_ACTIONS and not bmc.system.enable_provisioning():
+            return self._noBootableNIC(bmc.system)
+        return self._doPowerCmd(bmc, action)
 
     def _doPowerCmd(self, bmc, action="on"):
         print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, action: {action}")
