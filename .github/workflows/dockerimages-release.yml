@@ -26,11 +26,9 @@ jobs:
 
 
       - 
-        name: Build the MariaDB Docker Image
+        name: Build and push the release image
         uses: docker/build-push-action@v7
         with:
-          build-args: |
-            MPROV_INSTALL_OPTS=-m
           tags: |
             ghcr.io/mprov-ng/mprov-control-center:${{github.ref_name}}
             ghcr.io/mprov-ng/mprov-control-center:latest
