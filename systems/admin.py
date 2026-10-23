@@ -42,10 +42,6 @@ class NetForm(forms.ModelForm):
             'bootable': forms.CheckboxInput(attrs={
               'style': 'width: 5em;',
             }),
-            'ipaddress': forms.TextInput(attrs={
-              'style': 'width: 7em;',
-              'class': 'vTextField',
-            }),
         }
 
 class NetworkInterfaceInlineFormset(BaseInlineFormSet):
