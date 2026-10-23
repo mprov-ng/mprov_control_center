@@ -19,20 +19,26 @@ class SystemBulkUpdateTests(TestCase):
     self.assertEqual(response.status_code, 200)
     return [str(m) for m in response.context["messages"]]
 
-  def test_clearing_bootable_reports_only_the_clear(self):
-    messages = self.bulk_update(update_set_bootable="on")
-    self.nic.refresh_from_db()
-    self.assertFalse(self.nic.bootable)
-    self.assertIn("Bootable NIC cleared on 1 system(s).", messages)
-    self.assertFalse(any(m.startswith("Bootable NIC set") for m in messages), messages)
-
-  def test_setting_bootable(self):
-    self.nic.bootable = False
-    self.nic.save()
-    messages = self.bulk_update(update_set_bootable="on", set_bootable="on")
+  def test_clearing_provision(self):
+    self.bulk_update(update_provision="on")
+    self.system.refresh_from_db()
+    self.assertFalse(self.system.provision)
+    # the boot NIC is left alone.
     self.nic.refresh_from_db()
     self.assertTrue(self.nic.bootable)
-    self.assertIn("Bootable NIC set on 1 system(s).", messages)
+
+  def test_setting_provision(self):
+    self.system.provision = False
+    self.system.save()
+    messages = self.bulk_update(update_provision="on", provision="on")
+    self.system.refresh_from_db()
+    self.assertTrue(self.system.provision)
+    self.assertIn("Changed fields on 1 items", messages)
+
+  def test_set_bootable_option_is_gone(self):
+    response = self.client.post("/admin/systems/system/", {"action": "bulk_update", "_selected_action": [self.system.pk]})
+    self.assertNotContains(response, "set_bootable")
+    self.assertContains(response, 'name="update_provision"')
 
   def test_many_to_many_field(self):
     group = SystemGroup.objects.create(name="compute")

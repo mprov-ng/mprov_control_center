@@ -1,6 +1,6 @@
 import sys
 import traceback
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.forms import BaseInlineFormSet
 from django.utils.html import mark_safe
 from jobqueue.models import JobModule, JobStatus, Job
@@ -54,6 +54,13 @@ class NetworkInterfaceInlineFormset(BaseInlineFormSet):
         form.fields['switch_port'].queryset = form.fields['switch_port'].queryset.filter(networkinterface=None) | form.fields['switch_port'].queryset.filter(id=form.initial['switch_port'])
       else:
         form.fields['switch_port'].queryset = form.fields['switch_port'].queryset.filter(networkinterface=None)
+
+  def clean(self):
+    super().clean()
+    bootable = [form for form in self.forms
+                if getattr(form, 'cleaned_data', {}).get('bootable') and not form.cleaned_data.get('DELETE')]
+    if len(bootable) > 1:
+      raise ValidationError("Only one network interface can be bootable.")
   
 
 class NetworkInterfaceInline(admin.StackedInline):
@@ -131,6 +138,7 @@ class SystemAdmin(admin.ModelAdmin):
     ('System Parameters', {
       'fields': [
         'stateful',
+        'provision',
         'disks',
         'systemimage',
         'systemmodel',
@@ -243,6 +251,9 @@ class SystemAdmin(admin.ModelAdmin):
            print(f"Error: Unable to find bmc for {system.hostname}")
            continue
         mybmc = mybmc[0]
+        if not system.enable_provisioning():
+           self._noBootableNIC(request, system)
+           continue
         try:
           func_timeout(5, self._doPowerCmd, [mybmc, "pxe"])
         except FunctionTimedOut:
@@ -255,11 +266,17 @@ class SystemAdmin(admin.ModelAdmin):
            print(f"Error: Unable to find bmc for {system.hostname}")
            continue
         mybmc = mybmc[0]
+        if not system.enable_provisioning():
+           self._noBootableNIC(request, system)
+           continue
         try:
           func_timeout(5, self._doPowerCmd, [mybmc, "pxeefi"])
         except FunctionTimedOut:
            print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
   
+  def _noBootableNIC(self, request, system):
+    self.message_user(request, f"{system.hostname} has no bootable network interface, so it can't PXE boot.  It was not reset.", level=messages.ERROR)
+
   def _doPowerCmd(self, bmc, action="on"):
     print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, action: {action}")
 
@@ -333,17 +350,14 @@ class SystemAdmin(admin.ModelAdmin):
   @admin.action(description="Update fields on multiple systems")
   def bulk_update(self, request, queryset):
     # fields to allow multiple updates to.
-    fields = ['systemimage','systemmodel','stateful','prov_interface','initial_mods', 'systemgroups', 'disks', 'location']
-    class BulkUpdateForm(self.get_form(request)):
-        set_bootable = forms.BooleanField(required=False, label="Set bootable interface")
-
+    fields = ['systemimage','systemmodel','stateful','provision','prov_interface','initial_mods', 'systemgroups', 'disks', 'location']
     def remove_fields(form):
         for field in list(form.base_fields.keys()):
-            if field not in fields and field != 'set_bootable':
+            if field not in fields:
                 del form.base_fields[field]
         return form
 
-    form_class = remove_fields(BulkUpdateForm)
+    form_class = remove_fields(self.get_form(request))
 
     if request.method == 'POST':
         form = form_class()
@@ -411,42 +425,6 @@ class SystemAdmin(admin.ModelAdmin):
                           }
                       )
                   fieldsUpdated=True
-            # Handle set_bootable: mark the NIC matching each system's prov_interface as bootable
-            # (all NICs if prov_interface is empty), or clear bootable on all NICs if unchecked
-            bootable_updated = 0
-            if 'update_set_bootable' in request.POST:
-              if not form.cleaned_data.get('set_bootable'):
-                # if the checkbox is not checked, update bootable to false for all nics on the selected systems.
-                for item in queryset.all():
-                  nics = NetworkInterface.objects.filter(system=item)
-                  for nic in nics:
-                    nic.bootable = False
-                    nic.save()
-                  bootable_updated += 1
-                self.message_user(request, f"Bootable NIC cleared on {queryset.count()} system(s).")
-                fieldsUpdated = True 
-              else:
-                for item in queryset.all():
-                    prov_iface = item.prov_interface.strip() if item.prov_interface else ''
-                    if not prov_iface:
-                      # no prov_interface specified for this system, enable all interfaces.
-                      nics = NetworkInterface.objects.filter(system=item)
-                      for nic in nics:
-                        nic.bootable = True
-                        nic.save()
-                      bootable_updated += 1
-                    else:
-                      nics = NetworkInterface.objects.filter(system=item)
-                      for nic in nics:
-                          if nic.name == prov_iface:
-                              nic.bootable = True
-                              bootable_updated += 1
-                          else:
-                              nic.bootable = False
-                          nic.save()
-                self.message_user(request, f"Bootable NIC set on {bootable_updated} system(s).")
-                fieldsUpdated = True
-
             if fieldsUpdated is False:
               self.message_user(request, "No fields selected to update.")
               return render(

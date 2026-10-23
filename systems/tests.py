@@ -121,12 +121,12 @@ class IPXEAPIViewTests(TestCase):
     return self.client.get("/ipxe/", REMOTE_ADDR=ip)
 
   def test_no_bootable_nic_renders_local_boot(self):
-    # the state the stateful installer leaves a system in before it reboots.
+    # a system with no NIC to boot from.
     NetworkInterface.objects.create(system=self.system, name="eth0", ipaddress="10.0.0.5", bootable=False)
     response = self.get_ipxe("10.0.0.5")
     self.assertEqual(response.status_code, 200)
     content = response.content.decode()
-    self.assertIn("System not set to bootable", content)
+    self.assertIn("System not set to provision, or has no bootable NIC", content)
     self.assertNotIn("kernel /images/", content)
 
   def test_bootable_nic_renders_kernel(self):
@@ -135,7 +135,7 @@ class IPXEAPIViewTests(TestCase):
     self.assertEqual(response.status_code, 200)
     content = response.content.decode()
     self.assertIn(f"kernel /images/{self.image.slug}.vmlinuz", content)
-    self.assertNotIn("System not set to bootable", content)
+    self.assertNotIn("System not set to provision, or has no bootable NIC", content)
 
   def test_image_without_distro_renders_kernel(self):
     image = SystemImage.objects.create(name="no-distro-image", created_by=self.user)
