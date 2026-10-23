@@ -205,21 +205,18 @@ ${IFACE_CMDS}
 
 EOF
 
-# generate an api key
-       cat << EOF > /tmp/genAPIKey.py
-import rest_framework_api_key
-apikey = rest_framework_api_key.models.APIKey()
-key = rest_framework_api_key.models.APIKey.objects.assign_key(apikey)
-apikey.name="mProv Jobserver Key"
-apikey.save()
-print(key)
-EOF
-
-       apikey=`cat /tmp/genAPIKey.py | python3 manage.py shell`
-
-       # echo this out to a file in /etc/mprov/
-       echo "export MPROV_APIKEY=$apikey" > /etc/mprov/apikey
-       chmod 600 /etc/mprov/apikey
+       # generate an api key for the jobservers, and write it to /etc/mprov/apikey
+       # from Python, so nothing else manage.py shell prints (a banner, or
+       # newer Django's automatic-imports line) can end up in the file (#288).
+       # The file is created 0600, so the key is never readable by others.
+       python3 manage.py shell -c "
+import os
+from rest_framework_api_key.models import APIKey
+_, key = APIKey.objects.create_key(name='mProv Jobserver Key')
+fd = os.open('/etc/mprov/apikey', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(fd, 'w') as f:
+    f.write(f'export MPROV_APIKEY={key}\n')
+"
 fi
 
 # fix the db perms... again...
