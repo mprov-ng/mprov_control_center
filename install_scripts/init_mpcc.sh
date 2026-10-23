@@ -228,5 +228,13 @@ chmod u+w db/ -R
 # (mprov-compose passes it) but is ignored; this is the only mode.
 setsid --wait /usr/sbin/apachectl -D FOREGROUND &
 child_pid=$!
-trap "kill -SIGINT $child_pid" SIGINT
+# docker stop sends SIGTERM, which bash as PID 1 ignores without a trap, so
+# the container was killed after the stop timeout (#290).  apachectl runs
+# httpd as its child, so signal the whole process group setsid made, not
+# just apachectl.  SIGTERM stops httpd now; a graceful stop (SIGWINCH) would
+# wait on open connections past docker's timeout.
+trap 'kill -TERM -- -$child_pid 2>/dev/null' TERM INT
+wait $child_pid
+# wait returns as soon as the trap runs; wait again for httpd to exit, and
+# exit with its status.
 wait $child_pid
