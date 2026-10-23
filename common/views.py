@@ -1,6 +1,6 @@
 from django.http import HttpResponse, HttpResponseNotAllowed
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from rest_framework_api_key.permissions import HasAPIKey
 from rest_framework import mixins, generics
 from django.db.models import (
@@ -29,6 +29,39 @@ def depth3_serializer(serializer_class):
     class Meta(serializer_class.Meta):
         depth = 3
     return type(serializer_class.__name__ + 'Depth3', (serializer_class,), {'Meta': Meta})
+
+class HasScopedAgentAPIKey(HasAPIKey):
+    '''
+    API keys are scoped agent credentials, not admin credentials (#315).
+
+    A valid key may use any safe method (GET/HEAD/OPTIONS) on a model view and
+    make exactly the writes the jobserver agent protocol sends: register the
+    server (POST jobservers), report job status (PATCH jobs), and note which
+    images/repos the server holds (PATCH systemimages, PATCH repos, the
+    ?addjs calls).  Any other method with a key is refused and falls back to
+    the login requirement.  Before this class, plain HasAPIKey in an OR with
+    IsAuthenticated made every generated key full read-write on every model
+    endpoint.
+    '''
+    agent_write_rules = {
+        ('jobqueue.job', 'PATCH'),
+        ('jobqueue.jobserver', 'POST'),
+        ('systems.systemimage', 'PATCH'),
+        ('osmanagement.osrepo', 'PATCH'),
+    }
+
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view):
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        model = getattr(view, 'model', None)
+        if model is None:
+            model = getattr(getattr(view, 'queryset', None), 'model', None)
+        if model is None:
+            return False
+        key = f'{model._meta.app_label}.{model._meta.model_name}'
+        return (key, request.method) in self.agent_write_rules
 
 class MProvView( 
                 generics.ListAPIView,
@@ -64,7 +97,7 @@ with its own get() only gets this by calling super().get().
     #filter_backends = [DjangoFilterBackend]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
-    permission_classes = [HasAPIKey|IsAuthenticated]
+    permission_classes = [HasScopedAgentAPIKey|IsAuthenticated]
 
     model_to_json_type_map = {
         AutoField: 'number',
