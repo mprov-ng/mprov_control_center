@@ -64,6 +64,11 @@ cd /var/www/mprov_control_center
 python manage.py createcachetable
 python manage.py migrate
 
+# /etc/mprov/ holds the secret key and the jobserver API key.  Create it
+# whichever way the secret key comes, as it may not be a mounted volume (#289).
+mkdir -p /etc/mprov
+chmod 700 /etc/mprov
+
 # set up the secret key
 # Use SECRET_KEY from the docker env if set, otherwise generate one once and
 # keep it in /etc/mprov/ (a volume) so it survives restarts and image updates.
@@ -74,7 +79,6 @@ elif [ -s "$SECRET_KEY_FILE" ]; then
     NEW_VALUE=$(cat "$SECRET_KEY_FILE")
 else
     NEW_VALUE=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
-    mkdir -p /etc/mprov
     echo "$NEW_VALUE" > "$SECRET_KEY_FILE"
     chmod 600 "$SECRET_KEY_FILE"
 fi
