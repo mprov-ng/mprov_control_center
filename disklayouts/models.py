@@ -67,6 +67,12 @@ class RaidLayout(DiskLayout):
   filesystem = models.CharField(max_length=100, blank=True)
   raidlevel = models.CharField(max_length=6, choices=RaidLevels.choices, verbose_name="RAID Level", default=RaidLevels.RAID0)
   mount = models.CharField(max_length=4096, verbose_name="Mount Point")
-  
-RaidLayout._meta.get_field('dtype').default=RaidLayout.DiskTypes.MDRD
+
+  def __init__(self, *args, **kwargs):
+    # dtype is DiskLayout's field, so changing its default here changed it for
+    # every DiskLayout (#271).  Default new RAID layouts to Software RAID instead.
+    # Rows loaded from the database come in as args and keep their value.
+    if not args:
+      kwargs.setdefault('dtype', self.DiskTypes.MDRD)
+    super().__init__(*args, **kwargs)
   
