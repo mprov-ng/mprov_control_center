@@ -1,7 +1,11 @@
+from unittest import mock
+
 from rest_framework import serializers
+from rest_framework.response import Response
 
 from common.serializers import NestedPrimaryKeyRelatedField
 from common.testing import APITestCase
+from common.views import MProvView
 from jobqueue.models import Job, JobModule, JobStatus, queue_job
 from scripts.models import ScriptType
 
@@ -24,6 +28,24 @@ class FilterByQueryParamsTests(APITestCase):
 
   def test_unknown_params_are_ignored(self):
     self.assertEqual(len(self.get_json("/jobmodules/?nope=1").json()), 2)
+
+
+class UnpackedArgsTests(APITestCase):
+  """ MProvView.patch() and delete() pass the URL kwargs to the DRF mixins unpacked (#259). """
+
+  def setUp(self):
+    super().setUp()
+    JobModule.objects.create(slug="nads", name="NADS")
+
+  def test_patch_passes_pk(self):
+    with mock.patch.object(MProvView, "partial_update", return_value=Response()) as partial_update:
+      self.client.patch("/jobmodules/nads/", {"name": "x"}, content_type="application/json")
+    self.assertEqual(partial_update.call_args.kwargs, {"pk": "nads"})
+
+  def test_delete_passes_pk(self):
+    with mock.patch.object(MProvView, "destroy", return_value=Response(status=204)) as destroy:
+      self.client.delete("/jobmodules/nads/", content_type="application/json")
+    self.assertEqual(destroy.call_args.kwargs, {"pk": "nads"})
 
 
 class QueueJobTests(APITestCase):

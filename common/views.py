@@ -203,7 +203,7 @@ with its own get() only gets this by calling super().get().
         return self.create(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
-        return self.destroy(request, args, kwargs)
+        return self.destroy(request, *args, **kwargs)
     
     
     def put(self, request, *args, **kwargs):
@@ -212,7 +212,7 @@ with its own get() only gets this by calling super().get().
     def patch(self, request, *args, **kwargs):
         if(type(request.user) is AnonymousUser ):
             request.user = User.objects.get(username='admin')
-        return self.partial_update(request, args, kwargs)
+        return self.partial_update(request, *args, **kwargs)
 
     def getJSONDataStructure(self, model):
         if model is None:
