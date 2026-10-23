@@ -1,5 +1,7 @@
+import hmac
 import os
 import subprocess
+from django.conf import settings
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect
 from .serializers import (
@@ -38,6 +40,10 @@ POST methods, and they must be formatted in a specific way.
 ## Documentation
 
 ### POST method (with NADS Packet)
+- Requests must carry the deployment's enrollment token (set via the
+MPROV_ENROLLMENT_TOKEN environment variable) in the
+X-MProv-Enrollment-Token header.  A missing or wrong token returns 403;
+if the deployment has no token configured the endpoint returns 503.
 - This will register the MAC in the packet to the system that has a NIC
 with no MAC on the specified switch and port, if that system's model matches
 the vendor and model in the packet.  The NIC also gets an IPv6 link-local
@@ -93,6 +99,16 @@ NADS Packet:
 
 
     def post(self, request, *args, **kwargs):
+        # Enrollment token gate (issue #318): this view disables DRF auth by
+        # design, so require a per-deployment shared secret.  With no token
+        # configured the endpoint is closed rather than open.
+        expected_token = getattr(settings, 'MPROV_ENROLLMENT_TOKEN', '')
+        if not expected_token:
+            return Response({'detail': "Enrollment endpoint is not configured."}, status=503)
+        provided_token = request.headers.get('X-MProv-Enrollment-Token', '')
+        if not hmac.compare_digest(provided_token, expected_token):
+            return Response({'detail': "Invalid enrollment token."}, status=403)
+
         missing = [field for field in ('vendor', 'model', 'switch', 'port', 'mac') if field not in request.data]
         if missing:
             return Response({field: "This field is required." for field in missing}, status=400)

@@ -243,6 +243,12 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }
 
+# Per-deployment enrollment token for POST /systems/register (issue #318).
+# Callers must send it in the X-MProv-Enrollment-Token header.  When unset
+# (the default), the endpoint is disabled (503) so an unconfigured
+# deployment never accepts unauthenticated registrations.
+MPROV_ENROLLMENT_TOKEN = os.environ.get('MPROV_ENROLLMENT_TOKEN', '')
+
 
 # Internationalization
 
