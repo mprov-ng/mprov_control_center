@@ -1,4 +1,4 @@
-django  #https://www.djangoproject.com/ - 3-clause BSD
+django>=4.2,<5  # https://www.djangoproject.com/ - 3-clause BSD.  <5 until the Rocky 9 move (#197)
 django-dotenv # https://pypi.org/project/django-dotenv/ - MIT
 djangorestframework # https://pypi.org/project/djangorestframework/ - BSD License (BSD)
 pyyaml # https://pypi.org/project/PyYAML/ - MIT

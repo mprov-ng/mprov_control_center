@@ -2,7 +2,6 @@
 
 import datetime
 from django.db import migrations, models
-from django.utils.timezone import utc
 
 
 class Migration(migrations.Migration):
@@ -15,11 +14,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='switch',
             name='timestamp',
-            field=models.DateTimeField(default=datetime.datetime(2024, 1, 23, 3, 16, 43, 725732, tzinfo=utc), verbose_name='Created'),
+            field=models.DateTimeField(default=datetime.datetime(2024, 1, 23, 3, 16, 43, 725732, tzinfo=datetime.timezone.utc), verbose_name='Created'),
         ),
         migrations.AlterField(
             model_name='switch',
             name='updated',
-            field=models.DateTimeField(default=datetime.datetime(2024, 1, 23, 3, 16, 43, 725788, tzinfo=utc), verbose_name='Last Updated'),
+            field=models.DateTimeField(default=datetime.datetime(2024, 1, 23, 3, 16, 43, 725788, tzinfo=datetime.timezone.utc), verbose_name='Last Updated'),
         ),
     ]
