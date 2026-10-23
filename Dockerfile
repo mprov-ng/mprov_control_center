@@ -71,10 +71,11 @@ RUN wget https://memtest.org/download/v7.20/mt86plus_7.20.binaries.zip && \
     
 WORKDIR /var/www/mprov_control_center
 
-# Prepare environment file
+# Prepare environment file.  No DJANGO_SUPERUSER_PASSWORD here (#317):
+# the image must not ship default credentials; init_mpcc.sh generates a
+# random password at first start and keeps it root-only in /etc/mprov.
 RUN echo "DJANGO_SUPERUSER_USERNAME=admin" > /var/www/mprov_control_center/.env && \
-    echo "DJANGO_SUPERUSER_PASSWORD=admin" >> /var/www/mprov_control_center/.env && \
-    echo "DJANGO_SUPERUSER_EMAIL=root@localhost" >> /var/www/mprov_control_center/.env 
+    echo "DJANGO_SUPERUSER_EMAIL=root@localhost" >> /var/www/mprov_control_center/.env
     #echo "ALLOWED_HOSTS=$(hostname),127.0.0.1" >> /var/www/mprov_control_center/.env
     ## Create ENV VAR to set this outside of the container 
 

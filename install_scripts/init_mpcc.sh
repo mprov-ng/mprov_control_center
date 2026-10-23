@@ -25,7 +25,8 @@ then
               echo "SECRET_KEY='$SECRET_KEY'" > .env
 
               echo "DJANGO_SUPERUSER_USERNAME=admin" >> .env
-              echo "DJANGO_SUPERUSER_PASSWORD=admin" >> .env
+              # no password here (#317): the first-run password is resolved by
+              # install_scripts/superuser_password.sh below, never a baked-in default.
               echo "DJANGO_SUPERUSER_EMAIL=root@localhost" >> .env
               ALLOWED_HOSTS=""
               for i in `ip addr | grep "inet " | awk '{print $2}' | awk -F/ '{print $1}'`
@@ -124,6 +125,11 @@ then
 fi
 if [ "$init_state" == "10" ]
 then
+       # Resolve the superuser password before createsuperuser reads it
+       # (#317): operator env wins, else reuse/generate a random one and
+       # keep it root-only in $MPROV_ETC_DIR (default /etc/mprov).
+       . /var/www/mprov_control_center/install_scripts/superuser_password.sh
+
        python manage.py createsuperuser --noinput
 
        # systems.yaml refers to scripts that come from the mprov_scripts repo, so

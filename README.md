@@ -21,7 +21,7 @@ The mPCC is installed as part of the full mProv stack using [mprov-compose](http
 Note: The old bare-metal installer (`install_mpcc.sh`) has been removed and is no longer supported.  It also set up an NFS-exported `/export/mprov` share, built Slurm into it, and installed MLX OFED, NVIDIA drivers and Ansible on the mPCC host.  None of that is provided by the containerized install.  If you need those, set them up separately.
 
 # Post installation
-The successfully installed mPCC admin UI is available at http://<FQDN or IP>/admin/login/?next=/admin/ . The default credentials are admin / admin. 
+The successfully installed mPCC admin UI is available at http://<FQDN or IP>/admin/login/?next=/admin/ . The admin username is `admin`; on first start the container generates a random password, prints it once to the container log (`docker logs`), and keeps it in the container-only file `/etc/mprov/superuser_password` (readable only by root).
 Once the installation is complete, it is highly suggested that you create an API Key and get a job server running, https://github.com/mprov-ng/mprov_jobserver/blob/main/README.md
 
 When creating an API key in the mPCC, you only need to specify a name for the API key, the expire times are only if your security protocols dictate the need for expiring keys.
