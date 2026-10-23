@@ -343,8 +343,16 @@ then
   umount -a -f -l
   sync; sync; sync
   echo "Rebooting..."
+  # the sysrq trigger lives in /proc, which was unmounted above (#347).
+  mount -t proc proc /proc >/dev/null 2>&1
   echo b > /proc/sysrq-trigger
-else  
+  # if that didn't reboot, ask the kernel directly.  Never fall through to
+  # the exit below: init respawns this script, which would install again.
+  /bin/busybox reboot -f
+  sleep 10
+  echo "Error: unable to reboot.  Reset this system to boot the installed OS."
+  while true; do sleep 3600; done
+else
   echo "Give the root password for maintenance mode"
   chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1
   echo "You are at the end of the line for rescue mode."
