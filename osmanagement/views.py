@@ -33,7 +33,8 @@ class OSDistroAPIView(MProvView):
     CRB (version 9+) or PowerTools, and EPEL repos from baseurl, then resets to false
 - baseurl: The base URL the generated repos are built from
 - extrarepos: (Optional) IDs of extra repos
-- rootpw: (Optional) Root password for the image
+- rootpw: (Optional) Root password for the image. It is write-only: no GET
+    returns it.
 - rootsshkeys: (Optional) Keys to add to root's authorized keys file
 - ansibleplaybooks, ansibleroles, ansiblecollections: (Optional) Ansible content
     to run on images/systems using this OS
