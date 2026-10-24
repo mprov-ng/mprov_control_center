@@ -14,7 +14,6 @@ from django.db.models import (
 )
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
-from django.contrib.auth.models import AnonymousUser, User
 import markdown
 from bs4 import BeautifulSoup
 from django.apps import apps
@@ -210,8 +209,9 @@ with its own get() only gets this by calling super().get().
         return HttpResponseNotAllowed(["GET","POST","PATCH","DELETE"])
 
     def patch(self, request, *args, **kwargs):
-        if(type(request.user) is AnonymousUser ):
-            request.user = User.objects.get(username='admin')
+        if not request.user or not request.user.is_authenticated:
+            return Response({"detail": "Anonymous PATCH mutations are not allowed."},
+                            status=403)
         return self.partial_update(request, *args, **kwargs)
 
     def getJSONDataStructure(self, model):

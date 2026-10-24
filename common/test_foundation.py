@@ -2,6 +2,7 @@ from unittest import mock
 
 from rest_framework import serializers
 from rest_framework.response import Response
+from rest_framework_api_key.models import APIKey
 
 from common.serializers import NestedPrimaryKeyRelatedField
 from common.testing import APITestCase
@@ -75,6 +76,33 @@ class ScriptTypeSerializer(serializers.ModelSerializer):
   class Meta:
     model = ScriptType
     fields = '__all__'
+
+
+class AnonymousPatchTests(APITestCase):
+  """ MProvView.patch() rejects anonymous callers instead of substituting admin (#331). """
+
+  def setUp(self):
+    super().setUp()
+    JobModule.objects.create(slug="nads", name="NADS")
+    _, self.key = APIKey.objects.create_key(name="test-331")
+
+  def test_api_key_patch_is_rejected_not_run_as_admin(self):
+    # A valid API key passes the HasAPIKey|IsAuthenticated gate but leaves
+    # request.user anonymous; the PATCH must be rejected, not silently
+    # executed as the hard-coded admin superuser.
+    anon = self.client_class()  # fresh client: no login session
+    response = anon.patch(
+        "/jobmodules/nads/", {"name": "hijacked"},
+        content_type="application/json",
+        HTTP_AUTHORIZATION=f"Api-Key {self.key}")
+    self.assertEqual(response.status_code, 403)
+    self.assertEqual(JobModule.objects.get(slug="nads").name, "NADS")
+
+  def test_authenticated_patch_still_works(self):
+    response = self.client.patch("/jobmodules/nads/", {"name": "Renamed"},
+                                 content_type="application/json")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(JobModule.objects.get(slug="nads").name, "Renamed")
 
 
 class NestedPrimaryKeyRelatedFieldTests(APITestCase):
