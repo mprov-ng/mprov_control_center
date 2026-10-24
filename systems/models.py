@@ -255,7 +255,11 @@ class NetworkInterface(models.Model):
   def __str__(self):
     return self.name
   def save(self, *args, **kwargs):
-    self.hostname = self.system.hostname
+    # Only default the hostname from the parent System when this row doesn't
+    # carry one; a hostname set on the interface must survive later saves.
+    # See mprov-ng/mprov_control_center#322.
+    if not self.hostname:
+      self.hostname = self.system.hostname
     super(NetworkInterface, self).save(*args, **kwargs)
 
 class SystemImage(models.Model):
