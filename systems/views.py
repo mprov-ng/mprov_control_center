@@ -1,4 +1,5 @@
 import hmac
+import logging
 import os
 import subprocess
 from django.conf import settings
@@ -26,6 +27,9 @@ import pyipmi
 import pyipmi.interfaces
 from func_timeout import func_timeout, FunctionTimedOut
 
+logger = logging.getLogger(__name__)
+
+
 class SystemRegAPIView(MProvView):
     '''
 # /systems/register/
@@ -40,10 +44,11 @@ POST methods, and they must be formatted in a specific way.
 ## Documentation
 
 ### POST method (with NADS Packet)
-- Requests must carry the deployment's enrollment token (set via the
-MPROV_ENROLLMENT_TOKEN environment variable) in the
-X-MProv-Enrollment-Token header.  A missing or wrong token returns 403;
-if the deployment has no token configured the endpoint returns 503.
+- The enrollment token is opt-in.  If the deployment sets the
+MPROV_ENROLLMENT_TOKEN environment variable, requests must carry it in
+the X-MProv-Enrollment-Token header; a missing or wrong token returns
+403.  If no token is configured (the default) registration is allowed
+and a warning is logged.
 - This will register the MAC in the packet to the system that has a NIC
 with no MAC on the specified switch and port, if that system's model matches
 the vendor and model in the packet.  The NIC also gets an IPv6 link-local
@@ -99,15 +104,23 @@ NADS Packet:
 
 
     def post(self, request, *args, **kwargs):
-        # Enrollment token gate (issue #318): this view disables DRF auth by
-        # design, so require a per-deployment shared secret.  With no token
-        # configured the endpoint is closed rather than open.
+        # Enrollment token gate (issue #318): this view disables DRF auth
+        # by design, so deployments that want it opt in with a
+        # per-deployment shared secret.  When MPROV_ENROLLMENT_TOKEN is
+        # set the X-MProv-Enrollment-Token header must match; when unset
+        # (the default) registration stays open so existing enrollees keep
+        # working, and we log a loud warning on each such registration.
         expected_token = getattr(settings, 'MPROV_ENROLLMENT_TOKEN', '')
-        if not expected_token:
-            return Response({'detail': "Enrollment endpoint is not configured."}, status=503)
-        provided_token = request.headers.get('X-MProv-Enrollment-Token', '')
-        if not hmac.compare_digest(provided_token, expected_token):
-            return Response({'detail': "Invalid enrollment token."}, status=403)
+        if expected_token:
+            provided_token = request.headers.get('X-MProv-Enrollment-Token', '')
+            if not hmac.compare_digest(provided_token, expected_token):
+                return Response({'detail': "Invalid enrollment token."}, status=403)
+        else:
+            logger.warning(
+                "MPROV_ENROLLMENT_TOKEN is not set: accepting an "
+                "unauthenticated registration at POST /systems/register.  "
+                "Set MPROV_ENROLLMENT_TOKEN and have enrollees send it in "
+                "the X-MProv-Enrollment-Token header to gate this endpoint.")
 
         missing = [field for field in ('vendor', 'model', 'switch', 'port', 'mac') if field not in request.data]
         if missing:
