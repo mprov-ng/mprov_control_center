@@ -40,10 +40,21 @@ class ImagesAPIViewJobserverTests(TestCase):
       ImagesAPIView().getJobserver(self.image, "10.0.0.50")
 
   @mock.patch("systems.views_noauth.requests.head")
-  def test_unreachable_jobserver_is_removed_from_the_image(self, head):
+  def test_unreachable_jobserver_is_skipped_not_removed(self, head):
+    """Issue #321: one momentary fetch failure must not strip a jobserver."""
     head.side_effect = lambda url, timeout: SimpleNamespace(status_code=500 if "good.example" in url else 200)
     response = self.client.get("/images/compute/", REMOTE_ADDR="10.0.0.50")
     self.assertEqual(response.status_code, 302)
     self.assertEqual(response["Location"], "http://10.0.0.3:8080/images/compute/compute.img")
-    # bad.example didn't resolve for this client, but it may serve others.
-    self.assertEqual(sorted(js.name for js in self.image.jobservers.all()), ["bad", "ip"])
+    # An unauthenticated GET may skip jobservers for this request only:
+    # bad.example didn't resolve for this client and good.example 500'd,
+    # but neither association may be deleted and saved.
+    self.assertEqual(sorted(js.name for js in self.image.jobservers.all()), ["bad", "good", "ip"])
+
+  @mock.patch("systems.views_noauth.requests.head")
+  def test_no_responsive_jobserver_404s_without_stripping(self, head):
+    """All fetches failing returns 404 but leaves every association intact."""
+    head.side_effect = lambda url, timeout: SimpleNamespace(status_code=500)
+    response = self.client.get("/images/compute/", REMOTE_ADDR="10.0.0.50")
+    self.assertEqual(response.status_code, 404)
+    self.assertEqual(sorted(js.name for js in self.image.jobservers.all()), ["bad", "good", "ip"])
