@@ -58,8 +58,10 @@ class SystemPowerAPIViewResetTests(SimpleTestCase):
 
 
 class SystemBMCPasswordTests(TestCase):
-  """ The BMC password is write-only, except for a single entry or ?detail, which
-  mprov_scripts' setupBMC.py reads. """
+  """ The BMC password is write-only, except for a single entry or a per-system
+  detail query (?system=ID&detail), which mprov_scripts' setupBMC.py reads.
+  An unscoped ?detail must not return any password: one GET must not harvest
+  every BMC credential (issue #316). """
 
   def setUp(self):
     self.user = User.objects.create(username="bmc-test")
@@ -75,6 +77,20 @@ class SystemBMCPasswordTests(TestCase):
     self.assertEqual(response.status_code, 200)
     self.assertNotIn("password", response.json()[0])
     self.assertNotIn("bmc-secret", response.content.decode())
+
+  def test_bulk_detail_omits_password(self):
+    # issue #316: an unscoped ?detail returns every BMC, so it must not carry
+    # any of their passwords. setupBMC.py scopes its query with ?system=.
+    other = System.objects.create(hostname="bmc-node-2", created_by=self.user)
+    SystemBMC.objects.create(system=other, ipaddress="10.0.1.6", username="admin", password="bmc-secret-2")
+    response = self.get_json("/systembmcs/?detail")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(len(response.json()), 2)
+    body = response.content.decode()
+    self.assertNotIn("bmc-secret", body)
+    self.assertNotIn("bmc-secret-2", body)
+    for entry in response.json():
+      self.assertNotIn("password", entry)
 
   def test_detail_returns_password(self):
     response = self.get_json(f"/systembmcs/?system={self.system.id}&detail")

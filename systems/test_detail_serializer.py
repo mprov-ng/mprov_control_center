@@ -72,8 +72,9 @@ class DetailSerializerTests(TestCase):
 
 class BMCDetailSerializerTests(TestCase):
   """ /systembmcs/ uses SystemBMCDetailSerializer for details, nested one level.
-  Jobserver dns.py and mprov_scripts setupBMC.py read system.hostname,
-  network.netmask and the password from ?detail. """
+  Jobserver dns.py and mprov_scripts setupBMC.py read system.hostname and
+  network.netmask from ?detail; only setupBMC.py reads the password, and it
+  scopes its query with ?system= (#316). """
 
   def setUp(self):
     self.user = User.objects.create(username="bmc-detail-test")
@@ -87,7 +88,10 @@ class BMCDetailSerializerTests(TestCase):
   def test_detail_list(self):
     bmc = self.get_json("/systembmcs/?detail")[0]
     self.assertEqual(bmc["system"]["hostname"], "bmc-detail-node")
-    self.assertEqual(bmc["password"], "bmc-secret")
+    # An unscoped ?detail nests but carries no passwords (#316). The
+    # per-system ?system=ID&detail read setupBMC.py makes is covered in
+    # SystemBMCPasswordTests.
+    self.assertNotIn("password", bmc)
     # Nested one level only.
     self.assertEqual(bmc["system"]["created_by"], self.user.id)
 
