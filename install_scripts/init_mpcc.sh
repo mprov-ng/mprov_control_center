@@ -25,7 +25,8 @@ then
               echo "SECRET_KEY='$SECRET_KEY'" > .env
 
               echo "DJANGO_SUPERUSER_USERNAME=admin" >> .env
-              echo "DJANGO_SUPERUSER_PASSWORD=admin" >> .env
+              # no password here (#317): the first-run password is resolved by
+              # install_scripts/superuser_password.sh below, never a baked-in default.
               echo "DJANGO_SUPERUSER_EMAIL=root@localhost" >> .env
               ALLOWED_HOSTS=""
               for i in `ip addr | grep "inet " | awk '{print $2}' | awk -F/ '{print $1}'`
@@ -128,7 +129,27 @@ then
 fi
 if [ "$init_state" == "10" ]
 then
-       python manage.py createsuperuser --noinput
+       # Resolve the superuser password before it is consumed (#317):
+       # operator env wins, else reuse/generate a random one and
+       # keep it root-only in $MPROV_ETC_DIR (default /etc/mprov).
+       . /var/www/mprov_control_center/install_scripts/superuser_password.sh
+
+       # Create the superuser from the resolved env vars.  Not Django's
+       # createsuperuser --noinput: that command only reads the password
+       # from its own hardcoded Django env name, and the container's
+       # variable is MPROV_SUPERUSER_PASSWORD (#317).
+       python manage.py shell -c '
+import os
+from django.contrib.auth import get_user_model
+User = get_user_model()
+username = os.environ.get("DJANGO_SUPERUSER_USERNAME", "admin")
+User.objects.create_superuser(
+    username=username,
+    email=os.environ.get("DJANGO_SUPERUSER_EMAIL", "root@localhost"),
+    password=os.environ["MPROV_SUPERUSER_PASSWORD"],
+)
+print("Superuser created successfully.")
+'
 
        # systems.yaml refers to scripts that come from the mprov_scripts repo, so
        # it has to load after load_default_scripts.sh.  loaddata commits all its
