@@ -1,16 +1,21 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.test.utils import override_settings
 
 from networks.models import Switch
 
+TOKEN = "test-enrollment-token"
 
+
+@override_settings(MPROV_ENROLLMENT_TOKEN=TOKEN)
 class SystemRegAPIViewTests(TestCase):
   """ POST /systems/register records unknown MACs as N.A.D.S. systems. """
 
   packet = {"vendor": "Dell", "model": "R650", "switch": "sw1", "port": "1/1", "mac": "aa:bb:cc:dd:ee:ff"}
 
   def register(self, **changes):
-    return self.client.post("/systems/register", {**self.packet, **changes}, content_type="application/json")
+    return self.client.post("/systems/register", {**self.packet, **changes}, content_type="application/json",
+                            HTTP_X_MPROV_ENROLLMENT_TOKEN=TOKEN)
 
   def test_known_mac_on_a_new_port_updates_the_entry(self):
     from systems.models import NADSSystem
