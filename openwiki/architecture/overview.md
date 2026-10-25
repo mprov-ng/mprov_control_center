@@ -7,7 +7,7 @@ tags: [mprov, django, architecture, routing, settings, ci, containers]
 
 # Architecture Overview
 
-mProv Control Center is a single Django 3.2 project (`mprov_control_center/`) that combines an operator admin UI with a DRF JSON API. Almost all API behavior flows through one shared base class, [MProvView](api-foundation.md), and almost all external side effects flow through the [job queue](../domain/jobs-and-scripts.md) rather than direct calls.
+mProv Control Center is a single Django project (`mprov_control_center/`, pinned `django>=4.2,<5` in `requirements.txt` until the Rocky 9 move, issue #197) that combines an operator admin UI with a DRF JSON API. Almost all API behavior flows through one shared base class, [MProvView](api-foundation.md), and almost all external side effects flow through the [job queue](../domain/jobs-and-scripts.md) rather than direct calls.
 
 ## Project layout
 
@@ -53,7 +53,7 @@ Auth options (API keys, Basic/Session/Token, LDAP backend ordering) are detailed
 
 ## Container bootstrap
 
-`install_scripts/init_mpcc.sh` is the container entrypoint: run migrations, and on first start create the admin superuser, register the mPCC host, generate the jobserver API key, and import default scripts from the mprov_scripts repo via `load_default_scripts.sh`. `MPROV_DEVEL=1` enables a dev mode that builds the venv and generates `.env` (secret key, superuser vars, `ALLOWED_HOSTS` harvested from interface addresses). The image is built by `Dockerfile`/`Containerfile` (identical) and published to `ghcr.io/mprov-ng/mprov-control-center`.
+`install_scripts/init_mpcc.sh` is the container entrypoint: run migrations, and on first start create the admin superuser, register the mPCC host, generate the jobserver API key, and import default scripts from the mprov_scripts repo via `load_default_scripts.sh`. The jobserver key is created with `APIKey.objects.create_key()` inside `manage.py shell -c` and written from Python to `/etc/mprov/apikey` at mode 0600, so extraneous shell output can never leak into the file and the key is never briefly world-readable (#288). The entrypoint traps `TERM`/`INT` and forwards `SIGTERM` to the `setsid` process group running Apache, so `docker stop` shuts httpd down promptly instead of being killed after the timeout (#290). `MPROV_DEVEL=1` enables a dev mode that builds the venv and generates `.env` (secret key, superuser vars, `ALLOWED_HOSTS` harvested from interface addresses). The image is built by `Dockerfile`/`Containerfile` (identical) and published to `ghcr.io/mprov-ng/mprov-control-center`. The Dockerfile rewrites Apache's logging so every request on both ports is logged exactly once to stdout in combined format and no log files are written inside the container; the rewrite `grep`s its own seds so the build fails if a sed stops matching (#293). `static/configs/mprov_control_center.conf` deliberately has no `TransferLog` for this reason.
 
 ## CI
 
