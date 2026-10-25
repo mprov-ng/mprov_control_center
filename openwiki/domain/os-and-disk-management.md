@@ -18,6 +18,7 @@ Notable automation:
 - **Auto-generated repos**: an `OSDistro` post_save creates AppStream/BaseOS/extras (plus CRB for EL ≥9, else PowerTools) and EPEL `OSRepo` rows from the distro `baseurl`, guarded by a self-relief flag to avoid recursion.
 - **Repo mirroring**: saving an `OSRepo` with `update=True` bumps its version, clears `hosted_by`, and queues `repo-update` jobs; deleting a JobServer requeues repo-updates for every repo it hosted. The admin `mark_update` action (managed repos only) bumps the version with a queryset `.update()` to avoid double increments.
 - Endpoints: `distros/`, `repos/`, `ostypes/`, `osrepos/` route modules (`osmanagement/*_urls.py`); an unauthenticated `views_noauth.py` exists (see quickstart backlog).
+- **`rootpw` is write-only on the `/distros/` API** (`OSDistroAPISerializer` marks it `write_only`, like the BMC password in [Systems & Networking](systems-and-networking.md)): POST/PATCH accept it, but no GET response returns it (#313, `osmanagement/test_rootpw.py`). Jobservers still read the password from the osdistro nested inside `/systemimages/<slug>/`.
 
 ## Disk layouts (`disklayouts/`)
 

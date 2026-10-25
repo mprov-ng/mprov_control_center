@@ -25,6 +25,10 @@ Key models (`systems/models.py`):
 
 **API** (`systems/views.py`): `SystemAPIView` (own `get()` with `SystemDetailSerializer`), `SystemRegAPIView` at `/systems/register/` (unauthenticated NADS registration, derives IPv6 link-local from MAC), `SystemPowerAPIView` at `power/<action>/`, and the unauthenticated iPXE endpoint `views_noauth.py:IPXEAPIView` (see quickstart backlog for a full no-auth audit).
 
+**Security-sensitive behaviors** (both have regression tests):
+- `?hostname=` on `/power/<action>/` matches `hostname` **exactly**, not as a substring. It previously used `hostname__contains`, so one hostname powered on every system whose name contained that string (issue #332); `systems/test_power_by_hostname.py` pins the exact-match behavior.
+- The unauthenticated `/ipxe/` and `/images/` endpoints identify the client by socket peer address (`REMOTE_ADDR`), not by the client-supplied `X-Forwarded-For` header. `X-Forwarded-For` is honored only when the connection provably arrives from a proxy listed in the `TRUSTED_PROXIES` setting (comma-separated exact IPs or CIDRs); the chain is then walked right to left and the first untrusted address is used. Before this fix, any client able to reach the HTTP port could forge the header and fetch any managed system's iPXE config, kernel, or initramfs (issue #319). See `systems/views_noauth.py`, `systems/test_noauth_xff.py`, and `TRUSTED_PROXIES` in [Configuration](../architecture/overview.md#configuration).
+
 ## Networks (`networks/`)
 
 Key models (`networks/models.py`): `NetworkType`; `Network` (slug, VLAN, subnet/CIDR, gateway/nameservers, `isdhcp`/`managedns`/`isbootable`, DHCP range); `Switch` and `SwitchPort` (the OneToOne target NICs attach to). Signals queue pxe/dns/dhcp update jobs on save and delete-jobs on delete, same pattern as systems.
