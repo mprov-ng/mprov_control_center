@@ -182,10 +182,6 @@ mkdir -p /image
 mount -t tmpfs -o "size=$MPROV_TMPFS_SIZE" tmpfs /image
 mkdir -p /image/tmp
 date > /image/tmp/boot_timing
-mkdir -p /image/etc/dracut.conf.d/
-echo -n "add_drivers+=\" " >/image/etc/dracut.conf.d/mprov_mods.conf
-cat /tmp/init_mods | sed -e 's/,/ /g' >> /image/etc/dracut.conf.d/mprov_mods.conf
-echo -n " \"" >> /image/etc/dracut.conf.d/mprov_mods.conf
 echo "Image directory setup."
 chmod 755 /image
 sleep 5
@@ -207,6 +203,21 @@ do
 done
 cd /
 trap err_handler ERR
+
+# tell dracut in the image to add the drivers loaded above.  dracut stops at
+# a built-in or unknown module and leaves out every driver listed after it
+# (#360), so keep only the real modules of the image's kernel (ours).
+MPROV_DRACUT_MODS=""
+for mod in $(sed -e 's/,/ /g' /tmp/init_mods)
+do
+  case " ${MPROV_DRACUT_MODS} " in *" ${mod} "*) continue ;; esac
+  if chroot /image /usr/sbin/modinfo -k "$(uname -r)" -n "$mod" >/dev/null 2>&1
+  then
+    MPROV_DRACUT_MODS="${MPROV_DRACUT_MODS} ${mod}"
+  fi
+done
+mkdir -p /image/etc/dracut.conf.d/
+echo "add_drivers+=\"${MPROV_DRACUT_MODS} \"" > /image/etc/dracut.conf.d/mprov_mods.conf
 
 # set the address generation mode to not privacy and generate from MAC address, applies to GUA and LL IPv6 addresses.
 echo -e "[connection]\nipv6.addr-gen-mode=0\nipv6.ip6-privacy=0" > /image/etc/NetworkManager/conf.d/99.mprov-ipv6.conf

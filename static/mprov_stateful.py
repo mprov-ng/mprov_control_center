@@ -416,13 +416,13 @@ class mProvStatefulInstaller():
       except Exception:
           pass
       dracut_cmd = ["/newroot", "dracut", "--regenerate-all", "-f", "-vvv", "--mdadmconf", "--force-add", "mdraid"]
-      # build a generic initramfs: run in this chroot, host-only dracut leaves
-      # out the root disk's drivers (sd_mod), so the node can't find its root
-      # disk on first boot (#352).  Also add the drivers the boot command line
-      # asked for (mprov_initial_mods).
+      # build a generic initramfs, with every storage driver, so the node
+      # finds its root disk on first boot (#352).  Also add the drivers the
+      # boot command line asked for (mprov_initial_mods).
       dracut_cmd.append("--no-hostonly")
-      if self.modules.split():
-          dracut_cmd += ["--add-drivers", " ".join(self.modules.split())]
+      modules = self.realModules(self.modules.split())
+      if modules:
+          dracut_cmd += ["--add-drivers", " ".join(modules)]
       print(dracut_cmd)
       result = sh.chroot(dracut_cmd, _err_to_out=True)
       with open("/newroot/tmp/dracut.out", "w") as out:
@@ -508,6 +508,23 @@ class mProvStatefulInstaller():
               "--verbose",
               bootdisk ])
           sh.chroot(["/newroot", "grub2-mkconfig", "-o", "/etc/grub2.cfg"])
+
+  def realModules(self, mods):
+      # dracut stops at a built-in or unknown module and leaves out every
+      # driver listed after it (#360), so keep only the ones that are a
+      # module for every kernel installed in /newroot.
+      kernels = os.listdir("/newroot/lib/modules")
+      keep = []
+      for mod in mods:
+          if mod in keep:
+              continue
+          if all(subprocess.run(["chroot", "/newroot", "modinfo", "-k", kernel, "-n", mod],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+                 for kernel in kernels):
+              keep.append(mod)
+          else:
+              print(f"Leaving {mod} out of the initramfs: it's built in, or not a module of the installed kernel.")
+      return keep
 
   def cleanupAndSwitchroot(self):
     # disable netboot
