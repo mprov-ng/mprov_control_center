@@ -340,11 +340,29 @@ then
   sync; sync; sync
   # all done, reboot hard
 
+  # unmount the installed filesystems cleanly first: a hard reboot leaves
+  # the XFS log dirty, and GRUB doesn't replay it, so it can't find its
+  # own files (#347).  Deepest first; read-only if one won't unmount.
+  mount -t proc proc /proc >/dev/null 2>&1
+  for mnt in $(awk '$2 == "/image" || $2 ~ /^\/image\// { print $2 }' /proc/mounts | sort -r)
+  do
+    umount "$mnt" || mount -o remount,ro "$mnt"
+  done
+  sync
+
   umount -a -f -l
   sync; sync; sync
   echo "Rebooting..."
+  # the sysrq trigger lives in /proc, which was unmounted above (#347).
+  mount -t proc proc /proc >/dev/null 2>&1
   echo b > /proc/sysrq-trigger
-else  
+  # if that didn't reboot, ask the kernel directly.  Never fall through to
+  # the exit below: init respawns this script, which would install again.
+  /bin/busybox reboot -f
+  sleep 10
+  echo "Error: unable to reboot.  Reset this system to boot the installed OS."
+  while true; do sleep 3600; done
+else
   echo "Give the root password for maintenance mode"
   chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1
   echo "You are at the end of the line for rescue mode."
