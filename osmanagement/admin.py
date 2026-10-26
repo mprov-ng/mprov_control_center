@@ -7,9 +7,8 @@ from .models import (
   OSRepo,
 
 )
-@admin.action(description="Mark repositories as needing update.")
-def mark_update(modeladmin, request, queryset):
-  queryset.update(update=True)
+@admin.action(description="Re-sync the selected mirrored repositories.")
+def resync_repos(modeladmin, request, queryset):
   try:
       JobType = JobModule.objects.get(slug='repo-update')
   except JobModule.DoesNotExist:
@@ -34,7 +33,7 @@ class OSRepoAdmin(admin.ModelAdmin):
   list_display=['id', 'name', 'repo_package_url', 'managed', 'version']
   list_display_links=['id','name']
   readonly_fields=['hosted_by']
-  actions = [mark_update]
+  actions = [resync_repos]
 
 class OSDistroAdmin(admin.ModelAdmin):
   model = OSDistro

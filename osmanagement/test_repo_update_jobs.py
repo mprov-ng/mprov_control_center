@@ -16,13 +16,14 @@ class RepoUpdateJobTests(RepoJobTestCase):
   """ Repo-update jobs aren't queued twice for the same repo while one is pending. """
 
   def test_saving_a_repo_twice_queues_one_job(self):
-    repo = OSRepo.objects.create(name="BaseOS", repo_package_url="http://mirror/", managed=True, update=True)
+    repo = OSRepo.objects.create(name="BaseOS", repo_package_url="http://mirror/", managed=True, resync=True)
     repo.save()
     self.assertEqual(Job.objects.filter(module=self.module, params={"repo_id": repo.id}).count(), 1)
 
   def test_new_job_once_the_old_one_is_running(self):
-    repo = OSRepo.objects.create(name="BaseOS", repo_package_url="http://mirror/", managed=True, update=True)
+    repo = OSRepo.objects.create(name="BaseOS", repo_package_url="http://mirror/", managed=True, resync=True)
     Job.objects.update(status=2)
+    repo.resync = True
     repo.save()
     self.assertEqual(Job.objects.filter(module=self.module, params={"repo_id": repo.id}).count(), 2)
 
