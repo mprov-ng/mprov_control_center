@@ -340,6 +340,16 @@ then
   sync; sync; sync
   # all done, reboot hard
 
+  # unmount the installed filesystems cleanly first: a hard reboot leaves
+  # the XFS log dirty, and GRUB doesn't replay it, so it can't find its
+  # own files (#347).  Deepest first; read-only if one won't unmount.
+  mount -t proc proc /proc >/dev/null 2>&1
+  for mnt in $(awk '$2 == "/image" || $2 ~ /^\/image\// { print $2 }' /proc/mounts | sort -r)
+  do
+    umount "$mnt" || mount -o remount,ro "$mnt"
+  done
+  sync
+
   umount -a -f -l
   sync; sync; sync
   echo "Rebooting..."
