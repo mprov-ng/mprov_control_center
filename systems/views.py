@@ -862,7 +862,7 @@ class SystemPowerAPIView(MProvView):
             if system_results is None:
                 return Response(None, status=404)
             if kwargs['action'] in self.PXE_ACTIONS and not system_results.enable_provisioning():
-                return Response(self._noBootableNIC(system_results), status=409)
+                return Response(self._cantProvision(system_results), status=409)
             self.queryset = self.model.objects.filter(system=system_results.id)
             results = {}
             for bmc in self.queryset:
@@ -902,13 +902,14 @@ class SystemPowerAPIView(MProvView):
 
     PXE_ACTIONS = ("pxe", "pxeefi")
 
-    def _noBootableNIC(self, system):
-        return {'details': f"{system} has no bootable network interface, so it can't PXE boot.  It was not reset.", 'status': 409, 'chassis_status': 'unknown'}
+    def _cantProvision(self, system):
+        return {'details': f"{system.provisioning_problem()}  It was not reset.", 'status': 409, 'chassis_status': 'unknown'}
 
     def _powerAction(self, bmc, action):
-        # a PXE boot provisions the system, which needs a bootable NIC to boot from.
+        # a PXE boot provisions the system, which needs a bootable NIC to boot
+        # from and, if stateful, disk layouts the installer accepts.
         if action in self.PXE_ACTIONS and not bmc.system.enable_provisioning():
-            return self._noBootableNIC(bmc.system)
+            return self._cantProvision(bmc.system)
         return self._doPowerCmd(bmc, action)
 
     def _doPowerCmd(self, bmc, action="on"):

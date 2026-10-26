@@ -115,6 +115,15 @@ class BMCInline(admin.StackedInline):
     return formset
 
 
+def warn_boot_disk_problems(modeladmin, request, systems):
+  """ Warn about stateful systems the installer would refuse.  It's only a
+  warning: layouts and partitions are often added after the system (#361). """
+  for system in systems:
+    problem = system.boot_disk_problem()
+    if problem is not None:
+      modeladmin.message_user(request, f"{problem}  PXE Boot will refuse it until that's fixed.", level=messages.WARNING)
+
+
 class SystemAdmin(admin.ModelAdmin):
   actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
 
@@ -157,6 +166,11 @@ class SystemAdmin(admin.ModelAdmin):
     }
     ),
   )
+
+  def save_related(self, request, form, formsets, change):
+    # disks is a many-to-many, saved here after the system itself.
+    super().save_related(request, form, formsets, change)
+    warn_boot_disk_problems(self, request, [form.instance])
 
   def response_change(self, request, obj):
         # Check if our custom button was clicked
@@ -252,7 +266,7 @@ class SystemAdmin(admin.ModelAdmin):
            continue
         mybmc = mybmc[0]
         if not system.enable_provisioning():
-           self._noBootableNIC(request, system)
+           self._cantProvision(request, system)
            continue
         try:
           func_timeout(5, self._doPowerCmd, [mybmc, "pxe"])
@@ -267,15 +281,15 @@ class SystemAdmin(admin.ModelAdmin):
            continue
         mybmc = mybmc[0]
         if not system.enable_provisioning():
-           self._noBootableNIC(request, system)
+           self._cantProvision(request, system)
            continue
         try:
           func_timeout(5, self._doPowerCmd, [mybmc, "pxeefi"])
         except FunctionTimedOut:
            print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
   
-  def _noBootableNIC(self, request, system):
-    self.message_user(request, f"{system.hostname} has no bootable network interface, so it can't PXE boot.  It was not reset.", level=messages.ERROR)
+  def _cantProvision(self, request, system):
+    self.message_user(request, f"{system.provisioning_problem()}  It was not reset.", level=messages.ERROR)
 
   def _doPowerCmd(self, bmc, action="on"):
     print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, action: {action}")
@@ -444,6 +458,7 @@ class SystemAdmin(admin.ModelAdmin):
                     queryset.count(),
                 )
             )
+            warn_boot_disk_problems(self, request, queryset.all())
             return HttpResponseRedirect(request.get_full_path())
 
         return render(
