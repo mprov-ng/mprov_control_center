@@ -121,10 +121,36 @@ class System(models.Model):
     super().__init__(*args, **kwargs)
     self.flatten_config()
 
+  def boot_disk_problem(self):
+    """ Why the stateful installer would refuse this system's disk layouts, or
+    None.  Like buildDisks() in static/mprov_stateful.py, it needs exactly one
+    disk layout with a bootable partition, across all the system's layouts. """
+    if not self.stateful or self.id is None:
+      return None
+    layouts = list(self.disks.all())
+    if not layouts:
+      return f"{self} is stateful but has no disk layouts, so the stateful installer will fail."
+    bootdisks = [layout for layout in layouts if layout.partitions.filter(bootable=True).exists()]
+    if not bootdisks:
+      return (f"{self} is stateful but none of its disk layouts has a bootable partition, so the stateful "
+              "installer will fail.  Mark the partition it boots from as bootable.")
+    if len(bootdisks) > 1:
+      names = ", ".join(layout.name for layout in bootdisks)
+      return (f"{self} is stateful and more than one of its disk layouts has a bootable partition ({names}), "
+              "so the stateful installer will fail.  Only the disk it boots from can have one.")
+    return None
+
+  def provisioning_problem(self):
+    """ Why this system can't be provisioned on its next PXE boot, or None. """
+    if not NetworkInterface.objects.filter(system=self, bootable=True).exists():
+      return f"{self} has no bootable network interface, so it can't PXE boot."
+    return self.boot_disk_problem()
+
   def enable_provisioning(self):
     """ Set provision so the next PXE boot provisions this system.  Returns
-    False, and changes nothing, if the system has no bootable NIC to boot from. """
-    if not NetworkInterface.objects.filter(system=self, bootable=True).exists():
+    False, and changes nothing, if provisioning_problem() finds a reason it
+    can't be provisioned. """
+    if self.provisioning_problem() is not None:
       return False
     if not self.provision:
       self.provision = True
