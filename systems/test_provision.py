@@ -245,15 +245,19 @@ class PXEBootProvisionTests(ProvisionTestCase):
       self.get_json(f"/power/{action}/?id={self.system.id}")
     self.assertProvision(self.system, False)
 
-  def test_pxe_by_hostname_skips_systems_without_bootable_nic(self):
-    # mash's `bmc power pxe` goes through ?hostname=.
-    response = self.get_json("/power/pxe/?hostname=prov-")
+  def test_pxe_by_hostname_sets_provision(self):
+    # mash's `bmc power pxe` goes through ?hostname=, an exact match (#332).
+    response = self.get_json(f"/power/pxe/?hostname={self.system.hostname}")
     self.assertEqual(response.status_code, 200)
-    body = response.json()
-    self.assertEqual(body[str(self.bmc)], {"status": 200})
-    self.assertEqual(body[str(self.bare_bmc)]["status"], 409)
+    self.assertEqual(response.json(), {str(self.bmc): {"status": 200}})
     self.power.assert_called_once_with(self.bmc, "pxe")
     self.assertProvision(self.system, True)
+
+  def test_pxe_by_hostname_skips_systems_without_bootable_nic(self):
+    response = self.get_json(f"/power/pxe/?hostname={self.bare.hostname}")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.json()[str(self.bare_bmc)]["status"], 409)
+    self.power.assert_not_called()
     self.assertProvision(self.bare, False)
 
   def test_pxe_by_bmc_filter_skips_systems_without_bootable_nic(self):
