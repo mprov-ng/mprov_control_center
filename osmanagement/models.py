@@ -28,9 +28,26 @@ class OSDistro(models.Model):
   version=models.CharField(max_length=100)
   distType=models.ForeignKey(OSType, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="OS Type")
   distArch=models.CharField(max_length=400,default="x86_64", choices=ARCH)
-  managed=models.BooleanField(default=False)
-  update=models.BooleanField(default=False)
-  baseurl=models.CharField(max_length=4096)
+  managed=models.BooleanField(
+    default=False,
+    verbose_name="Mirror the generated repositories locally",
+    help_text="Copied onto each repository that \"Generate OS repositories on save\" creates. A mirrored "
+              "(managed) repository is downloaded and served by the job servers; each one can be several GB. "
+              "Unchecked, nodes and image builds use the upstream URLs directly.",
+  )
+  update=models.BooleanField(
+    default=False,
+    verbose_name="Generate OS repositories on save",
+    help_text="When saved with this checked, creates or refreshes this distribution's AppStream, BaseOS, extras, "
+              "PowerTools (CRB for version 9 and later) and EPEL repositories from the Base URL, sets them as its "
+              "base and OS repositories, and then clears this box. It does not update any packages.",
+  )
+  baseurl=models.CharField(
+    max_length=4096,
+    verbose_name="Base URL",
+    help_text="The distribution's repository root, e.g. https://download.rockylinux.org/pub/rocky/8. "
+              "Repositories are generated as <Base URL>/<repo>/<arch>/os/.",
+  )
   baserepo=models.ForeignKey(
     'OSRepo', 
     on_delete=models.CASCADE, 
@@ -84,8 +101,8 @@ class OSRepo(models.Model):
   endpoint="/repos/"
   name=models.CharField(max_length=100)
   repo_package_url=models.CharField(max_length=2048, verbose_name='Repo Package URL')
-  managed = models.BooleanField(default=False, verbose_name="mProv Managed?", help_text="Should mProv download and manage this repository?")
-  update = models.BooleanField(default=False, verbose_name="Update Repository?", help_text="Should we update a managed repository?")
+  managed = models.BooleanField(default=False, verbose_name="Mirror locally", help_text="Download this repository and serve a local copy from the job servers (repo-update/reposync). Unchecked, nodes and image builds use the Repo Package URL directly.")
+  update = models.BooleanField(default=False, verbose_name="Re-sync on save", help_text="On a mirrored repository, each save with this checked bumps the local version and queues a repo-update job to download it again. No effect on a repository that isn't mirrored.")
   hosted_by = models.ManyToManyField('jobqueue.JobServer', blank=True, verbose_name="Hosted by")
   ostype = models.ForeignKey(OSType, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="OS Type")
   version = models.BigIntegerField(default=1, verbose_name="Repository Local Version", help_text="Local version of the repository, if mProv Managed.")
