@@ -386,7 +386,7 @@ class mProvStatefulInstaller():
       if os.path.exists("/tmp/init_mods") :
           with open("/tmp/init_mods") as mods:
               for mod in mods:
-                  self.modules += mod.replace(",", " ")
+                  self.modules += " " + mod.replace(",", " ")
 
       # append the RAID options to the command line so the initramfs assembles any RAID devices (always added, RAID or not).
       newcmdline.append("rd.md=1")
@@ -416,6 +416,13 @@ class mProvStatefulInstaller():
       except Exception:
           pass
       dracut_cmd = ["/newroot", "dracut", "--regenerate-all", "-f", "-vvv", "--mdadmconf", "--force-add", "mdraid"]
+      # build a generic initramfs: run in this chroot, host-only dracut leaves
+      # out the root disk's drivers (sd_mod), so the node can't find its root
+      # disk on first boot (#352).  Also add the drivers the boot command line
+      # asked for (mprov_initial_mods).
+      dracut_cmd.append("--no-hostonly")
+      if self.modules.split():
+          dracut_cmd += ["--add-drivers", " ".join(self.modules.split())]
       print(dracut_cmd)
       result = sh.chroot(dracut_cmd, _err_to_out=True)
       with open("/newroot/tmp/dracut.out", "w") as out:
