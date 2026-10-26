@@ -102,7 +102,7 @@ class OSRepo(models.Model):
   name=models.CharField(max_length=100)
   repo_package_url=models.CharField(max_length=2048, verbose_name='Repo Package URL')
   managed = models.BooleanField(default=False, verbose_name="Mirror locally", help_text="Download this repository and serve a local copy from the job servers (repo-update/reposync). Unchecked, nodes and image builds use the Repo Package URL directly.")
-  update = models.BooleanField(default=False, verbose_name="Re-sync on save", help_text="On a mirrored repository, each save with this checked bumps the local version and queues a repo-update job to download it again. No effect on a repository that isn't mirrored.")
+  resync = models.BooleanField(default=False, verbose_name="Re-sync on save", help_text="On a mirrored repository, saving with this checked bumps the local version and queues a repo-update job to download it again, then clears this box. No effect on a repository that isn't mirrored.")
   hosted_by = models.ManyToManyField('jobqueue.JobServer', blank=True, verbose_name="Hosted by")
   ostype = models.ForeignKey(OSType, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="OS Type")
   version = models.BigIntegerField(default=1, verbose_name="Repository Local Version", help_text="Local version of the repository, if mProv Managed.")
@@ -149,8 +149,10 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
     else:
       newRepo = OSRepo()
     newRepo.name = f"{repo}-{instance.version}"
-    newRepo.repo_package_url = f"{baseURL}/{repo}/{instance.distArch}/os/"
-    newRepo.update = instance.update
+    url = f"{baseURL}/{repo}/{instance.distArch}/os/"
+    # only download a repo again if it's new, moved, or newly mirrored.
+    newRepo.resync = newRepo.pk is None or newRepo.repo_package_url != url or (instance.managed and not newRepo.managed)
+    newRepo.repo_package_url = url
     newRepo.managed = instance.managed
     newRepo.ostype = instance.distType
     newRepo.save()
@@ -171,11 +173,12 @@ def OSDistroCreateRepos(sender, instance, **kwargs):
   newRepo.name = f"EPEL-{instance.version}"
   # if the version has a . in it, use the archive.  If not, assume latest and pull from the main (non-archive) tree.
   if "." in instance.version:
-    newRepo.repo_package_url = f"https://dl.fedoraproject.org/pub/archive/epel/{instance.version}/Everything/{instance.distArch}/"
+    url = f"https://dl.fedoraproject.org/pub/archive/epel/{instance.version}/Everything/{instance.distArch}/"
   else:
-    newRepo.repo_package_url = f"https://dl.fedoraproject.org/pub/epel/{instance.version}/Everything/{instance.distArch}/"
-  # add managed and update based on distro values
-  newRepo.update = instance.update
+    url = f"https://dl.fedoraproject.org/pub/epel/{instance.version}/Everything/{instance.distArch}/"
+  newRepo.resync = newRepo.pk is None or newRepo.repo_package_url != url or (instance.managed and not newRepo.managed)
+  newRepo.repo_package_url = url
+  # managed follows the distro
   newRepo.managed = instance.managed
   newRepo.ostype = instance.distType
   newRepo.save()
@@ -200,7 +203,10 @@ def RepoUpdateJob(sender, instance, **kwargs):
       RepoJobType = JobModule.objects.get(slug='repo-update')
   except JobModule.DoesNotExist:
       RepoJobType = None
-  if RepoJobType is not None and instance.update and instance.id is not None:
+  if RepoJobType is not None and instance.resync and instance.id is not None:
+      # resync is one-shot: clear it in the save that queues the job, so later
+      # saves (e.g. a job server adding itself to hosted_by) don't re-sync.
+      instance.resync = False
       if instance.managed:
         instance.version = instance.version +1 
         # queue a repo-update job.
