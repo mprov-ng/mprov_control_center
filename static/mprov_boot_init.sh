@@ -286,6 +286,28 @@ then
   mount --move /newroot /image 
 else
   echo "Stateless Installation"
+
+  # label the tmpfs root for SELinux (#348).  The image tarball carries no
+  # labels, and tmpfs drops labels set before a policy is loaded, so load the
+  # image's policy here and then relabel.  /run and /dev were mounted above
+  # before the policy existed, and systemd only relabels them when it loads
+  # the policy itself, so relabel them too.
+  MPROV_SELINUX=$(sed -n 's/^SELINUX=//p' /image/etc/selinux/config 2>/dev/null)
+  MPROV_SELINUXTYPE=$(sed -n 's/^SELINUXTYPE=//p' /image/etc/selinux/config 2>/dev/null)
+  if [ -n "$MPROV_SELINUX" ] && [ "$MPROV_SELINUX" != "disabled" ] && ! grep -qw 'selinux=0' /proc/cmdline
+  then
+    echo "Applying SELinux labels to the image... "
+    if chroot /image /usr/sbin/load_policy -i && \
+      chroot /image /usr/sbin/setfiles -F -e /proc -e /sys -e /dev -e /run \
+        "/etc/selinux/${MPROV_SELINUXTYPE}/contexts/files/file_contexts" / && \
+      chroot /image /usr/sbin/restorecon -R /run /dev
+    then
+      echo "SELinux labels applied."
+    else
+      echo "Warning: unable to apply SELinux labels; logins may fail unless booted with enforcing=0 or selinux=0."
+    fi
+  fi
+
   # note we are not expecting to return from this.
   echo "Switching to new root.... LEEEEROY JENKINS!!!....."
   date >> /image/tmp/boot_timing
