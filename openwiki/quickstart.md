@@ -29,7 +29,7 @@ mPCC is installed as part of the full mProv stack via [mprov-compose](https://gi
 |---|---|
 | Project layout, routing, settings, bootstrap, CI | [Architecture Overview](architecture/overview.md) |
 | The shared API base class, auth, `?detail`, `/datamodel/` | [API Foundation](architecture/api-foundation.md) |
-| Systems, NICs, BMCs, images, networks, IPMI power | [Systems & Networking](domain/systems-and-networking.md) |
+| Systems, NICs, BMCs, provision flag / PXE Boot gating, images, networks, IPMI power | [Systems & Networking](domain/systems-and-networking.md) |
 | Job queue, jobservers, scripts, Ansible content | [Jobs & Scripts](domain/jobs-and-scripts.md) |
 | OS distros/repos, disk layouts and RAID | [OS & Disk Management](domain/os-and-disk-management.md) |
 
