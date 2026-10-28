@@ -1,7 +1,11 @@
+import ipaddress
+
 from django.contrib import admin, messages
 from django.shortcuts import render, redirect
 from django.urls import path, reverse
 from django.http import QueryDict
+from django.utils.html import format_html, format_html_join
+from systems.models import NetworkInterface, SystemBMC
 from .models import Network, NetworkType, Switch, SwitchPort
 from .utils import get_associated_objects, calculate_new_ips
 
@@ -11,9 +15,56 @@ class NetworkAdmin(admin.ModelAdmin):
   # Removing vlan for now.
   #list_display = ['slug', 'name', 'net_type', 'vlan', 'subnet', 'netmask']
   list_display = ['slug', 'name', 'net_type', 'subnet', 'netmask']
-  readonly_fields = ['slug']
+  readonly_fields = ['slug', 'network_summary']
   list_display_links = ['slug', 'name',]
   exclude = ('slug',)
+
+  def get_fieldsets(self, request, obj=None):
+      # jazzmin shows each fieldset as a tab; the summary only exists once the network does.
+      fields = [f for f in self.get_fields(request, obj) if f != 'network_summary']
+      fieldsets = [(None, {'fields': fields})]
+      if obj is not None:
+          fieldsets.append(('Network Summary', {'fields': ['network_summary']}))
+      return fieldsets
+
+  def get_object(self, request, object_id, from_field=None):
+      obj = super().get_object(request, object_id, from_field)
+      if obj is not None:
+          # network_summary() only gets the object, so it carries the table's sort order.
+          obj.summary_sort = request.GET.get('summary_sort', 'hostname')
+      return obj
+
+  @admin.display(description='Hosts on this network')
+  def network_summary(self, obj):
+      """ A table of the NICs and BMCs on this network, each linking to its system, sorted by hostname
+      (then NIC name) or by IP address. """
+      nics = NetworkInterface.objects.filter(network=obj).select_related('system', 'switch_port__switch')
+      bmcs = SystemBMC.objects.filter(network=obj).select_related('system', 'switch_port__switch')
+      rows = [(nic.system, 0, nic.name, nic.mac, nic.ipaddress, nic.switch_port, 'Yes' if nic.bootable else 'No')
+              for nic in nics]
+      rows += [(bmc.system, 1, format_html('<span class="badge bg-info">BMC</span>'), bmc.mac, bmc.ipaddress,
+                bmc.switch_port, 'N/A') for bmc in bmcs]
+      if not rows:
+          return 'No systems on this network.'
+      by_ip = getattr(obj, 'summary_sort', 'hostname') == 'ip'
+      by_host = lambda r: (r[0].hostname, r[1], str(r[2]))
+      if by_ip:
+          # NICs without an IP go last.
+          ip_key = lambda ip: (0, ipaddress.ip_address(ip).version, int(ipaddress.ip_address(ip))) if ip else (1, 0, 0)
+          rows.sort(key=lambda r: (ip_key(r[4]),) + by_host(r))
+      else:
+          rows.sort(key=by_host)
+      body = format_html_join('', '<tr><td><a href="{}">{}</a></td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>',
+          ((reverse('admin:systems_system_change', args=[system.pk]), system.hostname, iface,
+            mac or 'N/A', ip or 'N/A', port if port else 'N/A', bootable)
+           for system, _, iface, mac, ip, port, bootable in rows))
+      header = lambda key, label, active: format_html(
+          '<a href="?summary_sort={}#network-summary-tab">{}</a>{}', key, label,
+          format_html(' <i class="fas fa-sort-down"></i>') if active else '')
+      return format_html('<table class="table table-sm table-striped"><thead><tr><th>{}</th><th>Interface</th>'
+                         '<th>MAC Address</th><th>{}</th><th>Switch / Port</th><th>Bootable</th></tr></thead>'
+                         '<tbody>{}</tbody></table>',
+                         header('hostname', 'Hostname', not by_ip), header('ip', 'IP Address', by_ip), body)
 
   def get_urls(self):
       urls = super().get_urls()
