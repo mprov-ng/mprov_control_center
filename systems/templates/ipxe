@@ -7,11 +7,11 @@ set kernel-cmdline console=tty0 rdinit=/linuxrc
 
 # mProv dynamic stuff
 set kernel-cmdline ${kernel-cmdline} mprov_image_url={{nic.bootserver}}/images/{{ nic.system.systemimage.slug }}
-set kernel-cmdline ${kernel-cmdline} mprov_initial_mods={{ nic.system.systemimage.osdistro.initial_mods }}
+set kernel-cmdline ${kernel-cmdline} mprov_initial_mods={{ boot.initial_mods }}
 
-set kernel-cmdline ${kernel-cmdline} mprov_tmpfs_size={{ nic.system.systemimage.osdistro.tmpfs_root_size }}G
-{% if nic.system.systemimage.osdistro.install_kernel_cmdline != "" %} 
-set kernel-cmdline ${kernel-cmdline} {{ nic.system.systemimage.osdistro.install_kernel_cmdline }}
+set kernel-cmdline ${kernel-cmdline} mprov_tmpfs_size={{ boot.tmpfs_root_size }}G
+{% if boot.install_kernel_cmdline %}
+set kernel-cmdline ${kernel-cmdline} {{ boot.install_kernel_cmdline }}
 {% endif %}
 {% if nic.system.stateful %}
 set kernel-cmdline ${kernel-cmdline} mprov_stateful=1

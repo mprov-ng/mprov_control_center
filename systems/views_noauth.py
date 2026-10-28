@@ -3,6 +3,7 @@ from .models import SystemImage, NetworkInterface
 from django.shortcuts import redirect
 from django.conf import settings
 from rest_framework.exceptions import NotFound
+from common import render_config, flat_config
 from common.views import MProvView
 from systems.serializers import SystemImageSerializer, NetworkInterfaceDetailsSerializer
 from rest_framework import generics
@@ -287,11 +288,25 @@ class IPXEAPIView(MProvView):
         if not hasattr(nic.system.systemimage.osdistro, "install_kernel_cmdline"):
            # no distro on the image, so use a blank one to get the defaults.
            nic.system.systemimage.osdistro = OSDistro()
-        template = Template(nic.system.systemimage.osdistro.install_kernel_cmdline)
-        context = Context(dict(nic=nic))
 
         # check for the __nads__ image, which means a N.A.D.S. boot.
         is_nads = nic.system.systemimage.name == "__nads__"
+
+        # the boot options, merged from the distro, system groups, image and
+        # system (see common.render_config).  A N.A.D.S. boot has no system, so
+        # it gets the image's merge.
+        if is_nads:
+          config = flat_config(render_config(nic.system.systemimage))
+        else:
+          config = nic.system.config
+        boot = {
+          'install_kernel_cmdline': config.get('install_kernel_cmdline', ''),
+          'initial_mods': config.get('initial_mods', ''),
+          'tmpfs_root_size': config.get('tmpfs_root_size', 0),
+        }
+        template = Template(boot['install_kernel_cmdline'])
+        context = Context(dict(nic=nic, boot=boot))
+
         if is_nads:
           # set the mac to the provisioning interface.
           nic.mac = nic.system.systemimage.osdistro.prov_interface
@@ -311,14 +326,15 @@ class IPXEAPIView(MProvView):
         if not nic.system.systemimage.customIPXE == "" and nic.system.systemimage.customIPXE is not None:
            # let's just serve up the custom IPXE script.
            template = Template(nic.system.systemimage.customIPXE)
-           context = Context(dict(nic=nic))
+           context = Context(dict(nic=nic, boot=boot))
            rendered: str = template.render(context)
            return HttpResponse(content=rendered)
         
         rendered: str = template.render(context)
-        nic.system.systemimage.osdistro.install_kernel_cmdline = rendered + rescue_param
+        boot['install_kernel_cmdline'] = rendered + rescue_param
         print("PXE Request from: " + ip)
         context= {
           'nic': nic,
+          'boot': boot,
         }
         return(render(template_name="ipxe", request=request, context=context, content_type="text/plain" ))
