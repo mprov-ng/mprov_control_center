@@ -41,10 +41,11 @@ class NetworkAdmin(admin.ModelAdmin):
       (then NIC name) or by IP address. """
       nics = NetworkInterface.objects.filter(network=obj).select_related('system', 'switch_port__switch')
       bmcs = SystemBMC.objects.filter(network=obj).select_related('system', 'switch_port__switch')
-      rows = [(nic.system, 0, nic.name, nic.mac, nic.ipaddress, nic.switch_port, 'Yes' if nic.bootable else 'No')
-              for nic in nics]
+      # each row's link opens its system on the tab for that NIC or BMC.
+      rows = [(nic.system, 0, nic.name, nic.mac, nic.ipaddress, nic.switch_port, 'Yes' if nic.bootable else 'No',
+               '#network-interfaces-tab') for nic in nics]
       rows += [(bmc.system, 1, format_html('<span class="badge bg-info">BMC</span>'), bmc.mac, bmc.ipaddress,
-                bmc.switch_port, 'N/A') for bmc in bmcs]
+                bmc.switch_port, 'N/A', '#system-bmcs-tab') for bmc in bmcs]
       if not rows:
           return 'No systems on this network.'
       by_ip = getattr(obj, 'summary_sort', 'hostname') == 'ip'
@@ -56,9 +57,9 @@ class NetworkAdmin(admin.ModelAdmin):
       else:
           rows.sort(key=by_host)
       body = format_html_join('', '<tr><td><a href="{}">{}</a></td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>',
-          ((reverse('admin:systems_system_change', args=[system.pk]), system.hostname, iface,
+          ((reverse('admin:systems_system_change', args=[system.pk]) + tab, system.hostname, iface,
             mac or 'N/A', ip or 'N/A', port if port else 'N/A', bootable)
-           for system, _, iface, mac, ip, port, bootable in rows))
+           for system, _, iface, mac, ip, port, bootable, tab in rows))
       header = lambda key, label, active: format_html(
           '<a href="?summary_sort={}#network-summary-tab">{}</a>{}', key, label,
           format_html(' <i class="fas fa-sort-down"></i>') if active else '')

@@ -27,11 +27,18 @@ class NetworkSummaryTabTests(NetworkTestCase):
   def test_lists_nics_and_bmcs_with_links_to_their_system(self):
     html = self.summary(self.lan)
     self.assertIn('href="#network-summary-tab"', html)
-    link = f'<a href="/admin/systems/system/{self.node.pk}/change/">node01</a>'
-    self.assertEqual(html.count(link), 3)
+    change = f"/admin/systems/system/{self.node.pk}/change/"
+    # NIC rows open the system's Network Interfaces tab, the BMC row its System BMCs tab.
+    self.assertEqual(html.count(f'<a href="{change}#network-interfaces-tab">node01</a>'), 2)
+    self.assertEqual(html.count(f'<a href="{change}#system-bmcs-tab">node01</a>'), 1)
     self.assertInHTML("<td>ens18</td><td>bc:24:11:00:00:01</td><td>172.16.0.11</td><td>sw01/eth1</td><td>Yes</td>", html)
     self.assertInHTML('<td><span class="badge bg-info">BMC</span></td><td>bc:24:11:00:00:02</td>'
                       "<td>172.16.1.11</td><td>N/A</td><td>N/A</td>", html)
+
+  def test_system_page_has_the_tabs_the_links_open(self):
+    response = self.client.get(f"/admin/systems/system/{self.node.pk}/change/")
+    self.assertContains(response, 'href="#network-interfaces-tab"')
+    self.assertContains(response, 'href="#system-bmcs-tab"')
 
   def test_empty_fields_show_na(self):
     self.assertInHTML("<td>ens19</td><td>N/A</td><td>N/A</td><td>N/A</td><td>No</td>", self.summary(self.lan))
