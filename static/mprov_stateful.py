@@ -642,7 +642,15 @@ class mProvStatefulInstaller():
       fs=fs,
       geometry=geometry
     )
-    partition.setFlag(18)
+    # the flag sets the GPT partition type; other filesystems keep parted's
+    # default (Linux filesystem).  The pyparted in the images has no
+    # PARTITION_ESP constant, so look the ESP flag up by name.
+    if part['filesystem'] == 'efi':
+      partition.setFlag(next(flag for flag, name in parted.partitionFlag.items() if name == 'esp'))
+    elif part['filesystem'] == 'raid':
+      partition.setFlag(parted.PARTITION_RAID)
+    elif part['filesystem'] == 'linux-swap(v1)':
+      partition.setFlag(parted.PARTITION_SWAP)
     disk.addPartition(partition=partition, constraint=device.optimalAlignedConstraint)
     if part['filesystem'] == 'biosboot':
       if device.path.startswith("/dev/nvme"):
