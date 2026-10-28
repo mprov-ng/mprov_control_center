@@ -35,6 +35,7 @@ class SystemImageSerializer(serializers.ModelSerializer):
     jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all())
     # read as nested objects, written as IDs.
     systemgroups=NestedPrimaryKeyRelatedField(SystemGroupSerializer, many=True, required=False, queryset=SystemGroup.objects.all())
+    config = serializers.DictField(read_only=True)
     class Meta:
         model = SystemImage
         fields = '__all__'

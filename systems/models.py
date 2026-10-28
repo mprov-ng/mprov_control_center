@@ -269,6 +269,14 @@ class SystemImage(models.Model):
   def __str__(self):
     return self.name
 
+  @cached_property
+  def config(self):
+    """ This image's config, merged from its OS distro, system groups and
+    itself by common.render_config(). """
+    if self._state.adding:
+      return {}
+    return flat_config(render_config(self))
+
 class NADSSystem(models.Model):
   mac=models.CharField(max_length=100, verbose_name="MAC Address", unique=True)
   discovered=models.DateTimeField(default=timezone.now, verbose_name="Discovered")

@@ -176,3 +176,31 @@ class RenderConfigAPITests(LayersMixin, APITestCase):
     self.assertEqual(config["install_kernel_cmdline"], "quiet nomodeset")
     self.assertEqual(config["config_params"]["b"], "group")
     self.assertEqual(config["scripts"], [])
+
+  def test_image_detail_and_list_serve_the_merged_config(self):
+    group = SystemGroup.objects.create(name="group", config_params="b: group")
+    self.image.systemgroups.add(group)
+    self.image.config_params = "c: image"
+    self.image.save()
+    detail = self.get_json(f"/systemimages/{self.image.slug}/")
+    self.assertEqual(detail.status_code, 200)
+    listing = self.get_json("/systemimages/")
+    self.assertEqual(listing.status_code, 200)
+    listed = [image for image in listing.json() if image["slug"] == self.image.slug]
+    for config in (detail.json()["config"], listed[0]["config"]):
+      self.assertEqual(config["config_params"], {
+        "a": "distro", "b": "group", "c": "image", "nested": {"x": 1, "y": 1},
+      })
+      self.assertEqual(config["install_kernel_cmdline"], "quiet")
+      self.assertEqual(config["scripts"], [])
+
+  def test_image_config_is_read_only(self):
+    response = self.client.patch(f"/systemimages/{self.image.slug}/", '{"config": {"x": 1}, "config_params": "d: 1"}',
+                                 content_type="application/json")
+    self.assertEqual(response.status_code, 200)
+    self.image.refresh_from_db()
+    self.assertEqual(self.image.config_params, "d: 1")
+    self.assertNotIn("x", SystemImage.objects.get(pk=self.image.pk).config)
+
+  def test_unsaved_image_has_empty_config(self):
+    self.assertEqual(SystemImage(name="new", created_by=self.user).config, {})
