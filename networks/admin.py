@@ -18,6 +18,7 @@ class NetworkAdmin(admin.ModelAdmin):
   readonly_fields = ['slug', 'network_summary']
   list_display_links = ['slug', 'name',]
   exclude = ('slug',)
+  change_form_template = 'admin/networks/network_change_form.html'
 
   def get_fieldsets(self, request, obj=None):
       # jazzmin shows each fieldset as a tab; the summary only exists once the network does.

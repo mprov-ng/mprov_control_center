@@ -26,7 +26,7 @@ class NetworkSummaryTabTests(NetworkTestCase):
 
   def test_lists_nics_and_bmcs_with_links_to_their_system(self):
     html = self.summary(self.lan)
-    self.assertIn("Network Summary", html)
+    self.assertIn('href="#network-summary-tab"', html)
     link = f'<a href="/admin/systems/system/{self.node.pk}/change/">node01</a>'
     self.assertEqual(html.count(link), 3)
     self.assertInHTML("<td>ens18</td><td>bc:24:11:00:00:01</td><td>172.16.0.11</td><td>sw01/eth1</td><td>Yes</td>", html)
@@ -61,4 +61,4 @@ class NetworkSummaryTabTests(NetworkTestCase):
   def test_no_summary_tab_when_adding(self):
     response = self.client.get("/admin/networks/network/add/")
     self.assertEqual(response.status_code, 200)
-    self.assertNotIn("Network Summary", response.content.decode())
+    self.assertNotIn("#network-summary-tab", response.content.decode())
