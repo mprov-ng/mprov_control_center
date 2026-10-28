@@ -157,7 +157,7 @@ class IPXEAPIViewTests(TestCase):
 
 
 class FlattenConfigTests(TestCase):
-  """ System.config is built from OS Distro -> System Groups (by name) -> System.
+  """ System.config is built from OS Distro -> System Groups (by name) -> System Image -> System.
   install_kernel_cmdline and initial_mods append unless prefixed with '=', everything
   else overwrites when set. """
 
