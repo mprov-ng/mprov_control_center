@@ -6,7 +6,7 @@ from systems.models import System, SystemGroup, SystemImage
 
 
 class FlattenConfigTests(TestCase):
-  """ System.config is built from OS Distro -> System Groups (by name) -> System.
+  """ System.config is built from OS Distro -> System Groups (by name) -> System Image -> System.
   install_kernel_cmdline and initial_mods append unless prefixed with '=', everything
   else overwrites when set. """
 
@@ -31,8 +31,8 @@ class FlattenConfigTests(TestCase):
     self.group_b.save()
     for value in ("# one\n# two", "# one\n\n  # two\n"):
       system = self.make_system(f"comments-{len(value)}", groups=[self.group_b], systemimage=self.image, config_params=value)
-      self.assertEqual(system.config["config_params"], "extra_packages:\n  - vim")
+      self.assertEqual(system.config["config_params"], {"extra_packages": ["vim"]})
 
   def test_field_with_content_keeps_its_comments(self):
     system = self.make_system("commented", systemimage=self.image, config_params="# note\n# note 2\nfoo: 1")
-    self.assertEqual(system.config["config_params"], "# note\n# note 2\nfoo: 1")
+    self.assertEqual(system.config["config_params"], {"foo": 1})
