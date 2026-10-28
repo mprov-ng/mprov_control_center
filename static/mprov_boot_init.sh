@@ -50,6 +50,25 @@ get_kcmdline_opt(){
 
 
 
+# load the modules the kernel command line asks for (mprov_initial_mods: the
+# distro's, system groups' and system's initial_mods, merged by the mPCC),
+# before the drivers found by PCI class, so a listed NIC driver is there for
+# provisioning.  Each one that loads goes in /tmp/init_mods, for the image's
+# dracut config and the stateful installer; one that doesn't is skipped with
+# a warning (#372).
+load_initial_mods() {
+  for mod in $(echo "$1" | tr ',' ' ')
+  do
+    if modprobe "$mod" >/dev/null 2>&1
+    then
+      echo -n "${mod}," | tee -a /tmp/init_mods
+    else
+      echo -n "(${mod} not loaded)," >&2
+    fi
+  done
+}
+
+
 # grab some of our variables from the kernel cmdline.
 MPROV_TMPFS_SIZE=$(get_kcmdline_opt mprov_tmpfs_size)
 MPROV_IMAGE_URL=$(get_kcmdline_opt mprov_image_url)
@@ -62,6 +81,12 @@ export MPROV_TMPFS_SIZE MPROV_IMAGE_URL MPROV_INITIAL_MODS MPROV_PROV_INTF MPROV
 echo -n "" > /tmp/init_mods
 trap err_handler EXIT
 trap err_handler ERR
+echo -n "Loading initial modules... "
+trap ERR
+load_initial_mods "$MPROV_INITIAL_MODS"
+trap err_handler ERR
+echo "  DONE!"
+
 echo -n "Loading network drivers... "
 echo -n "virtio_net," | tee -a /tmp/init_mods
 modprobe virtio_net
