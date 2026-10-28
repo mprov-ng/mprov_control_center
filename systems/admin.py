@@ -13,6 +13,7 @@ from django.shortcuts import render
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
 from scripts.models import Script
+from common.rendered_config import RenderedConfigAdminMixin
 import pyipmi
 import pyipmi.interfaces
 from func_timeout import func_timeout, FunctionTimedOut
@@ -124,7 +125,7 @@ def warn_boot_disk_problems(modeladmin, request, systems):
       modeladmin.message_user(request, f"{problem}  PXE Boot will refuse it until that's fixed.", level=messages.WARNING)
 
 
-class SystemAdmin(admin.ModelAdmin):
+class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
 
   inlines = [ NetworkInterfaceInline, BMCInline]
@@ -532,7 +533,7 @@ def mark_rebuild(modeladmin, request, queryset):
     instance.jobservers.clear()
     SystemImage.objects.filter(pk=instance.pk).update(version=F('version') + 1)
 
-class SystemImageAdmin(admin.ModelAdmin):
+class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   list_display = ['slug', 'name', 'version', 'registered_jobservers']
   readonly_fields = ['timestamp', 'updated', 'created_by',  'jobservers']
   list_display_links = ['slug', 'name']

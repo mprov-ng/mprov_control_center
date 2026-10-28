@@ -157,3 +157,9 @@ td.delete input {
   background: #fff;
   border-left: 4px solid #007bff;
 }
+
+/* the Rendered Config tab (systems, system images) takes the whole tab, without a label column. */
+.form-group.field-rendered_config > .row > label { display: none; }
+.form-group.field-rendered_config > .row > div { flex: 0 0 100%; width: 100%; max-width: 100%; }
+.rendered-config pre { margin: 0; padding: 0; background: none; border: 0; white-space: pre-wrap; font-size: 87.5%; }
+.rendered-config td { vertical-align: top; }
