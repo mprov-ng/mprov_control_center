@@ -327,7 +327,14 @@ Format returned:
         if 'powerstate' in request.query_params:
             # get the power state via IPMI
             if 'pk' in kwargs:
-                systemObj = System.objects.get(pk=kwargs['pk'])
+                try:
+                    systemObj = System.objects.filter(pk=kwargs['pk']).first()
+                except ValueError:
+                    systemObj = None
+                if systemObj is None:
+                    # unknown or non-numeric id: the admin's <img> tags are the
+                    # only callers, so show unknown rather than a 500 (#324).
+                    return redirect("/static/images/power_unknown.svg")
                 bmcObj = SystemBMC.objects.filter(system=systemObj)
                 if bmcObj.count() != 1:
                     return redirect("/static/images/power_unknown.svg")
@@ -709,7 +716,8 @@ Format returned:
         sysimage = None
         if 'pk' in kwargs:
 
-          sysimage = self.model.objects.get(pk=kwargs['pk'])
+          # an unknown image is a 404 below, not a 500 (#324).
+          sysimage = self.model.objects.filter(pk=kwargs['pk']).first()
         if sysimage is None:
           return Response(None, status=404)
         if 'needs_rebuild' in request.data:
