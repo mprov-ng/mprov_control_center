@@ -166,14 +166,13 @@ class mProvNetworkScriptGenerator():
           netScript.write(f"HWADDR={intf['mac']}\n")
         if intf['gateway'] is not None and intf['gateway'] != "" and intf['isgateway'] is True:
           netScript.write(f"GATEWAY={intf['gateway']}\n")
-        if intf['mtu'] is not None and intf['mtu'] != "":
+        # the IB stack sets the IPoIB MTU itself, so never write one for ib*.
+        if intf['name'][:2] == 'ib':
+          pass
+        elif intf['mtu'] is not None and intf['mtu'] != "":
           netScript.write(f"MTU={intf['mtu']}\n")
         else:
-          # this is also very very very dirty...
-          if intf['name'][:2] == 'ib':
-            pass
-          else:
-            netScript.write("MTU=1500\n")
+          netScript.write("MTU=1500\n")
         netScript.write("ONBOOT=yes\n")
         netScript.write("NM_CONTROLLED=yes\n")
       
