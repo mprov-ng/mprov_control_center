@@ -27,12 +27,15 @@ class Script(models.Model):
   # optional: a script can be uploaded as a file or written as content.
   filename = models.FileField(upload_to='', blank=True)
   content = models.TextField(blank=True, null=True)
-  scriptType = models.ForeignKey(ScriptType, on_delete=models.SET_NULL, null=True)
+  # PROTECT: a script with no type can't be saved, so a type in use can't be
+  # deleted (#310).  null stays for rows a type deletion already emptied.
+  scriptType = models.ForeignKey(ScriptType, on_delete=models.PROTECT, null=True)
   version = models.BigIntegerField(default=1)
   dependsOn = models.ManyToManyField('self',blank=True,symmetrical=False)
-  
+
   def __str__(self):
-    return f"({self.scriptType.name[0]}) {self.name}"
+    initial = self.scriptType.name[0] if self.scriptType else "?"
+    return f"({initial}) {self.name}"
 
   def clean(self):
     if not self.filename and not self.content:
@@ -44,7 +47,10 @@ class Script(models.Model):
     if not self.slug:
       # an uploaded file names the script; a content-only script uses its name.
       self.slug = slugify(self.filename.name) if self.filename else slugify(self.name)
-    if not os.path.exists(settings.MEDIA_ROOT + '/' + self.scriptType.slug): 
+    if self.scriptType is None:
+      # the file is stored under its type's dir, below.
+      raise ValidationError({'scriptType': "Choose a script type."})
+    if not os.path.exists(settings.MEDIA_ROOT + '/' + self.scriptType.slug):
       # make the dir
       try:
         os.makedirs(settings.MEDIA_ROOT + '/' + self.scriptType.slug, exist_ok=True)
@@ -123,7 +129,8 @@ class AnsiblePlaybook(models.Model):
   name=models.CharField(max_length=120, verbose_name=("Playbook Name"))
   slug=models.SlugField(unique=True, primary_key=True)
   filename = models.FileField(upload_to='')
-  scriptType = models.ForeignKey(ScriptType, on_delete=models.SET_NULL, null=True, verbose_name="Playbook Type")
+  # PROTECT, as for Script.scriptType (#310).
+  scriptType = models.ForeignKey(ScriptType, on_delete=models.PROTECT, null=True, verbose_name="Playbook Type")
   version = models.BigIntegerField(default=1)
   dependsOn = models.ManyToManyField('self',blank=True,symmetrical=False)
   class Meta:
@@ -135,6 +142,8 @@ class AnsiblePlaybook(models.Model):
   def save(self, *args, **kwargs):
     if not self.slug:
       self.slug = slugify(self.filename.name)
+    if self.scriptType is None:
+      raise ValidationError({'scriptType': "Choose a playbook type."})
     # the dir the playbook is stored in, below.
     playbook_dir = settings.MEDIA_ROOT + '/' + self.scriptType.slug + '/ansibleplaybooks'
     if not os.path.exists(playbook_dir):
