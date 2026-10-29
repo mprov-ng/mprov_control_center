@@ -223,6 +223,8 @@ Format returned:
             queryset = OSType.objects.all().filter(pk=request.data['slug'])
             if queryset.count() > 0:
                 # update the entry
+                if 'name' not in request.data:
+                    return Response({'name': "This field is required."}, status=400)
                 obj = queryset[0]
                 obj.name = request.data['name']
                 obj.save()

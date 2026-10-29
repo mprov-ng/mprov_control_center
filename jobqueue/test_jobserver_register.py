@@ -35,3 +35,18 @@ class JobServerRegisterTests(APITestCase):
     response = self.post({"name": "js1"})
     self.assertEqual(response.status_code, 400)
     self.assertEqual(set(response.json()), {"address", "one_minute_load", "jobmodules"})
+
+  def test_bad_types_are_400(self):
+    # issue #328: these failed inside update_or_create() or the jobmodules loop with a 500.
+    response = self.post({"name": "js1", "address": "10.0.0.1", "one_minute_load": "high", "port": "http",
+                          "jobmodules": "nads"})
+    self.assertEqual(response.status_code, 400)
+    self.assertEqual(set(response.json()), {"one_minute_load", "port", "jobmodules"})
+    self.assertFalse(JobServer.objects.exists())
+
+  def test_port_from_yaml_as_a_string(self):
+    # the jobserver sends its config's serverPort, which a site may have quoted.
+    response = self.post({"name": "js1", "address": "10.0.0.1", "one_minute_load": 0.5, "port": "8081",
+                          "jobmodules": []})
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(JobServer.objects.get(name="js1").port, 8081)
