@@ -53,10 +53,20 @@ serializer_class nested to depth 3.  Lists without ?detail, and every write, use
 serializer_class as it is, so relations are plain IDs and can be written.  A view
 with its own get() only gets this by calling super().get().
 
+## Query parameters on a list GET
+?FIELD=VALUE filters on a model field (exact match).  ?detail, ?search and ?format
+are always accepted, and a view lists its own keys in extra_query_params.  Any other
+key, including a lookup such as ?hostname__startswith=, returns 400 with an error per
+key instead of being ignored, so a typo can't return every row (#390).
+
     '''
     serializer_class = None
     detail_serializer_class = None
     serve_detail = False
+    # query keys every list GET accepts besides model fields; a view adds its
+    # own in extra_query_params.
+    base_query_params = ('detail', 'search', 'format')
+    extra_query_params = ()
     queryset = None
     model = None
     filter_backends = [DjangoFilterBackend]
@@ -173,9 +183,10 @@ with its own get() only gets this by calling super().get().
     def filter_by_query_params(self, request, kwargs, skip=()):
         '''
         Filters all objects of self.model by each ?FIELD=VALUE query parameter
-        that names a model field (exact match), except the fields in skip.
+        that names a model field (exact match).  The fields in skip, and
+        base_query_params and extra_query_params, are left to the caller.
         Returns the queryset and a dict of errors by field, which is empty
-        if every filter worked.
+        if every filter worked.  Any other key is an error (#390).
         '''
         queryset = self.model.objects.all()
 
@@ -185,8 +196,7 @@ with its own get() only gets this by calling super().get().
             filter_value = request.query_params[field]
             if field in kwargs:
                 filter_value = kwargs[field]
-            if field == 'detail' or field in skip:
-                # ignore the detail flag.
+            if field in skip or self.is_extra_query_param(field):
                 continue
             if any(x for x in self.model._meta.get_fields() if x.name == field):
                 # we found a field.
@@ -194,9 +204,20 @@ with its own get() only gets this by calling super().get().
                     queryset = queryset.filter((field,filter_value))
                 except BaseException as e:
                     error_body[field] = f"Error searching for {field}: {type(e)=}: {e=}"
-            # else: 
-            #     error_body[field] = f"Error searching for {field}: Field doesn't exist."
+            else:
+                error_body[field] = self.unknown_query_param(field)
         return queryset, error_body
+
+    def is_extra_query_param(self, field):
+        return field in self.base_query_params or field in self.extra_query_params
+
+    def unknown_query_param(self, field):
+        '''
+        The error for a query key a list GET doesn't accept.
+        '''
+        if '__' in field:
+            return f"Error searching for {field}: lookups (__) are not supported."
+        return f"Error searching for {field}: Field doesn't exist."
 
     
     def post(self, request, *args, **kwargs):

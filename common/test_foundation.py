@@ -29,8 +29,11 @@ class FilterByQueryParamsTests(APITestCase):
   def test_no_match_is_404(self):
     self.assertEqual(self.get_json("/jobmodules/?name=nope").status_code, 404)
 
-  def test_unknown_params_are_ignored(self):
-    self.assertEqual(len(self.get_json("/jobmodules/?nope=1").json()), 2)
+  def test_unknown_params_are_400(self):
+    # issue #390: they used to be ignored, returning every row.
+    response = self.get_json("/jobmodules/?nope=1")
+    self.assertEqual(response.status_code, 400)
+    self.assertEqual(list(response.json()), ["nope"])
 
 
 class UnpackedArgsTests(APITestCase):

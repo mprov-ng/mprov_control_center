@@ -47,6 +47,9 @@ filtered with these optional query parameters:
     have each of its keys set to that value are returned.  Anything else returns 400.
 - jobserver: ID of the assigned job server
 - status: ID of the job's status
+- search: a job module ID to search for
+
+Any other query parameter returns 400.
 
 Format returned:
 
@@ -85,6 +88,7 @@ Format returned:
     serializer_class = JobAPISerializer
     queryset = Job.objects.all()
     search_fields = ['module__slug']
+    extra_query_params = ('module', 'params', 'jobserver', 'status')
 
     # Override the default get func; we need a bit more specialized query here
     def get(self, request, format=None, **kwargs):
@@ -101,7 +105,12 @@ Format returned:
             # someone is looking for a specific item.
             return self.retrieve(request, pk=kwargs['pk'])
 
-        # Let's see if someone is looking for something specific.
+        # Let's see if someone is looking for something specific.  Only the
+        # keys below are filters; anything else is a 400, not ignored (#390).
+        error_body = {field: self.unknown_query_param(field)
+                      for field in request.query_params if not self.is_extra_query_param(field)}
+        if len(error_body) > 0:
+            return Response(error_body, status=400)
         queryset = self.model.objects.all()
         jobmodule = self.request.query_params.get('module')
         
