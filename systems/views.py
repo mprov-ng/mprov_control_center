@@ -16,6 +16,7 @@ from .serializers import (
 from rest_framework.response import Response
 
 from common.views import MProvView
+from systems.views_noauth import get_client_ip
 from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, NADSSystem
 from networks.models import SwitchPort, Network, Switch
 from rest_framework import generics
@@ -290,15 +291,9 @@ Format returned:
     def post(self, request, *args, **kwargs):
         if 'self' in request.query_params:
             # someone would like to modify themselves.
-            # grab the IP
-            ip=""
-            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-            if x_forwarded_for:
-                ip = x_forwarded_for.split(',')[0]
-            else:
-                ip = request.META.get('REMOTE_ADDR')
-            # for testing
-#            #ip="172.16.12.1"
+            # identify them by their socket peer, not a client-supplied
+            # X-Forwarded-For (#320).
+            ip = get_client_ip(request)
             nicQueryset = NetworkInterface.objects.all()
             nicQueryset = nicQueryset.filter(ipaddress=ip)
             if nicQueryset.count() == 0:
@@ -379,16 +374,10 @@ Format returned:
                 return Response(None, status=404)
         if 'self' in request.query_params:
             # someone would like us to tell them who they are.
-            # grab the IP
-            ip=""
-            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-            if x_forwarded_for:
-                ip = x_forwarded_for.split(',')[0]
-            else:
-                ip = request.META.get('REMOTE_ADDR')
-            # for testing
-            #ip="172.16.12.1"
-            
+            # identify them by their socket peer, not a client-supplied
+            # X-Forwarded-For (#320).
+            ip = get_client_ip(request)
+
             # now try to grab the nic for this IP
             nicQueryset = NetworkInterface.objects.all()
             nicQueryset = nicQueryset.filter(ipaddress=ip)
