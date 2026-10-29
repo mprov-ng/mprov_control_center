@@ -8,6 +8,7 @@ from .serializers import (
     SystemGroupSerializer,
     SystemBMCSerializer,
     SystemBMCDetailSerializer,
+    SystemBMCDetailNoPasswordSerializer,
     SystemImageDetailsSerializer,
     SystemDetailSerializer,
     SystemImageSerializer,
@@ -766,8 +767,9 @@ class SystemBMCAPIView(MProvView):
 - mac: The MAC address of the entry
 - username: The username for authentication with this entry
 - password: The password for authentication with this entry. It is write-only:
-    GET returns it only for a single entry (/systembmcs/1/) or with `?detail`.
-    An empty password on POST or PATCH is ignored.
+    GET returns it only for a single entry (/systembmcs/1/) or a per-system
+    detail query (?system=ID&detail). An empty password on POST or PATCH is
+    ignored.
 - system: ID of the system this entry is associated with.
 - switch_port: ID of the switchport this entry resides on.
 - network: ID of the network this entry is on.
@@ -775,8 +777,9 @@ class SystemBMCAPIView(MProvView):
 - vlan: The VLAN ID of the entry
 
 ### Query Parameters
-- ?detail: GET (no primary key) returns entries with their system, switch port and network nested
-    one level, and the password.
+- ?detail: GET (no primary key) returns entries with their system, switch port and network
+    nested one level. The password is only included when the query is also
+    scoped to a single system with ?system=ID.
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 
 ### GET method (no parameters)
@@ -817,6 +820,15 @@ Format returned:
     serializer_class = SystemBMCSerializer
     detail_serializer_class = SystemBMCDetailSerializer
     queryset = None
+
+    def get_serializer_class(self):
+        # issue #316: only a request scoped to one system gets the password:
+        # GET /systembmcs/<pk>/ or GET /systembmcs/?system=ID (which is how
+        # mprov_scripts' setupBMC.py fetches its row). An unscoped ?detail
+        # returns the same entries with the password left out.
+        if self.serve_detail and 'pk' not in self.kwargs and 'system' not in self.request.query_params:
+            return SystemBMCDetailNoPasswordSerializer
+        return super().get_serializer_class()
 
     def post(self, request, *args, **kwargs):
         if request.data.get('password') == "":
