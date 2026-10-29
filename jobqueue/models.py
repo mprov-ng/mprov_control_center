@@ -1,6 +1,6 @@
 import time
 import datetime
-from django.db import models
+from django.db import models, connections
 from django.utils.timezone import make_aware, is_aware
 from django.utils import timezone
 from django.dispatch import receiver
@@ -56,6 +56,22 @@ class JobStatus(models.Model):
         verbose_name="Job Status"
 
 PENDING = 1
+
+def filter_params(queryset, params):
+    """
+    Filter a Job queryset to the jobs whose params have every key of the
+    dict params with that value.  On MySQL/MariaDB this uses JSON_CONTAINS
+    (params__contains): MariaDB never matches a key lookup against a string
+    value, because Django leaves the right-hand side as a quoted JSON string
+    there (#385).  SQLite has no JSON_CONTAINS, so other backends use one key
+    lookup per key.  Values are meant to be scalars; JSON_CONTAINS would also
+    match a nested object or list that only contains the given one.
+    """
+    if connections[queryset.db].vendor == 'mysql':
+        return queryset.filter(params__contains=params)
+    for key, value in params.items():
+        queryset = queryset.filter(**{f"params__{key}": value})
+    return queryset
 
 def queue_job(module, params=None):
     """

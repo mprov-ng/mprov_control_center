@@ -8,7 +8,7 @@ class MarkRebuildActionTests(TestCase):
   """ The "Mark images as needing rebuild" admin action handles every selected image and saves the new version. """
 
   def test_every_image_gets_a_job_and_a_new_version(self):
-    from jobqueue.models import Job, JobModule, JobServer, JobStatus
+    from jobqueue.models import Job, JobModule, JobServer, JobStatus, filter_params
     from systems.admin import mark_rebuild
     user = User.objects.create(username="rebuild-test")
     module = JobModule.objects.create(slug="image-update", name="Update Images")
@@ -29,5 +29,5 @@ class MarkRebuildActionTests(TestCase):
       self.assertTrue(image.needs_rebuild)
       self.assertEqual(image.version, versions[image.pk] + 1)
       self.assertEqual(list(image.jobservers.all()), [])
-      self.assertEqual(Job.objects.filter(module=module, params__imageId=image.pk).count(), 1)
+      self.assertEqual(filter_params(Job.objects.filter(module=module), {"imageId": image.pk}).count(), 1)
     self.assertEqual(SystemImage.objects.count(), 2)

@@ -137,7 +137,8 @@ class System(models.Model):
     disk layout with a bootable partition, across all the system's layouts. """
     if not self.stateful or self.id is None:
       return None
-    layouts = list(self.disks.all())
+    # by name, so the message is the same on every database backend.
+    layouts = list(self.disks.order_by('name'))
     if not layouts:
       return f"{self} is stateful but has no disk layouts, so the stateful installer will fail."
     bootdisks = [layout for layout in layouts if layout.partitions.filter(bootable=True).exists()]

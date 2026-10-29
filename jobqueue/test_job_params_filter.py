@@ -18,6 +18,23 @@ class JobParamsFilterTests(APITestCase):
     self.assertEqual(response.status_code, 200)
     self.assertEqual([job["params"]["repo_id"] for job in response.json()], [2])
 
+  def test_filter_by_string_params(self):
+    # issue #385: string values never matched on MariaDB.  How the jobserver
+    # finds an image's image-update jobs.
+    module = JobModule.objects.create(slug="image-update", name="Update Images")
+    for slug in ("compute", "login"):
+      Job.objects.create(name="Update Images", module=module, status_id=1, params={"imageId": slug})
+    response = self.client.get("/jobs/", {"module": "image-update", "status": 1, "params": '{"imageId": "login"}'},
+                               CONTENT_TYPE="application/json")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual([job["params"]["imageId"] for job in response.json()], ["login"])
+
+  def test_filter_by_several_keys(self):
+    response = self.client.get("/jobs/", {"params": '{"repo_id": 1, "x": "y"}'}, CONTENT_TYPE="application/json")
+    self.assertEqual([job["params"]["repo_id"] for job in response.json()], [1])
+    response = self.client.get("/jobs/", {"params": '{"repo_id": 1, "x": "z"}'}, CONTENT_TYPE="application/json")
+    self.assertEqual(response.json(), [])
+
   def test_bad_params_is_400(self):
     for value in ("nope", "[1]"):
       response = self.client.get("/jobs/", {"params": value}, CONTENT_TYPE="application/json")
