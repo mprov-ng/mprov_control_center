@@ -43,7 +43,7 @@ class BootDiskProblemTests(BootDiskTestCase):
     DiskPartition.objects.filter(disklayout=self.data).update(bootable=True)
     problem = self.system.boot_disk_problem()
     self.assertIn("more than one", problem)
-    self.assertIn("root, data", problem)
+    self.assertIn("data, root", problem)
 
   def test_no_disk_layouts(self):
     self.system.disks.clear()

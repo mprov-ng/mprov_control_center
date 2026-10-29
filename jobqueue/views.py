@@ -1,6 +1,6 @@
 from datetime import datetime
 from common.views import MProvView
-from jobqueue.models import JobModule, JobServer, Job
+from jobqueue.models import JobModule, JobServer, Job, filter_params
 from jobqueue.serializers import JobAPISerializer, JobModuleAPISerializer, JobServerAPISerializer
 from rest_framework import status, generics
 from rest_framework.response import Response
@@ -115,16 +115,14 @@ Format returned:
                 queryset = queryset.filter(module=jobmodule)
         params = self.request.query_params.get('params')
         if params is not None:
-            # match each key of a JSON object against the job's params.  Key
-            # lookups work on every database backend; contains doesn't on SQLite.
+            # match each key of a JSON object against the job's params.
             try:
                 params = json.loads(params)
             except ValueError:
                 params = None
             if not isinstance(params, dict):
                 return Response({'params': "Must be a JSON object, e.g. {\"imageId\": \"compute\"}."}, status=400)
-            for key, value in params.items():
-                queryset = queryset.filter(**{f"params__{key}": value})
+            queryset = filter_params(queryset, params)
         jobserver = self.request.query_params.get('jobserver')
         if jobserver is not None:
             queryset = queryset.filter(jobserver=jobserver)
