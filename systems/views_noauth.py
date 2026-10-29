@@ -71,7 +71,8 @@ returned, or a JSON list of all images if the request content type is applicatio
 regardless of requested content type.  A primary key ending in .initramfs or .vmlinuz
 redirects to that file, otherwise the .img is used.
 - Jobservers registered by host name are skipped if the name doesn't resolve for the
-client's address family.  Jobservers that fail to respond are removed from the image.
+client's address family.  Jobservers that fail to respond are skipped for the
+current request only; this endpoint never modifies image-to-jobserver associations.
 If no jobserver is left, a 404 is returned.
 
     '''
@@ -131,14 +132,14 @@ If no jobserver is left, a 404 is returned.
         print(f"Error occurred while fetching image: {e}")
         statCode = 0
       while ( statCode <= 199 or statCode >=400):
-        # jobserver gave a bad response, remove it and retry.
-        print("Removing Jobserver " + str(js) + ", URL: " + imageURL + " not accessible. Status: " + str(statCode))
-        # remove only this jobserver; the ones getJobserver left out for
-        # this client may still serve others.
-        image.jobservers.remove(js)
-        image.save()
-        js_set = self.getJobserver(image, ip)
-        js = None
+        # jobserver gave a bad response; skip it for this request only.
+        # An unauthenticated GET must never persist jobserver-to-image
+        # association changes: one momentary fetch failure would otherwise
+        # permanently strip the jobserver from the image (#321).
+        print("Skipping Jobserver " + str(js) + ", URL: " + imageURL + " not accessible. Status: " + str(statCode))
+        js_set = [candidate for candidate in js_set if candidate.pk != js.pk]
+        if len(js_set) == 0:
+          raise NotFound(detail="Error 404, No responsive Jobservers for Image", code=404)
         js = js_set[0]
         # if ":" in js.name:
         #   js.address = f"[{js.address}]"
