@@ -1,4 +1,7 @@
+import warnings
 from unittest import mock
+
+from bs4 import GuessedAtParserWarning
 
 from rest_framework import serializers
 from rest_framework.response import Response
@@ -85,3 +88,15 @@ class NestedPrimaryKeyRelatedFieldTests(APITestCase):
     field = NestedPrimaryKeyRelatedField(ScriptTypeSerializer, queryset=ScriptType.objects.all())
     self.assertEqual(field.to_internal_value("post-boot"), script_type)
     self.assertEqual(field.to_representation(script_type), {"name": "Post Boot", "slug": "post-boot"})
+
+
+class DocsPageTests(APITestCase):
+  """ A non-JSON request gets the view's docs page, built without BeautifulSoup guessing a parser. """
+
+  def test_docs_page_names_its_parser(self):
+    with warnings.catch_warnings(record=True) as caught:
+      warnings.simplefilter("always")
+      response = self.client.get("/")
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual([w for w in caught if issubclass(w.category, GuessedAtParserWarning)], [])
+    self.assertContains(response, '<link href="/static/css/mprov_docs.css" rel="stylesheet"/>', html=True)

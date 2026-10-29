@@ -12,6 +12,10 @@ class OSDistroAPISerializer(serializers.ModelSerializer):
     class Meta:
         model = OSDistro
         fields = '__all__'
+        # Accept rootpw on POST/PATCH but never return it, as for the BMC
+        # password. The jobserver reads it from the osdistro nested inside
+        # /systemimages/<slug>/, where it is still present. (#313)
+        extra_kwargs = {'rootpw': {'write_only': True}}
 
 class OSRepoAPISerializer(serializers.ModelSerializer):
     hosted_by=serializers.PrimaryKeyRelatedField(queryset=JobServer.objects.all(), many=True, required=False)

@@ -8,7 +8,7 @@ from common.serializers import NestedPrimaryKeyRelatedField
 from scripts.serializers import ScriptAPISerializer, AnsibleCollectionAPISerializer, AnsiblePlaybookAPISerializer, AnsibleRoleAPISerializer
 
 class SystemSerializer(serializers.ModelSerializer): 
-    config = serializers.DictField(allow_empty=True, required=False)
+    config = serializers.DictField(read_only=True)
     class Meta:
         model = System
         fields = '__all__'
@@ -36,6 +36,7 @@ class SystemImageSerializer(serializers.ModelSerializer):
     jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all())
     # read as nested objects, written as IDs.
     systemgroups=NestedPrimaryKeyRelatedField(SystemGroupSerializer, many=True, required=False, queryset=SystemGroup.objects.all())
+    config = serializers.DictField(read_only=True)
     class Meta:
         model = SystemImage
         fields = '__all__'
@@ -48,7 +49,7 @@ class SystemDetailSerializer(serializers.ModelSerializer):
     disks = DiskLayoutAPISerializer(many=True, read_only=True)
     systemimage = SystemImageDetailsSerializer(many=False)
     systemmodel =  serializers.PrimaryKeyRelatedField(queryset=SystemModel.objects.all())
-    config = serializers.DictField()
+    config = serializers.DictField(read_only=True)
     systemgroups = SystemGroupSerializer(many=True)
     ansibleplaybooks = AnsiblePlaybookAPISerializer(many=True)
     ansibleroles = AnsibleRoleAPISerializer(many=True)

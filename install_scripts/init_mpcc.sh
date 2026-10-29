@@ -64,6 +64,11 @@ cd /var/www/mprov_control_center
 python manage.py createcachetable
 python manage.py migrate
 
+# /etc/mprov/ holds the secret key and the jobserver API key.  Create it
+# whichever way the secret key comes, as it may not be a mounted volume (#289).
+mkdir -p /etc/mprov
+chmod 700 /etc/mprov
+
 # set up the secret key
 # Use SECRET_KEY from the docker env if set, otherwise generate one once and
 # keep it in /etc/mprov/ (a volume) so it survives restarts and image updates.
@@ -74,7 +79,6 @@ elif [ -s "$SECRET_KEY_FILE" ]; then
     NEW_VALUE=$(cat "$SECRET_KEY_FILE")
 else
     NEW_VALUE=$(python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')
-    mkdir -p /etc/mprov
     echo "$NEW_VALUE" > "$SECRET_KEY_FILE"
     chmod 600 "$SECRET_KEY_FILE"
 fi
@@ -201,21 +205,18 @@ ${IFACE_CMDS}
 
 EOF
 
-# generate an api key
-       cat << EOF > /tmp/genAPIKey.py
-import rest_framework_api_key
-apikey = rest_framework_api_key.models.APIKey()
-key = rest_framework_api_key.models.APIKey.objects.assign_key(apikey)
-apikey.name="mProv Jobserver Key"
-apikey.save()
-print(key)
-EOF
-
-       apikey=`cat /tmp/genAPIKey.py | python3 manage.py shell`
-
-       # echo this out to a file in /etc/mprov/
-       echo "export MPROV_APIKEY=$apikey" > /etc/mprov/apikey
-       chmod 600 /etc/mprov/apikey
+       # generate an api key for the jobservers, and write it to /etc/mprov/apikey
+       # from Python, so nothing else manage.py shell prints (a banner, or
+       # newer Django's automatic-imports line) can end up in the file (#288).
+       # The file is created 0600, so the key is never readable by others.
+       python3 manage.py shell -c "
+import os
+from rest_framework_api_key.models import APIKey
+_, key = APIKey.objects.create_key(name='mProv Jobserver Key')
+fd = os.open('/etc/mprov/apikey', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(fd, 'w') as f:
+    f.write(f'export MPROV_APIKEY={key}\n')
+"
 fi
 
 # fix the db perms... again...
@@ -227,5 +228,13 @@ chmod u+w db/ -R
 # (mprov-compose passes it) but is ignored; this is the only mode.
 setsid --wait /usr/sbin/apachectl -D FOREGROUND &
 child_pid=$!
-trap "kill -SIGINT $child_pid" SIGINT
+# docker stop sends SIGTERM, which bash as PID 1 ignores without a trap, so
+# the container was killed after the stop timeout (#290).  apachectl runs
+# httpd as its child, so signal the whole process group setsid made, not
+# just apachectl.  SIGTERM stops httpd now; a graceful stop (SIGWINCH) would
+# wait on open connections past docker's timeout.
+trap 'kill -TERM -- -$child_pid 2>/dev/null' TERM INT
+wait $child_pid
+# wait returns as soon as the trap runs; wait again for httpd to exit, and
+# exit with its status.
 wait $child_pid

@@ -11,6 +11,8 @@ from django.utils.text import slugify
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 from django.contrib.auth.models import AnonymousUser, User
 from django.utils import timezone
+from django.utils.functional import cached_property
+from common import render_config, flat_config
 
 class SystemGroup(models.Model):
   """ System Groups are ways to group systems and system images together to manage configuration better.   You can specify configuration
@@ -21,10 +23,10 @@ class SystemGroup(models.Model):
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
   ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles")
   ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
-  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
+  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel, added after the inherited ones. Start with = to replace the inherited options instead.", blank=True)
   # install kernel parameters.
   tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gigabytes, 0 inherits from parent Group/Distro")
-  initial_mods = models.CharField(default="", help_text="Comma-separated list of modules to load.", max_length=255, blank=True)
+  initial_mods = models.CharField(default="", help_text="Comma-separated list of modules to load, added after the inherited ones. Start with = to replace the inherited list instead.", max_length=255, blank=True)
   prov_interface = models.CharField(default="", help_text="Interface name to provision over.", max_length=255, blank=True)
   systems = models.ManyToManyField("System", blank=True)
   
@@ -33,7 +35,8 @@ class SystemGroup(models.Model):
   config_params=models.TextField(
     blank=True, 
     default="# Inherit from OS", 
-    verbose_name="Configuration Parameters"
+    verbose_name="Configuration Parameters",
+    help_text="YAML. Merged with the inherited parameters by top-level key: a key set here replaces that key's whole inherited value. Only comments means inherit.",
   )
 
   class Meta:
@@ -65,11 +68,6 @@ class SystemModel(models.Model):
     super(SystemModel, self).save(*args, **kwargs)
 
 
-def has_content(value):
-  """ True if value has a line that isn't blank or a # comment, so an
-  inherited field set to only comments doesn't override the layer below. """
-  return any(line.strip() and not line.lstrip().startswith("#") for line in value.split("\n"))
-
 class System(models.Model):
   """ Systems are physical or virtual machines that will run an OS in RAM or have an OS installed on them.  This is the endpoint for the mPCC's
   provisioning system."""
@@ -91,13 +89,14 @@ class System(models.Model):
   config_params = models.TextField(
     default="# Inherit from System Group or Distribution.",
     verbose_name="Configuration Parameters",
+    help_text="YAML. Merged with the inherited parameters by top-level key: a key set here replaces that key's whole inherited value. Only comments means inherit.",
     blank=True,
     null=True,
   )
-  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel", blank=True)
+  install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel, added after the inherited ones. Start with = to replace the inherited options instead.", blank=True)
   # install kernel parameters.
   tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gigabytes, 0 inherits from parent Group/Distro")
-  initial_mods = models.CharField(default="", help_text="Comma-separated list of modules to load.", max_length=255, blank=True)
+  initial_mods = models.CharField(default="", help_text="Comma-separated list of modules to load, added after the inherited ones. Start with = to replace the inherited list instead.", max_length=255, blank=True)
   prov_interface = models.CharField(default="", help_text="Interface name to provision over.", max_length=255, blank=True)
 
   systemimage = models.ForeignKey('SystemImage', blank=True, null=True, on_delete=models.SET_NULL, verbose_name="System Image")
@@ -106,103 +105,58 @@ class System(models.Model):
   # bootdisk = models.ForeignKey(DiskLayout, blank=True, null=True, on_delete=models.SET_NULL, verbose_name="Boot Disk Layout", help_text="Boot disk layout for stateful installs")
   stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system install its image to disk?")
   location = models.ForeignKey('SystemLocation', blank=True, null=True, on_delete=models.SET_NULL,  )
+  provision = models.BooleanField(default=True, verbose_name="Provision?", help_text="Should this system be provisioned (installed or netbooted) on its next PXE boot? The stateful installer clears this once it has installed.")
   class Meta:
     ordering = ['hostname']
     verbose_name = 'System'
     verbose_name_plural = 'Systems'
   
-  inheritableFields=['install_kernel_cmdline', 'tmpfs_root_size', 'initial_mods', 'prov_interface', 'config_params']
-
   def __str__(self):
     return self.hostname
 
-  def __init__(self, *args, **kwargs):
-    super().__init__(*args, **kwargs)
-    self.flatten_config()
-
-  
-  def flatten_config(self):
-    # rebuilt per instance on every call, never shared between Systems.
-    self.config = {}
+  @cached_property
+  def config(self):
+    """ This system's config, merged from its OS distro, system groups, image
+    and itself by common.render_config(). """
     if self.id is None:
-      return
-    # Used to merge the OS Distro level params, and any System Group
-    # params to the system's stuff.
+      return {}
+    return flat_config(render_config(self))
 
-    # loop through our fields and see if OS Distro has anything, assign it to
-    # the config dict.
-    if hasattr(self, "systemimage"):
-      if hasattr(self.systemimage, "osdistro"):
-        try:
-          for field in self.systemimage.osdistro._meta.get_fields():
-            field = field.name
-            if field in self.inheritableFields:
-              self.config[field] = getattr(self.systemimage.osdistro, field)
-        except Exception as e:
-          print(f"Error processing OS Distro config. {e}")
-        
-      
-    # Then loop through our system groups, and check each for this field
-    # adding it to the config dict
-    if hasattr(self, "systemgroups"):
-      if self.systemgroups.count() > 0:
-        for systemgroup in self.systemgroups.all():
-          for field in systemgroup._meta.get_fields():
-            field = field.name
-            if field in self.inheritableFields:
-              # system groups are higher inheritance than OS distro.
-              sysgrpfield = getattr(systemgroup, field)
-              if type(sysgrpfield) is str:
-                if sysgrpfield != "" :
-                  if has_content(sysgrpfield):
-                    if field == 'install_kernel_cmdline' or field == 'initial_mods':
-                      if sysgrpfield[0] == "=":
-                        # user is asking us to overwrite the field here.
-                        self.config[field] = sysgrpfield[1:]
-                      else:
-                        # no specifier, let's append
-                        if field == 'install_kernel_cmdline':
-                          # kernel cmdline is space separated.
-                          self.config[field] = (self.config.get(field, "") + f" {sysgrpfield}").lstrip(" ")
-                        else:
-                          # mod list is comma separated.
-                          self.config[field] = (self.config.get(field, "") + f",{sysgrpfield}").lstrip(",")
-                    else: 
-                      # everything else overwrites.
-                      self.config[field] = sysgrpfield
-              elif type(sysgrpfield) is int:
-                if sysgrpfield != 0:
-                  self.config[field] = sysgrpfield
-          
-    # finally see if the object has it set on its top level and overwrite it to the
-    # config dict.
-    for field in self._meta.get_fields():
-      field = field.name
-      if field in self.inheritableFields:
-        # system attr are highest inheritance
-        sysfield = getattr(self, field)
-        if type(sysfield) is str:
-          if sysfield != "" :
-            if has_content(sysfield):
-              if field == 'install_kernel_cmdline' or field == 'initial_mods':
-                if sysfield[0] == "=":
-                  # user is asking us to overwrite the field here.
-                  self.config[field] = sysfield[1:]
-                else:
-                  # no specifier, let's append
-                  if field == 'install_kernel_cmdline':
-                    # kernel cmdline is space separated.
-                    self.config[field] = (self.config.get(field, "") + f" {sysfield}").lstrip(" ")
-                  else:
-                    # mod list is comma separated.
-                    self.config[field] = (self.config.get(field, "") + f",{sysfield}").lstrip(",")
-              else: 
-                # everything else overwrites.
-                self.config[field] = sysfield
-        elif type(sysfield) is int:
-          if sysfield != 0:
-            
-            self.config[field] = sysfield
+  def boot_disk_problem(self):
+    """ Why the stateful installer would refuse this system's disk layouts, or
+    None.  Like buildDisks() in static/mprov_stateful.py, it needs exactly one
+    disk layout with a bootable partition, across all the system's layouts. """
+    if not self.stateful or self.id is None:
+      return None
+    layouts = list(self.disks.all())
+    if not layouts:
+      return f"{self} is stateful but has no disk layouts, so the stateful installer will fail."
+    bootdisks = [layout for layout in layouts if layout.partitions.filter(bootable=True).exists()]
+    if not bootdisks:
+      return (f"{self} is stateful but none of its disk layouts has a bootable partition, so the stateful "
+              "installer will fail.  Mark the partition it boots from as bootable.")
+    if len(bootdisks) > 1:
+      names = ", ".join(layout.name for layout in bootdisks)
+      return (f"{self} is stateful and more than one of its disk layouts has a bootable partition ({names}), "
+              "so the stateful installer will fail.  Only the disk it boots from can have one.")
+    return None
+
+  def provisioning_problem(self):
+    """ Why this system can't be provisioned on its next PXE boot, or None. """
+    if not NetworkInterface.objects.filter(system=self, bootable=True).exists():
+      return f"{self} has no bootable network interface, so it can't PXE boot."
+    return self.boot_disk_problem()
+
+  def enable_provisioning(self):
+    """ Set provision so the next PXE boot provisions this system.  Returns
+    False, and changes nothing, if provisioning_problem() finds a reason it
+    can't be provisioned. """
+    if self.provisioning_problem() is not None:
+      return False
+    if not self.provision:
+      self.provision = True
+      self.save()
+    return True
 
 class SystemBMC(models.Model):
   endpoint="/systembmcs/"
@@ -257,6 +211,9 @@ class NetworkInterface(models.Model):
   def save(self, *args, **kwargs):
     self.hostname = self.system.hostname
     super(NetworkInterface, self).save(*args, **kwargs)
+    if self.bootable:
+      # a system boots from at most one NIC.
+      NetworkInterface.objects.filter(system=self.system, bootable=True).exclude(pk=self.pk).update(bootable=False)
 
 class SystemImage(models.Model):
   """ System Images are filesystems that are managed by the mPCC's configuration management, built into .img files, and synced out to Systems."""
@@ -282,6 +239,7 @@ class SystemImage(models.Model):
   config_params = models.TextField(
     default="# Inherit from System Group or Distribution.",
     verbose_name="Configuration Parameters",
+    help_text="YAML. Merged with the inherited parameters by top-level key: a key set here replaces that key's whole inherited value. Only comments means inherit.",
     blank=True,
     null=True,
   )
@@ -310,6 +268,14 @@ class SystemImage(models.Model):
 
   def __str__(self):
     return self.name
+
+  @cached_property
+  def config(self):
+    """ This image's config, merged from its OS distro, system groups and
+    itself by common.render_config(). """
+    if self._state.adding:
+      return {}
+    return flat_config(render_config(self))
 
 class NADSSystem(models.Model):
   mac=models.CharField(max_length=100, verbose_name="MAC Address", unique=True)

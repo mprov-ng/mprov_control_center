@@ -1,7 +1,7 @@
 ---
 type: Reference
 title: mProv Control Center Quickstart
-description: Entry point for the mProv Control Center (mPCC) documentation — a Django 3.2 + DRF bare-metal provisioning control center with an admin UI and REST API. Covers what it is, how it is installed, and where to go next.
+description: Entry point for the mProv Control Center (mPCC) documentation — a Django 4.2 + DRF bare-metal provisioning control center with an admin UI and REST API. Covers what it is, how it is installed, and where to go next.
 tags: [mprov, django, drf, provisioning, quickstart]
 ---
 
@@ -13,7 +13,7 @@ mPCC is the brain of the mProv bare-metal provisioning stack. It manages the inv
 - A **REST/CRUD JSON API** under paths like `/systems/`, `/networks/`, `/jobs/`, used remotely by jobservers and automation.
 - **Self-documenting endpoints**: a non-JSON `GET` to most API views returns the endpoint's docstring rendered as HTML, and `GET /datamodel/?model=app.models.Model` returns the JSON field structure of any model.
 
-Stack: Django 3.2, Django REST Framework, `djangorestframework-api-key`, optional LDAP (`django-auth-ldap`), Apache + `mod_wsgi` in a container. See [Architecture Overview](architecture/overview.md) for the full map.
+Stack: Django (pinned `django>=4.2,<5` in `requirements.txt` pending the Rocky 9 move), Django REST Framework, `djangorestframework-api-key`, optional LDAP (`django-auth-ldap`), Apache + `mod_wsgi` in a container. See [Architecture Overview](architecture/overview.md) for the full map.
 
 ## Installation and first steps
 
@@ -29,7 +29,7 @@ mPCC is installed as part of the full mProv stack via [mprov-compose](https://gi
 |---|---|
 | Project layout, routing, settings, bootstrap, CI | [Architecture Overview](architecture/overview.md) |
 | The shared API base class, auth, `?detail`, `/datamodel/` | [API Foundation](architecture/api-foundation.md) |
-| Systems, NICs, BMCs, images, networks, IPMI power | [Systems & Networking](domain/systems-and-networking.md) |
+| Systems, NICs, BMCs, provision flag / PXE Boot gating, images, networks, IPMI power | [Systems & Networking](domain/systems-and-networking.md) |
 | Job queue, jobservers, scripts, Ansible content | [Jobs & Scripts](domain/jobs-and-scripts.md) |
 | OS distros/repos, disk layouts and RAID | [OS & Disk Management](domain/os-and-disk-management.md) |
 

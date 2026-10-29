@@ -16,7 +16,7 @@ import subprocess
 # - mount all of the new filesystems under /newroot
 # - rsync the RAM image to the disk and update /newroot/etc/fstab
 # - install the boot loader from inside the /newroot chroot
-# - mark the system's NICs as not bootable to indicate it's provisioned
+# - clear the system's provision flag (POST systems/?self {"netboot": false}) so it boots from disk
 # - exit, after which mprov_boot_init.sh reboots the system
 
 
@@ -34,6 +34,8 @@ class mProvStatefulInstaller():
   bootpart = None
   modules = ""
   rootpartUUID = ""
+  # (disk layout slug, layout partition number) -> the device buildDisks() made for it
+  partDevices = {}
 
   def __init__(self, **kwargs):
     print("mProv Stateful Installer Starting.")
@@ -156,12 +158,16 @@ class mProvStatefulInstaller():
       os.unlink("/tmp/fstab")
     except OSError:
       pass
-    partnum=1
+    self.partDevices = {}
     print(f"Boot Disk: {self.bootdisk}")
     for pdisk in self.disklayout:
       # don't do raid disks here.
       if pdisk['dtype'] == 'mdrd':
         continue
+      # partitions are numbered in the order they're created: biosboot and
+      # EFI on the boot disk, then the layout's partitions by number, with
+      # the fill partition last.
+      partnum=1
       device = parted.getDevice(pdisk['diskname'])
       disk = parted.freshDisk(device, 'gpt' )
       
@@ -203,6 +209,7 @@ class mProvStatefulInstaller():
           continue
         print(f"Partition Number: {partnum}")
         start = start + self._createPartition(device, disk, part, sectorsize, start) + 1
+        self._setPartDevice(pdisk, part, partnum)
         if part['filesystem'] != 'raid' and part['mount'] != 'raid':
           partuuid = self._makeFS(part, pdisk)
 
@@ -218,6 +225,7 @@ class mProvStatefulInstaller():
 
       if fillpart is not None:
         self._createPartition(device, disk, fillpart, sectorsize, start)    
+        self._setPartDevice(pdisk, fillpart, partnum)
         
         if part['filesystem'] != 'raid' and part['mount'] != 'raid':
           partuuid = self._makeFS(fillpart, pdisk)
@@ -238,20 +246,10 @@ class mProvStatefulInstaller():
       self.hasRAID=True
       mdadm_cmd = f"--create {pdisk['diskname']} -R --force --level={pdisk['raidlevel']} --raid-devices={len(pdisk['members'])} "
       for member in pdisk['members']:
-        # find our dev from the disklayouts.
-        for sdisk in self.disklayout:
-          if sdisk['slug'] == member['disklayout']:
-            dev = sdisk['diskname']
-        partOffset = 0
-        if dev == self.bootdisk:
-          # boot disk, we are going to add 2 more to partOffset
-          partOffset += 2
-        if dev.startswith("/dev/nvme"):
-            part_prefix="p"
-        else:
-            part_prefix=""
-
-        member_part = f"{dev}{part_prefix}{member['partnum'] + partOffset}"
+        member_part = self.partDevices.get((member['disklayout'], member['partnum']))
+        if member_part is None:
+          print(f"ERROR: RAID {pdisk['diskname']} member partition {member['partnum']} of {member['disklayout']} wasn't created.")
+          sys.exit(1)
         mdadm_cmd += f"{member_part} "
         # zero the superblock
         sh.mdadm(['--zero-superblock', f"{member_part}"])
@@ -386,7 +384,7 @@ class mProvStatefulInstaller():
       if os.path.exists("/tmp/init_mods") :
           with open("/tmp/init_mods") as mods:
               for mod in mods:
-                  self.modules += mod.replace(",", " ")
+                  self.modules += " " + mod.replace(",", " ")
 
       # append the RAID options to the command line so the initramfs assembles any RAID devices (always added, RAID or not).
       newcmdline.append("rd.md=1")
@@ -416,6 +414,13 @@ class mProvStatefulInstaller():
       except Exception:
           pass
       dracut_cmd = ["/newroot", "dracut", "--regenerate-all", "-f", "-vvv", "--mdadmconf", "--force-add", "mdraid"]
+      # build a generic initramfs, with every storage driver, so the node
+      # finds its root disk on first boot (#352).  Also add the drivers the
+      # boot command line asked for (mprov_initial_mods).
+      dracut_cmd.append("--no-hostonly")
+      modules = self.realModules(self.modules.split())
+      if modules:
+          dracut_cmd += ["--add-drivers", " ".join(modules)]
       print(dracut_cmd)
       result = sh.chroot(dracut_cmd, _err_to_out=True)
       with open("/newroot/tmp/dracut.out", "w") as out:
@@ -501,6 +506,23 @@ class mProvStatefulInstaller():
               "--verbose",
               bootdisk ])
           sh.chroot(["/newroot", "grub2-mkconfig", "-o", "/etc/grub2.cfg"])
+
+  def realModules(self, mods):
+      # dracut stops at a built-in or unknown module and leaves out every
+      # driver listed after it (#360), so keep only the ones that are a
+      # module for every kernel installed in /newroot.
+      kernels = os.listdir("/newroot/lib/modules")
+      keep = []
+      for mod in mods:
+          if mod in keep:
+              continue
+          if all(subprocess.run(["chroot", "/newroot", "modinfo", "-k", kernel, "-n", mod],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+                 for kernel in kernels):
+              keep.append(mod)
+          else:
+              print(f"Leaving {mod} out of the initramfs: it's built in, or not a module of the installed kernel.")
+      return keep
 
   def cleanupAndSwitchroot(self):
     # disable netboot
@@ -620,7 +642,15 @@ class mProvStatefulInstaller():
       fs=fs,
       geometry=geometry
     )
-    partition.setFlag(18)
+    # the flag sets the GPT partition type; other filesystems keep parted's
+    # default (Linux filesystem).  The pyparted in the images has no
+    # PARTITION_ESP constant, so look the ESP flag up by name.
+    if part['filesystem'] == 'efi':
+      partition.setFlag(next(flag for flag, name in parted.partitionFlag.items() if name == 'esp'))
+    elif part['filesystem'] == 'raid':
+      partition.setFlag(parted.PARTITION_RAID)
+    elif part['filesystem'] == 'linux-swap(v1)':
+      partition.setFlag(parted.PARTITION_SWAP)
     disk.addPartition(partition=partition, constraint=device.optimalAlignedConstraint)
     if part['filesystem'] == 'biosboot':
       if device.path.startswith("/dev/nvme"):
@@ -636,6 +666,12 @@ class mProvStatefulInstaller():
     disk.commit()
     return self.from_mebibytes(part['size'], sectorsize)
     
+
+  def _setPartDevice(self, pdisk, part, partnum):
+    """ Note the device a layout partition got, for _makeFS() and buildRAIDs(). """
+    prefix = "p" if pdisk['diskname'].startswith("/dev/nvme") else ""
+    part['device'] = f"{pdisk['diskname']}{prefix}{partnum}"
+    self.partDevices[(pdisk['slug'], part['partnum'])] = part['device']
 
   def _makeFS(self, part, pdisk):
     
@@ -655,13 +691,9 @@ class mProvStatefulInstaller():
       return None
   
 
-    # everything else is offset by the biosboot and EFI partitions if applicable
-    partOffset = 0
-    if pdisk['diskname'] == self.bootdisk:
-      # boot disk, we are going to add 2 more to partOffset
-      partOffset += 2
-    if part['partnum'] != '':
-      part['partnum'] = int(part['partnum']) + partOffset
+    # layout partitions carry the device buildDisks() made for them; a RAID
+    # device is pdisk itself.
+    dev = part.get('device') or pdisk['diskname']
 
       
     if 'format' in part:
@@ -671,7 +703,7 @@ class mProvStatefulInstaller():
 
         try:
           part['uuid'] = subprocess.run(
-            ['blkid', '-o', 'value', '--match-tag=UUID', f"{pdisk['diskname']}{partprefix}{part['partnum']}"],
+            ['blkid', '-o', 'value', '--match-tag=UUID', f"{dev}"],
             text=True, capture_output=True
             ).stdout.split("\n")[0]
         except Exception:
@@ -695,15 +727,15 @@ class mProvStatefulInstaller():
     # make the filesystem
     if part['filesystem'] == 'linux-swap(v1)':
       # print("mkswap ",f"{pdisk['diskname']}{part['partnum']}",f"{part['uuidopt']}",  f"{part['uuid']}")
-      print(f"Building {part['filesystem']} file system on {pdisk['diskname']}{partprefix}{part['partnum']}...")
-      sh.mkswap(f"{pdisk['diskname']}{partprefix}{part['partnum']}",f"{part['uuidopt']}",  f"{part['uuid']}")
+      print(f"Building {part['filesystem']} file system on {dev}...")
+      sh.mkswap(f"{dev}",f"{part['uuidopt']}",  f"{part['uuid']}")
       part['mount'] = "none"
       # put this back
       part['filesystem'] = "swap"
       
     else:
-      print(f"Building {part['filesystem']} file system on {pdisk['diskname']}{partprefix}{part['partnum']}...")
-      sh.mkfs("-t", f"{part['filesystem']}", f"{part['force']}", f"{part['uuidopt']}", f"{part['uuid']}", f"{pdisk['diskname']}{partprefix}{part['partnum']}")
+      print(f"Building {part['filesystem']} file system on {dev}...")
+      sh.mkfs("-t", f"{part['filesystem']}", f"{part['force']}", f"{part['uuidopt']}", f"{part['uuid']}", f"{dev}")
     return partuuid
 
 def main():

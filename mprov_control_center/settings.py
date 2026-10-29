@@ -179,6 +179,13 @@ MIDDLEWARE = [
 SESSION_EXPIRE_SECONDS = float(os.environ.get('SESSION_EXPIRE_SECONDS', '1800'))
 SESSION_TIMEOUT_REDIRECT = '/admin/login/'
 SESSION_EXPIRE_AFTER_LAST_ACTIVITY = True
+
+# Reverse proxies whose X-Forwarded-For header the unauthenticated image
+# and iPXE endpoints (/images/, /ipxe/) may trust, comma-separated: exact
+# IPs or CIDR networks, e.g. "10.0.0.1,2001:db8::/64".  The default, an
+# empty list, means the header is never honored and those endpoints
+# identify clients by their actual socket peer address only.
+TRUSTED_PROXIES = [p.strip() for p in os.environ.get('TRUSTED_PROXIES', '').split(',') if p.strip()]
 ROOT_URLCONF = 'mprov_control_center.urls'
 TEMPLATES = [
     {

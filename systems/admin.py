@@ -1,6 +1,6 @@
 import sys
 import traceback
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.forms import BaseInlineFormSet
 from django.utils.html import mark_safe
 from jobqueue.models import JobModule, JobStatus, Job
@@ -13,6 +13,7 @@ from django.shortcuts import render
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
 from scripts.models import Script
+from common.rendered_config import RenderedConfigAdminMixin
 import pyipmi
 import pyipmi.interfaces
 from func_timeout import func_timeout, FunctionTimedOut
@@ -54,6 +55,13 @@ class NetworkInterfaceInlineFormset(BaseInlineFormSet):
         form.fields['switch_port'].queryset = form.fields['switch_port'].queryset.filter(networkinterface=None) | form.fields['switch_port'].queryset.filter(id=form.initial['switch_port'])
       else:
         form.fields['switch_port'].queryset = form.fields['switch_port'].queryset.filter(networkinterface=None)
+
+  def clean(self):
+    super().clean()
+    bootable = [form for form in self.forms
+                if getattr(form, 'cleaned_data', {}).get('bootable') and not form.cleaned_data.get('DELETE')]
+    if len(bootable) > 1:
+      raise ValidationError("Only one network interface can be bootable.")
   
 
 class NetworkInterfaceInline(admin.StackedInline):
@@ -108,7 +116,16 @@ class BMCInline(admin.StackedInline):
     return formset
 
 
-class SystemAdmin(admin.ModelAdmin):
+def warn_boot_disk_problems(modeladmin, request, systems):
+  """ Warn about stateful systems the installer would refuse.  It's only a
+  warning: layouts and partitions are often added after the system (#361). """
+  for system in systems:
+    problem = system.boot_disk_problem()
+    if problem is not None:
+      modeladmin.message_user(request, f"{problem}  PXE Boot will refuse it until that's fixed.", level=messages.WARNING)
+
+
+class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
 
   inlines = [ NetworkInterfaceInline, BMCInline]
@@ -131,6 +148,7 @@ class SystemAdmin(admin.ModelAdmin):
     ('System Parameters', {
       'fields': [
         'stateful',
+        'provision',
         'disks',
         'systemimage',
         'systemmodel',
@@ -149,6 +167,11 @@ class SystemAdmin(admin.ModelAdmin):
     }
     ),
   )
+
+  def save_related(self, request, form, formsets, change):
+    # disks is a many-to-many, saved here after the system itself.
+    super().save_related(request, form, formsets, change)
+    warn_boot_disk_problems(self, request, [form.instance])
 
   def response_change(self, request, obj):
         # Check if our custom button was clicked
@@ -243,6 +266,9 @@ class SystemAdmin(admin.ModelAdmin):
            print(f"Error: Unable to find bmc for {system.hostname}")
            continue
         mybmc = mybmc[0]
+        if not system.enable_provisioning():
+           self._cantProvision(request, system)
+           continue
         try:
           func_timeout(5, self._doPowerCmd, [mybmc, "pxe"])
         except FunctionTimedOut:
@@ -255,11 +281,17 @@ class SystemAdmin(admin.ModelAdmin):
            print(f"Error: Unable to find bmc for {system.hostname}")
            continue
         mybmc = mybmc[0]
+        if not system.enable_provisioning():
+           self._cantProvision(request, system)
+           continue
         try:
           func_timeout(5, self._doPowerCmd, [mybmc, "pxeefi"])
         except FunctionTimedOut:
            print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
   
+  def _cantProvision(self, request, system):
+    self.message_user(request, f"{system.provisioning_problem()}  It was not reset.", level=messages.ERROR)
+
   def _doPowerCmd(self, bmc, action="on"):
     print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, action: {action}")
 
@@ -333,17 +365,14 @@ class SystemAdmin(admin.ModelAdmin):
   @admin.action(description="Update fields on multiple systems")
   def bulk_update(self, request, queryset):
     # fields to allow multiple updates to.
-    fields = ['systemimage','systemmodel','stateful','prov_interface','initial_mods', 'systemgroups', 'disks', 'location']
-    class BulkUpdateForm(self.get_form(request)):
-        set_bootable = forms.BooleanField(required=False, label="Set bootable interface")
-
+    fields = ['systemimage','systemmodel','stateful','provision','prov_interface','initial_mods', 'systemgroups', 'disks', 'location']
     def remove_fields(form):
         for field in list(form.base_fields.keys()):
-            if field not in fields and field != 'set_bootable':
+            if field not in fields:
                 del form.base_fields[field]
         return form
 
-    form_class = remove_fields(BulkUpdateForm)
+    form_class = remove_fields(self.get_form(request))
 
     if request.method == 'POST':
         form = form_class()
@@ -411,42 +440,6 @@ class SystemAdmin(admin.ModelAdmin):
                           }
                       )
                   fieldsUpdated=True
-            # Handle set_bootable: mark the NIC matching each system's prov_interface as bootable
-            # (all NICs if prov_interface is empty), or clear bootable on all NICs if unchecked
-            bootable_updated = 0
-            if 'update_set_bootable' in request.POST:
-              if not form.cleaned_data.get('set_bootable'):
-                # if the checkbox is not checked, update bootable to false for all nics on the selected systems.
-                for item in queryset.all():
-                  nics = NetworkInterface.objects.filter(system=item)
-                  for nic in nics:
-                    nic.bootable = False
-                    nic.save()
-                  bootable_updated += 1
-                self.message_user(request, f"Bootable NIC cleared on {queryset.count()} system(s).")
-                fieldsUpdated = True 
-              else:
-                for item in queryset.all():
-                    prov_iface = item.prov_interface.strip() if item.prov_interface else ''
-                    if not prov_iface:
-                      # no prov_interface specified for this system, enable all interfaces.
-                      nics = NetworkInterface.objects.filter(system=item)
-                      for nic in nics:
-                        nic.bootable = True
-                        nic.save()
-                      bootable_updated += 1
-                    else:
-                      nics = NetworkInterface.objects.filter(system=item)
-                      for nic in nics:
-                          if nic.name == prov_iface:
-                              nic.bootable = True
-                              bootable_updated += 1
-                          else:
-                              nic.bootable = False
-                          nic.save()
-                self.message_user(request, f"Bootable NIC set on {bootable_updated} system(s).")
-                fieldsUpdated = True
-
             if fieldsUpdated is False:
               self.message_user(request, "No fields selected to update.")
               return render(
@@ -466,6 +459,7 @@ class SystemAdmin(admin.ModelAdmin):
                     queryset.count(),
                 )
             )
+            warn_boot_disk_problems(self, request, queryset.all())
             return HttpResponseRedirect(request.get_full_path())
 
         return render(
@@ -539,7 +533,7 @@ def mark_rebuild(modeladmin, request, queryset):
     instance.jobservers.clear()
     SystemImage.objects.filter(pk=instance.pk).update(version=F('version') + 1)
 
-class SystemImageAdmin(admin.ModelAdmin):
+class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   list_display = ['slug', 'name', 'version', 'registered_jobservers']
   readonly_fields = ['timestamp', 'updated', 'created_by',  'jobservers']
   list_display_links = ['slug', 'name']

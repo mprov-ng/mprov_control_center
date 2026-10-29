@@ -11,7 +11,8 @@
   }
 
   function errorAjax(jqXHR, textStatus, errorThrown){
-    alert("Power Command Failed! " + textStatus);
+    var details = (jqXHR.responseJSON && jqXHR.responseJSON.details) || textStatus;
+    alert("Power Command Failed! " + details);
   }
 
 </script>

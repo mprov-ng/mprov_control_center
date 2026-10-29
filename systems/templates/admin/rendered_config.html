@@ -1,21 +1,79 @@
-{% load custom_filters %}
-<ul>
-{% for key, value in config.items %}
+{% comment %}
+The Rendered Config tab on systems and system images (common/rendered_config.py).
+The merge rules below must match common/__init__.py.
+{% endcomment %}
+{% load i18n %}
+{% spaceless %}
+<div class="rendered-config">
 
-  <li>
-  {% spaceless %}
-    <label>{{key}}</label><blockquote><label>Source:</label> {{ value.source }}<br />
-    {% if key != '' %}
-      {% if value.value|is_list %}
-        {% for param in value.value %}
-          <label>Value:</label> {{ param }}<br />
-        {% endfor %}
-      {% else %}
-                <label>Value:</label> {{ value.value }}
-      {% endif %}    
-    {% endif %}
-  </blockquote>
-  {% endspaceless %}
-  </li>
-{% endfor %}
-</ul>
+  <p><strong>{% trans 'Inherits from, in this order:' %} </strong>
+  {% for layer in layers %}{% if not forloop.first %} &rarr; {% endif %}{% if layer.url %}<a href="{{ layer.url }}">{{ layer.label }}</a>{% else %}{{ layer.label }}{% endif %}{% endfor %}</p>
+
+  {% for error in errors %}
+  <div class="alert alert-warning">
+    {% if error.source.url %}<a href="{{ error.source.url }}">{{ error.source.label }}</a>{% else %}{{ error.source.label }}{% endif %}: {{ error.message }}
+  </div>
+  {% endfor %}
+
+  <h5>{% trans 'Boot options' %}</h5>
+  {% if fields %}
+  <table class="table table-sm table-striped">
+    <thead><tr><th>{% trans 'Option' %}</th><th>{% trans 'Value' %}</th><th>{% trans 'From' %}</th></tr></thead>
+    <tbody>
+    {% for field in fields %}
+      <tr><td>{{ field.label }}</td><td><code>{{ field.value }}</code></td>
+      <td>{% for s in field.sources %}{% if not forloop.first %}, {% endif %}{% if s.url %}<a href="{{ s.url }}">{{ s.label }}</a>{% else %}{{ s.label }}{% endif %}{% endfor %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{% trans 'None set.' %}</p>
+  {% endif %}
+
+  <h5>{% trans 'Configuration Parameters' %}</h5>
+  {% if params %}
+  <table class="table table-sm table-striped">
+    <thead><tr><th>{% trans 'Key' %}</th><th>{% trans 'Value' %}</th><th>{% trans 'From' %}</th></tr></thead>
+    <tbody>
+    {% for param in params %}
+      <tr><td><code>{{ param.key }}</code></td><td><pre>{{ param.value }}</pre></td>
+      <td>{% if param.source.url %}<a href="{{ param.source.url }}">{{ param.source.label }}</a>{% else %}{{ param.source.label }}{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{% trans 'None set.' %}</p>
+  {% endif %}
+
+  {% for list in lists %}
+  <h5>{{ list.label }}</h5>
+  {% if list.items %}
+  <table class="table table-sm table-striped">
+    <thead><tr><th>{% trans 'Name' %}</th><th>{% trans 'Type' %}</th><th>{% trans 'From' %}</th></tr></thead>
+    <tbody>
+    {% for item in list.items %}
+      <tr><td>{% if item.url %}<a href="{{ item.url }}">{{ item.name }}</a>{% else %}{{ item.name }}{% endif %}</td><td>{{ item.type }}</td>
+      <td>{% for s in item.sources %}{% if not forloop.first %}, {% endif %}{% if s.url %}<a href="{{ s.url }}">{{ s.label }}</a>{% else %}{{ s.label }}{% endif %}{% endfor %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{% trans 'None.' %}</p>
+  {% endif %}
+  {% endfor %}
+
+  <h5>{% trans 'How this is merged' %}</h5>
+  <ul>
+    <li>{% trans 'The layers apply in the order above, each over the one before: OS Distribution, then System Groups (by name), then the System Image, then the System.' %}
+      {% if kind == 'system' %}{% trans "A system's groups are its own groups plus its image's groups, each applied once." %}{% endif %}</li>
+    <li>{% trans 'Install kernel command line and initial modules add to what is inherited (the command line with spaces, modules with commas). A value starting with = replaces everything inherited instead.' %}</li>
+    <li>{% trans 'Root tmpfs size and provisioning interface replace the inherited value. 0 or empty inherits.' %}</li>
+    <li>{% trans "Configuration Parameters are merged by top-level key: a key set lower down replaces that key's whole value, and other keys are kept. A block that is only comments inherits. A block that isn't valid YAML, or isn't a mapping, is skipped and shown above." %}</li>
+    <li>{% trans 'Scripts and Ansible playbooks, roles and collections are the union of every layer. Which ones run depends on their type (image generation or post-boot).' %}</li>
+  </ul>
+
+  <h5>{% trans 'Merged result' %}</h5>
+  {% if kind == 'system' %}<p>{% blocktrans %}Served to nodes as this system's <code>config</code> field in the mPCC API.{% endblocktrans %}</p>{% endif %}
+  <pre>{{ served }}</pre>
+</div>
+{% endspaceless %}
