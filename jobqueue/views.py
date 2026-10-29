@@ -115,10 +115,15 @@ Format returned:
         jobmodule = self.request.query_params.get('module')
         
         if jobmodule is not None:
-            if jobmodule[0] == "[":
+            if jobmodule.startswith("["):
                 # we are being passed an array
                 # convert the string to an array
-                modules = json.loads(jobmodule) 
+                try:
+                    modules = json.loads(jobmodule)
+                except ValueError:
+                    modules = None
+                if not isinstance(modules, list) or not all(isinstance(m, str) for m in modules):
+                    return Response({'module': "Must be a job module ID or a JSON array of them, e.g. [\"repo-update\",\"pxe-update\"]."}, status=400)
                 queryset = queryset.filter(module__in=modules)
             else:
                 queryset = queryset.filter(module=jobmodule)
@@ -303,6 +308,22 @@ Format returned:
             return Response({field: "This field is required." for field in missing}, status=status.HTTP_400_BAD_REQUEST)
         if not request.data['name']:
             return Response({'name': "This field may not be blank."}, status=status.HTTP_400_BAD_REQUEST)
+        # bad types used to fail inside update_or_create() or the jobmodules
+        # loop with a 500 (#328).
+        errors = {}
+        try:
+            float(request.data['one_minute_load'])
+        except (TypeError, ValueError):
+            errors['one_minute_load'] = "Must be a number."
+        if request.data.get('port') is not None:
+            try:
+                int(request.data['port'])
+            except (TypeError, ValueError):
+                errors['port'] = "Must be an integer."
+        if not isinstance(request.data['jobmodules'], list):
+            errors['jobmodules'] = "Must be a list of job module IDs."
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         if 'port' not in request.data:
             request.data['port'] = None
         defaults = {
