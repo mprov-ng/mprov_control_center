@@ -287,6 +287,7 @@ Format returned:
     model = System
     serializer_class = SystemSerializer
     queryset = None
+    extra_query_params = ('self',)
 
     def post(self, request, *args, **kwargs):
         if 'self' in request.query_params:
