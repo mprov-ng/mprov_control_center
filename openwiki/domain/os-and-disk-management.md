@@ -11,7 +11,7 @@ These apps define *what* gets installed on a machine: the OS distro/repo sources
 
 ## OS management (`osmanagement/`)
 
-Models (`osmanagement/models.py`): `OSType`; `OSDistro` (architecture choices, `baseurl`, `baserepo`/`osrepos`/`extrarepos`, root password/SSH keys, and the inheritable config fields merged into `System.flatten_config()`); `OSRepo` (mirror `repo_package_url`, `managed`/`resync` flags, `hosted_by` JobServers, local mirror `version`). Note: "OS images" in mPCC terms are `SystemImage` in the systems app, not here; there is no package-level modeling.
+Models (`osmanagement/models.py`): `OSType`; `OSDistro` (architecture choices, `baseurl`, `baserepo`/`osrepos`/`extrarepos`, root password/SSH keys, and the inheritable config fields — the bottom layer of the `common.render_config()` merge described in [Systems & Networking](systems-and-networking.md)); `OSRepo` (mirror `repo_package_url`, `managed`/`resync` flags, `hosted_by` JobServers, local mirror `version`). Note: "OS images" in mPCC terms are `SystemImage` in the systems app, not here; there is no package-level modeling.
 
 Notable automation:
 
@@ -34,5 +34,5 @@ Models (`disklayouts/models.py`): `DiskLayout` (slug PK, `dtype` of SCSI / NVMe 
 
 - Any `disklayouts` model change must keep the SCSI-default invariant and pass `disklayouts/test_dtype_default.py`; new migrations for default changes need care because existing rows must retain stored values.
 - Changing `OSDistro.baseurl` semantics ripples into auto-generated repos and `repo-update` job payloads in the [job queue](jobs-and-scripts.md).
-- Remember config inheritance order OSDistro → SystemGroup → System with `=`-prefix override semantics (documented in [Systems & Networking](systems-and-networking.md)).
+- Remember the config inheritance order OSDistro → System Groups → System Image → System with `=`-prefix override semantics (documented in [Systems & Networking](systems-and-networking.md)).
 - Key sources: `osmanagement/{models,admin,forms}.py`, `disklayouts/{models,admin}.py`, `disklayouts/migrations/0028_disklayout_dtype_default_scsi.py`, `common/admin.py`.
