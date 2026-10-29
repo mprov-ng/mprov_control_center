@@ -77,9 +77,13 @@ class NetworkInterfaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = NetworkInterface
         fields = '__all__'
+        # copied from the System on every save (NetworkInterface.save()), so
+        # a value sent here would be overwritten anyway (#382).
+        read_only_fields = ['hostname']
 
 class NetworkInterfaceDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = NetworkInterface
         fields = '__all__'
+        read_only_fields = ['hostname']
         depth=3

@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.dispatch import receiver
 from django.forms import CharField, PasswordInput, ModelForm
@@ -113,6 +113,15 @@ class System(models.Model):
   
   def __str__(self):
     return self.hostname
+
+  def save(self, *args, **kwargs):
+    # Each NIC carries a copy of the hostname (NetworkInterface.save()), which
+    # DHCP/DNS and register_IPv6_ll.py read.  Update the copies in the same
+    # transaction, so a rename never leaves NICs with the old name (#382).
+    # The pre_save signal below already queues the dns/dhcp/pxe jobs.
+    with transaction.atomic():
+      super().save(*args, **kwargs)
+      NetworkInterface.objects.filter(system=self).exclude(hostname=self.hostname).update(hostname=self.hostname)
 
   @cached_property
   def config(self):
