@@ -50,6 +50,25 @@ get_kcmdline_opt(){
 
 
 
+# load the modules the kernel command line asks for (mprov_initial_mods: the
+# distro's, system groups' and system's initial_mods, merged by the mPCC),
+# before the drivers found by PCI class, so a listed NIC driver is there for
+# provisioning.  Each one that loads goes in /tmp/init_mods, for the image's
+# dracut config and the stateful installer; one that doesn't is skipped with
+# a warning (#372).
+load_initial_mods() {
+  for mod in $(echo "$1" | tr ',' ' ')
+  do
+    if modprobe "$mod" >/dev/null 2>&1
+    then
+      echo -n "${mod}," | tee -a /tmp/init_mods
+    else
+      echo -n "(${mod} not loaded)," >&2
+    fi
+  done
+}
+
+
 # grab some of our variables from the kernel cmdline.
 MPROV_TMPFS_SIZE=$(get_kcmdline_opt mprov_tmpfs_size)
 MPROV_IMAGE_URL=$(get_kcmdline_opt mprov_image_url)
@@ -62,6 +81,12 @@ export MPROV_TMPFS_SIZE MPROV_IMAGE_URL MPROV_INITIAL_MODS MPROV_PROV_INTF MPROV
 echo -n "" > /tmp/init_mods
 trap err_handler EXIT
 trap err_handler ERR
+echo -n "Loading initial modules... "
+trap ERR
+load_initial_mods "$MPROV_INITIAL_MODS"
+trap err_handler ERR
+echo "  DONE!"
+
 echo -n "Loading network drivers... "
 echo -n "virtio_net," | tee -a /tmp/init_mods
 modprobe virtio_net
@@ -182,10 +207,6 @@ mkdir -p /image
 mount -t tmpfs -o "size=$MPROV_TMPFS_SIZE" tmpfs /image
 mkdir -p /image/tmp
 date > /image/tmp/boot_timing
-mkdir -p /image/etc/dracut.conf.d/
-echo -n "add_drivers+=\" " >/image/etc/dracut.conf.d/mprov_mods.conf
-cat /tmp/init_mods | sed -e 's/,/ /g' >> /image/etc/dracut.conf.d/mprov_mods.conf
-echo -n " \"" >> /image/etc/dracut.conf.d/mprov_mods.conf
 echo "Image directory setup."
 chmod 755 /image
 sleep 5
@@ -207,6 +228,21 @@ do
 done
 cd /
 trap err_handler ERR
+
+# tell dracut in the image to add the drivers loaded above.  dracut stops at
+# a built-in or unknown module and leaves out every driver listed after it
+# (#360), so keep only the real modules of the image's kernel (ours).
+MPROV_DRACUT_MODS=""
+for mod in $(sed -e 's/,/ /g' /tmp/init_mods)
+do
+  case " ${MPROV_DRACUT_MODS} " in *" ${mod} "*) continue ;; esac
+  if chroot /image /usr/sbin/modinfo -k "$(uname -r)" -n "$mod" >/dev/null 2>&1
+  then
+    MPROV_DRACUT_MODS="${MPROV_DRACUT_MODS} ${mod}"
+  fi
+done
+mkdir -p /image/etc/dracut.conf.d/
+echo "add_drivers+=\"${MPROV_DRACUT_MODS} \"" > /image/etc/dracut.conf.d/mprov_mods.conf
 
 # set the address generation mode to not privacy and generate from MAC address, applies to GUA and LL IPv6 addresses.
 echo -e "[connection]\nipv6.addr-gen-mode=0\nipv6.ip6-privacy=0" > /image/etc/NetworkManager/conf.d/99.mprov-ipv6.conf
@@ -275,6 +311,28 @@ then
   mount --move /newroot /image 
 else
   echo "Stateless Installation"
+
+  # label the tmpfs root for SELinux (#348).  The image tarball carries no
+  # labels, and tmpfs drops labels set before a policy is loaded, so load the
+  # image's policy here and then relabel.  /run and /dev were mounted above
+  # before the policy existed, and systemd only relabels them when it loads
+  # the policy itself, so relabel them too.
+  MPROV_SELINUX=$(sed -n 's/^SELINUX=//p' /image/etc/selinux/config 2>/dev/null)
+  MPROV_SELINUXTYPE=$(sed -n 's/^SELINUXTYPE=//p' /image/etc/selinux/config 2>/dev/null)
+  if [ -n "$MPROV_SELINUX" ] && [ "$MPROV_SELINUX" != "disabled" ] && ! grep -qw 'selinux=0' /proc/cmdline
+  then
+    echo "Applying SELinux labels to the image... "
+    if chroot /image /usr/sbin/load_policy -i && \
+      chroot /image /usr/sbin/setfiles -F -e /proc -e /sys -e /dev -e /run \
+        "/etc/selinux/${MPROV_SELINUXTYPE}/contexts/files/file_contexts" / && \
+      chroot /image /usr/sbin/restorecon -R /run /dev
+    then
+      echo "SELinux labels applied."
+    else
+      echo "Warning: unable to apply SELinux labels; logins may fail unless booted with enforcing=0 or selinux=0."
+    fi
+  fi
+
   # note we are not expecting to return from this.
   echo "Switching to new root.... LEEEEROY JENKINS!!!....."
   date >> /image/tmp/boot_timing
@@ -340,11 +398,29 @@ then
   sync; sync; sync
   # all done, reboot hard
 
+  # unmount the installed filesystems cleanly first: a hard reboot leaves
+  # the XFS log dirty, and GRUB doesn't replay it, so it can't find its
+  # own files (#347).  Deepest first; read-only if one won't unmount.
+  mount -t proc proc /proc >/dev/null 2>&1
+  for mnt in $(awk '$2 == "/image" || $2 ~ /^\/image\// { print $2 }' /proc/mounts | sort -r)
+  do
+    umount "$mnt" || mount -o remount,ro "$mnt"
+  done
+  sync
+
   umount -a -f -l
   sync; sync; sync
   echo "Rebooting..."
+  # the sysrq trigger lives in /proc, which was unmounted above (#347).
+  mount -t proc proc /proc >/dev/null 2>&1
   echo b > /proc/sysrq-trigger
-else  
+  # if that didn't reboot, ask the kernel directly.  Never fall through to
+  # the exit below: init respawns this script, which would install again.
+  /bin/busybox reboot -f
+  sleep 10
+  echo "Error: unable to reboot.  Reset this system to boot the installed OS."
+  while true; do sleep 3600; done
+else
   echo "Give the root password for maintenance mode"
   chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1
   echo "You are at the end of the line for rescue mode."

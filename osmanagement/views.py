@@ -33,7 +33,8 @@ class OSDistroAPIView(MProvView):
     CRB (version 9+) or PowerTools, and EPEL repos from baseurl, then resets to false
 - baseurl: The base URL the generated repos are built from
 - extrarepos: (Optional) IDs of extra repos
-- rootpw: (Optional) Root password for the image
+- rootpw: (Optional) Root password for the image. It is write-only: no GET
+    returns it.
 - rootsshkeys: (Optional) Keys to add to root's authorized keys file
 - ansibleplaybooks, ansibleroles, ansiblecollections: (Optional) Ansible content
     to run on images/systems using this OS
@@ -110,8 +111,9 @@ class OSRepoAPIView(MProvView):
 - name: A human-readable name 
 - repo_package_url: The URL of the repo install package
 - managed: Whether mProv downloads and manages this repo
-- update: If true (and managed), saving queues a repo-update job, bumps the
-    version, and clears hosted_by
+- resync: If true (and managed), saving queues a repo-update job, bumps the
+    version, and clears hosted_by.  resync is then cleared again, so it reads
+    back false.
 - hosted_by: IDs of the job servers hosting this repo
 - ostype: (Optional) The slug of the OS type
 - version: Local version of the repo, if mProv managed
@@ -133,7 +135,7 @@ Format returned:
         "name": "Rocky Linux 8.5 OS",
         "repo_package_url": "https://distro.ibiblio.org/rocky/8.5/BaseOS/x86_64/os/Packages/r/rocky-repos-8.5-3.el8.noarch.rpm",
         "managed": false,
-        "update": false,
+        "resync": false,
         "hosted_by": [],
         "ostype": null,
         "version": 1

@@ -1,0 +1,9 @@
+{% extends 'admin/change_form.html' %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  /* the Network Summary table takes the whole tab, without a label column. */
+  .form-group.field-network_summary > .row > label { display: none; }
+  .form-group.field-network_summary > .row > div { flex: 0 0 100%; width: 100%; max-width: 100%; }
+</style>
+{% endblock %}

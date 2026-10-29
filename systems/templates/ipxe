@@ -1,17 +1,17 @@
 #!ipxe
 
-{% if nic.bootable or nic.system.systemimage.slug == "nads" %}
+{% if nic.bootable and nic.system.provision or nic.system.systemimage.slug == "nads" %}
 
 # static commandline stuff
 set kernel-cmdline console=tty0 rdinit=/linuxrc
 
 # mProv dynamic stuff
 set kernel-cmdline ${kernel-cmdline} mprov_image_url={{nic.bootserver}}/images/{{ nic.system.systemimage.slug }}
-set kernel-cmdline ${kernel-cmdline} mprov_initial_mods={{ nic.system.systemimage.osdistro.initial_mods }}
+set kernel-cmdline ${kernel-cmdline} mprov_initial_mods={{ boot.initial_mods }}
 
-set kernel-cmdline ${kernel-cmdline} mprov_tmpfs_size={{ nic.system.systemimage.osdistro.tmpfs_root_size }}G
-{% if nic.system.systemimage.osdistro.install_kernel_cmdline != "" %} 
-set kernel-cmdline ${kernel-cmdline} {{ nic.system.systemimage.osdistro.install_kernel_cmdline }}
+set kernel-cmdline ${kernel-cmdline} mprov_tmpfs_size={{ boot.tmpfs_root_size }}G
+{% if boot.install_kernel_cmdline %}
+set kernel-cmdline ${kernel-cmdline} {{ boot.install_kernel_cmdline }}
 {% endif %}
 {% if nic.system.stateful %}
 set kernel-cmdline ${kernel-cmdline} mprov_stateful=1
@@ -40,7 +40,7 @@ boot
 {% else %}
 echo
 echo 
-echo ***** System not set to bootable in the mProv Control Center.  
+echo ***** System not set to provision, or has no bootable NIC, in the mProv Control Center.
 echo ***** Attempting local boot.
 sleep 3
 exit

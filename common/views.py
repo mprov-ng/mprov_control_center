@@ -142,7 +142,7 @@ with its own get() only gets this by calling super().get().
                 <link rel="stylesheet" href="/static/jazzmin/css/main.css">
                 <link rel="stylesheet" href="/static/css/mprov.css">
                 <link rel="stylesheet" href="/static/css/mprov_docs.css">
-            '''))
+            ''', features="html.parser"))
             body.append(BeautifulSoup(html, features="html.parser"))
             return HttpResponse(bs, content_type='text/html')
         return None

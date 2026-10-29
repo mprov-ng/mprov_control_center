@@ -3,6 +3,8 @@ from disklayouts.models import DiskLayout, DiskPartition, RaidLayout
 from common.admin import AdminWizardModel
 from django import forms
 from django.db.models import Q
+from systems.admin import warn_boot_disk_problems
+from systems.models import System
 
 class PartForm(forms.ModelForm):
     class Meta:
@@ -30,7 +32,18 @@ class DiskPartitionInline(admin.TabularInline):
   description = "When adding physical partitions that will be used as software RAID members, set both Mount Point and Filesystem to exactly 'raid'."
   
 
-class DiskLayoutAdmin(AdminWizardModel):
+class WarnBootDisksMixin:
+  """ After a layout is saved, warn about every stateful system it was or is
+  attached to that the installer would now refuse (#361). """
+  def save_related(self, request, form, formsets, change):
+    before = set(form.initial.get('systems') or [])
+    super().save_related(request, form, formsets, change)
+    after = set(form.instance.systems.values_list('pk', flat=True))
+    ids = {getattr(s, 'pk', s) for s in before} | after
+    warn_boot_disk_problems(self, request, System.objects.filter(pk__in=ids, stateful=True))
+
+
+class DiskLayoutAdmin(WarnBootDisksMixin, AdminWizardModel):
   inlines = [DiskPartitionInline]
   step_fields = [['dtype'],None]
   readonly_fields = ['dtype', 'slug']
@@ -50,7 +63,7 @@ class DiskLayoutAdmin(AdminWizardModel):
     return form
 
 
-class RaidLayoutAdmin(AdminWizardModel):
+class RaidLayoutAdmin(WarnBootDisksMixin, AdminWizardModel):
   readonly_fields = ['dtype', 'slug']
   exclude=['slug']
 

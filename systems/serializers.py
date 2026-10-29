@@ -8,7 +8,7 @@ from common.serializers import NestedPrimaryKeyRelatedField
 from scripts.serializers import ScriptAPISerializer, AnsibleCollectionAPISerializer, AnsiblePlaybookAPISerializer, AnsibleRoleAPISerializer
 
 class SystemSerializer(serializers.ModelSerializer): 
-    config = serializers.DictField(allow_empty=True, required=False)
+    config = serializers.DictField(read_only=True)
     class Meta:
         model = System
         fields = '__all__'
@@ -19,8 +19,9 @@ class SystemBMCSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemBMC
         fields = '__all__'
-        # Accept the password on POST/PATCH but never return it. Only the ?detail
-        # serializer returns it, because mprov_scripts' setupBMC.py needs it.
+        # Accept the password on POST/PATCH but never return it. Only the
+        # per-system detail paths return it (see SystemBMCAPIView), because
+        # mprov_scripts' setupBMC.py needs it.
         extra_kwargs = {'password': {'write_only': True}}
 class SystemGroupSerializer(serializers.ModelSerializer): 
     # read as nested objects, written as IDs.
@@ -35,6 +36,7 @@ class SystemImageSerializer(serializers.ModelSerializer):
     jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all())
     # read as nested objects, written as IDs.
     systemgroups=NestedPrimaryKeyRelatedField(SystemGroupSerializer, many=True, required=False, queryset=SystemGroup.objects.all())
+    config = serializers.DictField(read_only=True)
     class Meta:
         model = SystemImage
         fields = '__all__'
@@ -47,7 +49,7 @@ class SystemDetailSerializer(serializers.ModelSerializer):
     disks = DiskLayoutAPISerializer(many=True, read_only=True)
     systemimage = SystemImageDetailsSerializer(many=False)
     systemmodel =  serializers.PrimaryKeyRelatedField(queryset=SystemModel.objects.all())
-    config = serializers.DictField()
+    config = serializers.DictField(read_only=True)
     systemgroups = SystemGroupSerializer(many=True)
     ansibleplaybooks = AnsiblePlaybookAPISerializer(many=True)
     ansibleroles = AnsibleRoleAPISerializer(many=True)
@@ -62,6 +64,13 @@ class SystemBMCDetailSerializer(serializers.ModelSerializer):
         model = SystemBMC
         fields = '__all__'# ['id','switch_port','system', 'system_detail', 'network', 'ipaddress', 'mac', 'username', 'password']
         depth = 1        
+class SystemBMCDetailNoPasswordSerializer(SystemBMCDetailSerializer):
+    """ Same nesting as SystemBMCDetailSerializer, without the password, for
+    ?detail queries that are not scoped to one system: one unscoped GET must
+    not return every BMC password (issue #316). The per-system paths keep
+    using SystemBMCDetailSerializer. """
+    class Meta(SystemBMCDetailSerializer.Meta):
+        extra_kwargs = {'password': {'write_only': True}}
 
         
 class NetworkInterfaceSerializer(serializers.ModelSerializer):
