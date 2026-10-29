@@ -89,6 +89,27 @@ class StatefulPartitionDeviceTests(SimpleTestCase):
     self.assertEqual(create[0][-2:], ["/dev/sda3", "/dev/sdb1"])
     self.assertIn("/dev/md0", self.formatted())
 
+  def test_fill_partition_numbered_before_a_raid_member_is_formatted(self):
+    # issue #273: the fill check read the loop's last partition (here the
+    # RAID member numbered after it), so / was never formatted or put in fstab.
+    self.build(disk("root", "/dev/sda",
+                    {"partnum": 1, "mount": "/", "fill": True, "bootable": True},
+                    {"partnum": 2, "mount": "raid", "size": 4096, "filesystem": "raid"}))
+    self.assertEqual(self.installer.partDevices, {("root", 2): "/dev/sda3", ("root", 1): "/dev/sda4"})
+    self.assertIn("/dev/sda4", self.formatted())
+    self.assertNotIn("/dev/sda3", self.formatted())
+    self.assertTrue(self.installer.rootpartUUID)
+
+  def test_fill_raid_member_numbered_first_is_not_formatted(self):
+    # and the other way round: a fill RAID member numbered before a normal
+    # partition was formatted as if it were a filesystem.
+    self.build(disk("root", "/dev/sda",
+                    {"partnum": 1, "mount": "raid", "fill": True, "filesystem": "raid"},
+                    {"partnum": 2, "mount": "/", "size": 8192, "bootable": True}))
+    self.assertEqual(self.installer.partDevices, {("root", 2): "/dev/sda3", ("root", 1): "/dev/sda4"})
+    self.assertNotIn("/dev/sda4", self.formatted())
+    self.assertIn("/dev/sda3", self.formatted())
+
   def test_unknown_raid_member_stops_the_install(self):
     md = {"slug": "md0", "diskname": "/dev/md0", "dtype": "mdrd", "raidlevel": 1, "filesystem": "xfs", "mount": "/data", "partitions": [],
           "members": [{"disklayout": "root", "partnum": 9}]}

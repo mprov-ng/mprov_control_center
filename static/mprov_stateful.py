@@ -227,7 +227,7 @@ class mProvStatefulInstaller():
         self._createPartition(device, disk, fillpart, sectorsize, start)    
         self._setPartDevice(pdisk, fillpart, partnum)
         
-        if part['filesystem'] != 'raid' and part['mount'] != 'raid':
+        if fillpart['filesystem'] != 'raid' and fillpart['mount'] != 'raid':
           partuuid = self._makeFS(fillpart, pdisk)
           # update /tmp/fstab
           with open("/tmp/fstab", "a") as fstab:
