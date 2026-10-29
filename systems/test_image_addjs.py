@@ -30,3 +30,10 @@ class SystemImageAddJobserverTests(TestCase):
   def test_add_one(self):
     self.assertEqual(self.addjs(self.js2.id).status_code, 200)
     self.assertEqual(self.jobserver_ids(), [self.js1.id, self.js2.id])
+
+  def test_unknown_image_is_404(self):
+    # issue #324: was a 500 from DoesNotExist.
+    import json
+    response = self.client.patch("/systemimages/nope/?addjs", json.dumps({"jobservers": [self.js2.id]}),
+                                 content_type="application/json")
+    self.assertEqual(response.status_code, 404)
