@@ -544,7 +544,7 @@ def mark_rebuild(modeladmin, request, queryset):
     SystemImage.objects.filter(pk=instance.pk).update(version=F('version') + 1)
 
 class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
-  list_display = ['slug', 'name', 'version', 'registered_jobservers']
+  list_display = ['slug', 'name', 'osdistro', 'version', 'registered_jobservers']
   readonly_fields = ['timestamp', 'updated', 'created_by',  'jobservers']
   list_display_links = ['slug', 'name']
   actions= [mark_rebuild]
@@ -573,6 +573,9 @@ class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
     }
     ),
   )
+  def get_queryset(self, request):
+    return super().get_queryset(request).select_related('osdistro')
+
   def registered_jobservers(self, obj):
     return ", ".join([jm.name for jm in obj.jobservers.all()])
   registered_jobservers.short_description = 'Registered Job Servers'
