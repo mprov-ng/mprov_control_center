@@ -16,9 +16,21 @@ class JobServerRegisterTests(APITestCase):
     self.assertEqual(response.status_code, 200)
     server = JobServer.objects.get(name="js1")
     # the jobserver json.loads() the body, so it stays a JSON-encoded string (D-33).
-    self.assertEqual(json.loads(response.json()), {"pk": server.pk})
+    self.assertEqual(json.loads(response.json()), {"pk": server.pk, "features": ["addjs-version"]})
     self.assertEqual(server.port, 8080)
     self.assertEqual(list(server.jobmodules.values_list("slug", flat=True)), ["nads"])
+
+  def test_reply_lists_features_and_stays_double_encoded(self):
+    """ Issue #406: the reply lists the optional API features, still as a JSON string. """
+    from jobqueue.views import FEATURES
+    response = self.post({"name": "js1", "address": "10.0.0.1", "one_minute_load": 0.5, "jobmodules": []})
+    self.assertEqual(response.status_code, 200)
+    # mprov_jobserver v0.0.62 rejects a reply that is already an object (#268).
+    self.assertIsInstance(response.json(), str)
+    reply = json.loads(response.json())
+    self.assertEqual(reply["pk"], JobServer.objects.get(name="js1").pk)
+    self.assertEqual(reply["features"], FEATURES)
+    self.assertIn("addjs-version", reply["features"])
 
   def test_unknown_module_is_500(self):
     # the jobserver can't register a module the mPCC doesn't know (#256).
