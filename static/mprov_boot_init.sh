@@ -34,18 +34,21 @@ err_handler() {
 export -f err_handler
 
 
+# the value of option $1 on the kernel command line: only the exact key
+# (mprov_stateful doesn't match mprov_stateful_disk=), everything after the
+# first '=' (a URL may hold more), and the last one when it's given twice,
+# as the kernel does (#285).
 get_kcmdline_opt(){
+  value=""
   # the kernel cmdline is split into words on purpose.
   # shellcheck disable=SC2013
   for i in $(cat /proc/cmdline)
   do
-    tmp_str=$(echo "$i" | grep "$1")
-    if [ "$tmp_str" != "" ]
-    then
-      echo "$tmp_str" | awk -F= '{print $NF}'
-    fi
+    case "$i" in
+      "$1"=*) value="${i#*=}" ;;
+    esac
   done
-
+  echo "$value"
 }
 
 
@@ -214,6 +217,9 @@ sleep 5
 echo; echo "Downloading and extracting image to image directory... "
 echo "Retrieving $MPROV_IMAGE_URL"
 trap ERR
+# a failed wget or gunzip must fail the pipeline too, not just tar: tar can
+# exit 0 on a truncated stream (#286).
+set -o pipefail
 while true
 do
   cd /image || exit 1
@@ -226,6 +232,7 @@ do
     sleep 5
   fi
 done
+set +o pipefail
 cd /
 trap err_handler ERR
 
