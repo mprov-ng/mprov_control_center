@@ -68,6 +68,16 @@ on:
       - 'db/**'
       - '.dev.init'
       - 'backups/**'
+
+# One run per ref (refs/heads/main, or a pull request's own ref).  A newer
+# push cancels the older run still in progress, so the run that publishes
+# :dev is always for the newest commit on main; without this, overlapping
+# runs race and the last one to finish wins, which can be an older commit
+# (#404).  A pull request only cancels its own previous run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
