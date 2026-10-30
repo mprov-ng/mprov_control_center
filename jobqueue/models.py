@@ -93,6 +93,10 @@ class JobServer(models.Model):
     """
     endpoint="/jobservers/"
     name = models.CharField(max_length=255, unique=True)
+    # a job server's own stable ID, sent with every heartbeat by job servers
+    # that have one, so a rename keeps the same row (mprov_jobserver#113).
+    # NULL for job servers that don't send one.
+    host_id = models.CharField(max_length=64, unique=True, null=True, blank=True, verbose_name="Host ID")
     address = models.CharField(max_length=1024, default="mprov")
     port = models.IntegerField(verbose_name="Port", default=8080, )
     heartbeat_time = models.DateTimeField(default=timezone.now, verbose_name="Last Heartbeat")
