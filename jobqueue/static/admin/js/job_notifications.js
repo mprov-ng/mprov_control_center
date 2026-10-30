@@ -8,7 +8,20 @@
     const STORAGE_KEY = 'job_status_notified_changes';
     const MAX_TRACKED_CHANGES = 100;
     const MAX_VISIBLE_NOTIFICATIONS = 5; // Limit concurrent notifications
-    
+
+    // Handle for the polling interval, so a 403 (session expired) can stop it.
+    let pollIntervalId = null;
+
+    // Stop polling and send the user to the login page, bringing them back here after.
+    function redirectToLogin() {
+        if (pollIntervalId !== null) {
+            clearInterval(pollIntervalId);
+            pollIntervalId = null;
+        }
+        const next = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = '/admin/login/?next=' + next;
+    }
+
     // Load previously notified changes from localStorage
     let notifiedChanges = new Set();
     try {
@@ -149,8 +162,17 @@
         }
         
         fetch(url)
-            .then(response => response.json())
+            .then(response => {
+                if (response.status === 403) {
+                    redirectToLogin();
+                    return null;
+                }
+                return response.json();
+            })
             .then(data => {
+                if (!data) {
+                    return;
+                }
                 if (data.changes && data.changes.length > 0) {
                     data.changes.forEach(change => {
                         // Create a unique identifier for this change
@@ -191,7 +213,7 @@
         // Only run on admin pages
         if (document.querySelector('.admin-interface, .admin-site, #changelist')) {
             // Poll every 5 seconds
-            setInterval(pollJobStatusChanges, 1000);
+            pollIntervalId = setInterval(pollJobStatusChanges, 1000);
         }
     });
     
