@@ -14,6 +14,7 @@ from .serializers import (
     SystemImageSerializer,
 )
 from rest_framework.response import Response
+from django.db import transaction
 
 from common.views import MProvView
 from systems.views_noauth import get_client_ip
@@ -629,7 +630,10 @@ class SystemImagesAPIView(MProvView):
 - ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 - ?addjs: PATCH merges the passed jobservers (a list or a single ID) into the
-    existing jobservers instead of replacing them.
+    existing jobservers instead of replacing them.  An optional "version" in the
+    body is the image version the caller has: if the image has been rebuilt
+    since (its version differs), the reply is 409 with the current version and
+    nothing is changed.  Without "version" there is no check.
 
 ### GET method (no parameters)
 Returns a JSON list of all objects in the mPCC of this type.  System groups are
@@ -713,13 +717,32 @@ Format returned:
         # if 'addjs' is in the query string, we are appending a jobserver to the 
         # jobserver array.
         # first let's get the image in question
+        with transaction.atomic():
+          return self.addJobservers(request, *args, **kwargs)
+      return super().patch(request, *args, **kwargs)
+
+    def addJobservers(self, request, *args, **kwargs):
         sysimage = None
         if 'pk' in kwargs:
 
           # an unknown image is a 404 below, not a 500 (#324).
-          sysimage = self.model.objects.filter(pk=kwargs['pk']).first()
+          # locked, so a rebuild can't land between the version check and
+          # the update (#396).
+          sysimage = self.model.objects.select_for_update().filter(pk=kwargs['pk']).first()
         if sysimage is None:
           return Response(None, status=404)
+        if 'version' in request.data:
+          # the caller says which version it has; if the image was rebuilt
+          # since, it doesn't host the current one, so change nothing (#396).
+          try:
+            version = int(request.data['version'])
+          except (TypeError, ValueError):
+            return Response({'detail': "version must be an integer."}, status=400)
+          if version != sysimage.version:
+            return Response({'detail': f"Image {sysimage.pk} is at version {sysimage.version}, not {version}.",
+                             'version': sysimage.version}, status=409)
+          # ?addjs never changes the version.
+          del request.data['version']
         if 'needs_rebuild' in request.data:
             sysimage.needs_rebuild = request.data['needs_rebuild']
         # if the incoming 'jobservers' param is an array, let's merge it with 
@@ -739,7 +762,7 @@ Format returned:
           sysimage.jobservers.set(jobservers)
           sysimage.save()
         
-      return super().patch(request, *args, **kwargs)
+        return super().patch(request, *args, **kwargs)
 # class SytemImageUpdateAPIView(MProvView):
 #   model = SystemImage
 #   queryset = SystemImage.objects.all()
