@@ -11,6 +11,12 @@ from django.core.cache import cache
 from django.http import JsonResponse
 from django.views import View
 
+# Optional API behaviours this mPCC supports, listed in the POST /jobservers/
+# reply so a job server only relies on them when they're there (#406).  Add
+# a name here when a client needs to detect a new behaviour.
+# - addjs-version: PATCH /systemimages/<slug>/?addjs accepts "version" (#396).
+FEATURES = ["addjs-version"]
+
 class JobAPIView(MProvView,
                       GenericAPIView):
     '''
@@ -288,9 +294,11 @@ Format returned:
 - POST is sent to the base URL (no primary key) and creates or updates the job
     server with the given name.  It requires name, address, one_minute_load, and
     jobmodules (a list of job module IDs to register); port is optional and
-    defaults to 8080.  It returns 200 with the job server's ID as a JSON-encoded
-    string, e.g. '{"pk": 3}', 400 if a required field is missing or the name is
-    blank, or a 500 error if a job module can't be found.
+    defaults to 8080.  It returns 200 with the job server's ID and the optional
+    API features this mPCC supports, as a JSON-encoded string, e.g.
+    '{"pk": 3, "features": ["addjs-version"]}' (a client ignores feature names
+    it doesn't know), 400 if a required field is missing or the name is blank,
+    or a 500 error if a job module can't be found.
 
 - PATCH returns the updated object.
 
@@ -348,6 +356,7 @@ Format returned:
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
         obj.save()
         data['pk'] = obj.pk
+        data['features'] = FEATURES
         return Response(status=status.HTTP_200_OK,data=json.dumps(data))
 
 
