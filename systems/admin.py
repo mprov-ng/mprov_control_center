@@ -580,6 +580,10 @@ class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   def get_form(self, request, obj, **kwargs):
     form = super(SystemImageAdmin, self).get_form(request, obj, **kwargs)
     form.base_fields['scripts'].queryset = Script.objects.exclude(scriptType='post-boot')
+    # #424: the name is part of how the image's identity (slug) is derived,
+    # so changing it on an existing image makes a new copy rather than
+    # renaming this one in place.
+    form.base_fields['name'].help_text = "Changing this on an existing image creates a new copy of it; it doesn't rename this one in place."
     return form
   
   
