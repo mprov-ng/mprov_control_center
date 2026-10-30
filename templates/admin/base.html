@@ -50,11 +50,13 @@
     {% block extrastyle %} {% endblock %}
     {% block extrahead %}{% endblock %}
     {# Outside extrahead, so a child template that overrides it without {{ block.super }} keeps these. #}
+    {% if request.user.is_active and request.user.is_staff %}
     <script>
         // Define the URL for job status changes endpoint
         const JOB_STATUS_CHANGES_URL = "/jobqueue/status-changes/";
     </script>
     <script src="{% static "admin/js/job_notifications.js" %}"></script>
+    {% endif %}
     <script src="/static/textarea_tab.js"></script>
     <link rel="stylesheet" href="/static/css/mprov.css">
 </head>
