@@ -1,9 +1,10 @@
 from django.utils import timezone
 from common.views import MProvView
-from jobqueue.models import JobModule, JobServer, Job, filter_params
+from jobqueue.models import JobModule, JobServer, JobServerAddress, Job, filter_params
 from jobqueue.serializers import JobAPISerializer, JobModuleAPISerializer, JobServerAPISerializer
 from rest_framework import status, generics
 from rest_framework.response import Response
+import ipaddress
 import json
 
 from rest_framework.generics import GenericAPIView
@@ -18,7 +19,10 @@ from django.views import View
 # - addjs-version: PATCH /systemimages/<slug>/?addjs accepts "version" (#396).
 # - host-id: POST /jobservers/ accepts "host_id" and finds the job server by
 #   it, so a rename keeps the same row (mprov_jobserver#113).
-FEATURES = ["addjs-version", "host-id"]
+# - jobserver-addresses: POST /jobservers/ accepts "addresses", one per
+#   network the job server serves, and clients are sent to the one on their
+#   network (mprov_jobserver#114).
+FEATURES = ["addjs-version", "host-id", "jobserver-addresses"]
 
 class JobAPIView(MProvView,
                       GenericAPIView):
@@ -300,7 +304,11 @@ Format returned:
     host_id is optional: with it, the job server is found by host_id, so a new
     name renames the same job server; a job server registered under that name
     without a host_id is adopted.  Without it, the job server with the given
-    name is updated.  It returns 200 with the job server's ID and the optional
+    name is updated.  addresses is optional: a list of {"address": ...,
+    "network": <network ID>}, one per network it serves (a missing network
+    is found from the networks' subnets).  Each heartbeat's list replaces
+    the last; image and repository redirects send a client to the address on
+    its own network, else to address.  It returns 200 with the job server's ID and the optional
     API features this mPCC supports, as a JSON-encoded string, e.g.
     '{"pk": 3, "features": ["addjs-version", "host-id"]}' (a client ignores
     feature names it doesn't know), 400 if a required field is missing, the
@@ -341,6 +349,11 @@ Format returned:
         host_id = request.data.get('host_id')
         if 'host_id' in request.data and not (isinstance(host_id, str) and 0 < len(host_id.strip()) <= 64):
             errors['host_id'] = "Must be a non-blank string of up to 64 characters."
+        addresses = None
+        if 'addresses' in request.data:
+            addresses, problem = self._addresses(request.data['addresses'])
+            if problem:
+                errors['addresses'] = problem
         if errors:
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         if 'port' not in request.data:
@@ -372,9 +385,62 @@ Format returned:
             except JobModule.DoesNotExist:
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
         obj.save()
+        # the heartbeat's list replaces the last one; a heartbeat without it
+        # (an older job server) leaves only the single address.
+        with transaction.atomic():
+            obj.addresses.all().delete()
+            for address, network in addresses or []:
+                JobServerAddress.objects.create(jobserver=obj, address=address, network=network,
+                                                heartbeat_time=defaults['heartbeat_time'])
         data['pk'] = obj.pk
         data['features'] = FEATURES
         return Response(status=status.HTTP_200_OK,data=json.dumps(data))
+
+    def _addresses(self, entries):
+        """
+        Check a heartbeat's "addresses" list (mprov_jobserver#114): a list of
+        {"address": ..., "network": <network ID, optional>}.  A missing
+        network is found from the address and the networks' subnets.
+        Returns ([(address, network or None)], None) or (None, problem).
+        """
+        from networks.models import Network
+        if not isinstance(entries, list):
+            return None, 'Must be a list of {"address": ..., "network": <network ID>} objects.'
+        networks = list(Network.objects.all())
+        result = []
+        seen = set()
+        for entry in entries:
+            if not isinstance(entry, dict) or not isinstance(entry.get('address'), str) or not entry['address'].strip():
+                return None, 'Each entry needs a non-blank "address".'
+            address = entry['address'].strip()
+            if len(address) > 1024:
+                return None, f"Address {address[:40]}... is too long."
+            if address in seen:
+                return None, f"Address {address} is listed twice."
+            seen.add(address)
+            if entry.get('network') is not None:
+                network = next((n for n in networks if str(n.pk) == str(entry['network'])), None)
+                if network is None:
+                    return None, f"Network {entry['network']} doesn't exist."
+            else:
+                network = self._networkOf(address, networks)
+            result.append((address, network))
+        return result, None
+
+    @staticmethod
+    def _networkOf(address, networks):
+        """ The network whose subnet holds address, or None (e.g. a host name). """
+        try:
+            ip = ipaddress.ip_address(address)
+        except ValueError:
+            return None
+        for network in networks:
+            try:
+                if ip in ipaddress.ip_network(f"{network.subnet}/{network.netmask}", strict=False):
+                    return network
+            except ValueError:
+                continue
+        return None
 
     def _register_by_host_id(self, host_id, defaults):
         """
