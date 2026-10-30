@@ -1,5 +1,3 @@
-import os
-import subprocess
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect
 from .serializers import (
@@ -25,6 +23,7 @@ from jobqueue.models import Job, JobModule, JobStatus
 from django.utils.text import slugify
 import pyipmi
 import pyipmi.interfaces
+from systems.bootdev import bootdev_failed, set_pxe_bootdev
 from func_timeout import func_timeout, FunctionTimedOut
 
 class SystemRegAPIView(MProvView):
@@ -894,12 +893,16 @@ class SystemPowerAPIView(MProvView):
                 return Response({'id': "Must be a system ID."}, status=400)
             if system_results is None:
                 return Response(None, status=404)
+            was_provisioning = system_results.provision
             if kwargs['action'] in self.PXE_ACTIONS and not system_results.enable_provisioning():
                 return Response(self._cantProvision(system_results), status=409)
             self.queryset = self.model.objects.filter(system=system_results.id)
             results = {}
             for bmc in self.queryset:
                 results[str(bmc)] = self._doPowerCmd(bmc, kwargs['action'])
+            if kwargs['action'] in self.PXE_ACTIONS and results and all(bootdev_failed(r) for r in results.values()):
+                # nothing was reset, so nothing changes (#311).
+                self._restoreProvision(system_results, was_provisioning)
             return Response(results, status=200)
 
         # otherwise act on the BMCs matching ?FIELD=VALUE filters on the BMC
@@ -941,9 +944,21 @@ class SystemPowerAPIView(MProvView):
     def _powerAction(self, bmc, action):
         # a PXE boot provisions the system, which needs a bootable NIC to boot
         # from and, if stateful, disk layouts the installer accepts.
-        if action in self.PXE_ACTIONS and not bmc.system.enable_provisioning():
+        if action not in self.PXE_ACTIONS:
+            return self._doPowerCmd(bmc, action)
+        was_provisioning = bmc.system.provision
+        if not bmc.system.enable_provisioning():
             return self._cantProvision(bmc.system)
-        return self._doPowerCmd(bmc, action)
+        result = self._doPowerCmd(bmc, action)
+        if bootdev_failed(result):
+            # nothing was reset, so nothing changes (#311).
+            self._restoreProvision(bmc.system, was_provisioning)
+        return result
+
+    def _restoreProvision(self, system, provision):
+        if system.provision != provision:
+            system.provision = provision
+            system.save()
 
     def _doPowerCmd(self, bmc, action="on"):
         print(f"Bmc: {bmc.ipaddress}, user: {bmc.username}, action: {action}")
@@ -958,20 +973,11 @@ class SystemPowerAPIView(MProvView):
         
         
         if action == "pxe" or  action == "pxeefi":
-            efiopt=""
-            if action == "pxeefi":
-                efiopt = "options=efiboot"
-        
-            # XXX: bootdev is not implemented in python-ipmi(pyipmi)
-            # so we will need to issue a raw ipmitool command.
-            # -E reads the password from IPMI_PASSWORD, keeping it out of the process list.
-            ipmitool_cmd = ["/usr/bin/ipmitool", "-Ilanplus", f"-U{bmc.username}", "-E", f"-H{bmc.ipaddress}", "chassis", "bootdev", "pxe"] + efiopt.split()
-            ipmitool_env = {**os.environ, "IPMI_PASSWORD": bmc.password or ""}
-            try:
-                subprocess.run(args=ipmitool_cmd, env=ipmitool_env)
-            except OSError:
-                print("Error Setting PXE.")
-                return
+            # don't reset the node into its old OS when the boot device
+            # wasn't set (#311).
+            failed = set_pxe_bootdev(bmc, efi=(action == "pxeefi"))
+            if failed:
+                return failed
             # force a reset
             action = "reset"
             # make sure we are powered on

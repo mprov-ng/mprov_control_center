@@ -16,9 +16,8 @@ from scripts.models import Script
 from common.rendered_config import RenderedConfigAdminMixin
 import pyipmi
 import pyipmi.interfaces
+from systems.bootdev import bootdev_failed, set_pxe_bootdev
 from func_timeout import func_timeout, FunctionTimedOut
-import os
-import subprocess
 
 from .models import (
   System,
@@ -260,34 +259,36 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
            print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
   @admin.action(description="Boot to PXE (Legacy)")
   def sys_pxe(self, request, queryset):
-     for system in queryset: 
-        mybmc = SystemBMC.objects.all().filter(system=system.id)
-        if len(mybmc) != 1:
-           print(f"Error: Unable to find bmc for {system.hostname}")
-           continue
-        mybmc = mybmc[0]
-        if not system.enable_provisioning():
-           self._cantProvision(request, system)
-           continue
-        try:
-          func_timeout(5, self._doPowerCmd, [mybmc, "pxe"])
-        except FunctionTimedOut:
-           print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
+     self._pxeBoot(request, queryset, "pxe")
   @admin.action(description="Boot to PXE (EFI)")
   def sys_pxe_efi(self, request, queryset):
+     self._pxeBoot(request, queryset, "pxeefi")
+
+  def _pxeBoot(self, request, queryset, action):
      for system in queryset: 
         mybmc = SystemBMC.objects.all().filter(system=system.id)
         if len(mybmc) != 1:
            print(f"Error: Unable to find bmc for {system.hostname}")
            continue
         mybmc = mybmc[0]
+        was_provisioning = system.provision
         if not system.enable_provisioning():
            self._cantProvision(request, system)
            continue
         try:
-          func_timeout(5, self._doPowerCmd, [mybmc, "pxeefi"])
+          result = func_timeout(5, self._doPowerCmd, [mybmc, action])
         except FunctionTimedOut:
            print(f"Error: {system.hostname} bmc timeout (ip: {mybmc.ipaddress})")
+           self.message_user(request, f"{system.hostname}: the BMC ({mybmc.ipaddress}) timed out; it may not have been reset.", level=messages.ERROR)
+           continue
+        if bootdev_failed(result):
+           # nothing was reset, so nothing changes (#311).
+           if system.provision != was_provisioning:
+              system.provision = was_provisioning
+              system.save()
+           self.message_user(request, f"{system.hostname}: {result['details']}", level=messages.ERROR)
+        else:
+           self.message_user(request, f"{system.hostname}: set to PXE boot and reset.", level=messages.SUCCESS)
   
   def _cantProvision(self, request, system):
     self.message_user(request, f"{system.provisioning_problem()}  It was not reset.", level=messages.ERROR)
@@ -308,20 +309,11 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
         ipmi.session.establish()
         ipmi.target = pyipmi.Target(ipmb_address=0x20)
         if action == "pxe" or  action == "pxeefi":
-          efiopt=""
-          if action == "pxeefi":
-             efiopt = "options=efiboot"
-          
-          # XXX: bootdev is not implemented in python-ipmi(pyipmi)
-          # so we will need to issue a raw ipmitool command.
-          # -E reads the password from IPMI_PASSWORD, keeping it out of the process list.
-          ipmitool_cmd = ["/usr/bin/ipmitool", "-Ilanplus", f"-U{bmc.username}", "-E", f"-H{bmc.ipaddress}", "chassis", "bootdev", "pxe"] + efiopt.split()
-          ipmitool_env = {**os.environ, "IPMI_PASSWORD": bmc.password or ""}
-          try:
-            subprocess.run(args=ipmitool_cmd, env=ipmitool_env)
-          except OSError:
-            print("Error Setting PXE.")
-            return
+          # don't reset the node into its old OS when the boot device
+          # wasn't set (#311).  The PXE actions give this call 5 s in all.
+          failed = set_pxe_bootdev(bmc, efi=(action == "pxeefi"), timeout=4)
+          if failed:
+            return failed
           # force a reset
           action = "reset"
           # make sure we are powered on

@@ -30,27 +30,27 @@ class SystemPowerAPIViewResetTests(SimpleTestCase):
     SystemPowerAPIView()._doPowerCmd(self.bmc, "reset")
     self.ipmi.chassis_control_power_cycle.assert_called_once_with()
 
-  @mock.patch("systems.views.subprocess")
-  def test_pxe_resets_once(self, subprocess):
+  @mock.patch("systems.bootdev.subprocess.run", return_value=SimpleNamespace(returncode=0, stderr=""))
+  def test_pxe_resets_once(self, run):
     # pxe sets the boot device, then forces a reset.
     SystemPowerAPIView()._doPowerCmd(self.bmc, "pxe")
-    subprocess.run.assert_called_once()
+    run.assert_called_once()
     self.ipmi.chassis_control_hard_reset.assert_called_once_with()
     self.ipmi.chassis_control_power_cycle.assert_not_called()
 
-  @mock.patch("systems.views.subprocess")
-  def test_pxe_passes_password_in_env(self, subprocess):
+  @mock.patch("systems.bootdev.subprocess.run", return_value=SimpleNamespace(returncode=0, stderr=""))
+  def test_pxe_passes_password_in_env(self, run):
     # the password must not be on the ipmitool command line, where ps shows it.
     SystemPowerAPIView()._doPowerCmd(self.bmc, "pxeefi")
-    args = subprocess.run.call_args.kwargs["args"]
-    env = subprocess.run.call_args.kwargs["env"]
+    args = run.call_args.args[0]
+    env = run.call_args.kwargs["env"]
     self.assertIn("-E", args)
     self.assertEqual(args[-1], "options=efiboot")
     self.assertFalse(any("secret" in arg for arg in args))
     self.assertEqual(env["IPMI_PASSWORD"], "secret")
 
-  @mock.patch("systems.views.subprocess")
-  def test_power_cmd_does_not_print_password(self, subprocess):
+  @mock.patch("systems.bootdev.subprocess.run", return_value=SimpleNamespace(returncode=0, stderr=""))
+  def test_power_cmd_does_not_print_password(self, run):
     out = io.StringIO()
     with redirect_stdout(out):
       SystemPowerAPIView()._doPowerCmd(self.bmc, "pxe")
