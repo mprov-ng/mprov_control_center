@@ -175,6 +175,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'common.request.CurrentRequestMiddleware',
 ]
 SESSION_EXPIRE_SECONDS = float(os.environ.get('SESSION_EXPIRE_SECONDS', '1800'))
 SESSION_TIMEOUT_REDIRECT = '/admin/login/'

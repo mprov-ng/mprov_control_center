@@ -104,13 +104,8 @@ class SwitchPort(models.Model):
 @receiver(pre_save, sender=Switch)
 def UpdateSwitch(sender, instance, **kwargs):
   if sender == Switch:
-    import inspect
-    for frame_record in inspect.stack():
-        if frame_record[3]=='get_response':
-            request = frame_record[0].f_locals['request']
-            break
-    else:
-        request = None
+    from common.request import get_current_request
+    request = get_current_request()
     if request is not None:
       if type(request.user) is AnonymousUser:
           instance.created_by = User.objects.get(pk=1)
