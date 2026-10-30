@@ -3,9 +3,11 @@ on:
   pull_request:
     paths-ignore:
       # Skip changes that can't affect the tests: files .dockerignore keeps
-      # out of the image, plus docs.  Changes to this workflow still run it.
+      # out of the image, plus docs.  Changes to this workflow or to the
+      # shared tests in .github/actions/mpcc-tests still run it.
       - '.github/**'
       - '!.github/workflows/test-and-publish-dev.yml'
+      - '!.github/actions/**'
       - '.gitignore'
       - 'REVIEW-2026-10.md'
       - '**.md'
@@ -36,9 +38,11 @@ on:
       - main
     paths-ignore:
       # Skip changes that can't affect the tests: files .dockerignore keeps
-      # out of the image, plus docs.  Changes to this workflow still run it.
+      # out of the image, plus docs.  Changes to this workflow or to the
+      # shared tests in .github/actions/mpcc-tests still run it.
       - '.github/**'
       - '!.github/workflows/test-and-publish-dev.yml'
+      - '!.github/actions/**'
       - '.gitignore'
       - 'REVIEW-2026-10.md'
       - '**.md'
@@ -94,41 +98,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Includes MigrationsTest, which fails if a model change has no
-      # migration committed for it.
+      # The same tests the release workflow runs (#333).
       -
-        name: Run Django Tests
-        run: |
-          docker run --rm --entrypoint bash mpcc-test:ci -c '
-            cd /var/www/mprov_control_center &&
-            . bin/activate &&
-            export SECRET_KEY="$(python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")" &&
-            python manage.py check &&
-            python manage.py test
-          '
-
-      # Production runs on MariaDB (mprov-compose ships mariadb:10.11), and
-      # some queries behave differently there than on SQLite (#385), so the
-      # whole suite runs against it too.  Throwaway container and password.
-      -
-        name: Run Django Tests on MariaDB
-        run: |
-          docker network create mpcc-ci
-          docker run -d --name mpcc-ci-db --network mpcc-ci \
-            -e MARIADB_ROOT_PASSWORD=ci -e MARIADB_DATABASE=mprov mariadb:10.11
-          for i in $(seq 1 60); do
-            docker exec mpcc-ci-db healthcheck.sh --connect --innodb_initialized && break
-            sleep 2
-          done
-          docker run --rm --network mpcc-ci \
-            -e DB_ENGINE=django.db.backends.mysql -e DB_NAME=mprov -e DB_USER=root \
-            -e DB_PASS=ci -e DB_HOST=mpcc-ci-db -e DB_PORT=3306 \
-            --entrypoint bash mpcc-test:ci -c '
-            cd /var/www/mprov_control_center &&
-            . bin/activate &&
-            export SECRET_KEY="$(python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")" &&
-            python manage.py test --noinput
-          '
+        name: Run the tests
+        uses: ./.github/actions/mpcc-tests
+        with:
+          image: mpcc-test:ci
 
       # Publish the image that was just tested as :dev.  Only for pushes to
       # main; pull requests stop after the tests.
