@@ -358,7 +358,9 @@ class mProvStatefulInstaller():
           os.makedirs("/newroot/sys/firmware/efi/efivars", exist_ok=True)
           sh.mount(['-o', 'bind', "/sys/firmware/efi/efivars", "/newroot/sys/firmware/efi/efivars"])
 
-      bootdisk = self.bootdisk
+      # grub2-install and efibootmgr run in /newroot: give them the kernel
+      # name, not a /dev/disk/ link (#410).
+      bootdisk = os.path.realpath(self.bootdisk)
 
       # add the kernel commandline to /etc/default/grub
       with open("/proc/cmdline", "r") as cmdline:
@@ -684,7 +686,9 @@ class mProvStatefulInstaller():
     if part['filesystem'] == 'biosboot':
       print(f"Setting bios_grub flag on {self._partName(device.path, part['partnum'])}")
       partition.setFlag(parted.PARTITION_BIOS_GRUB)
-      if device.path != self.bootdisk:
+      # parted names the device by its kernel name, the layout may use a
+      # /dev/disk/ link to it (#410).
+      if os.path.realpath(device.path) != os.path.realpath(self.bootdisk):
         print("ERROR: Somehow, the disk we detected was not the same as the one we are trying to set.  Bailing out.")
         sys.exit(1)
       self.bootpart = self._partName(self.bootdisk, part['partnum'])
@@ -707,15 +711,13 @@ class mProvStatefulInstaller():
   def _checkDisks(self):
     """
     Stop before touching anything if a layout's disk doesn't exist (#391).
-    The installer runs without udev, so /dev/disk/by-id/ and by-path/ links
-    don't exist here even though the installed system has them.
+    /dev/disk/by-id/ and by-path/ names work too: mprov_stateful.sh runs the
+    image's udev while installing (#410).
     """
     missing = [d['diskname'] for d in self.disklayout
                if d['dtype'] != 'mdrd' and not os.path.exists(d['diskname'])]
     for diskname in missing:
       print(f"ERROR: disk {diskname} doesn't exist on this node.")
-      if diskname.startswith("/dev/disk/"):
-        print("ERROR: /dev/disk/by-id/ and by-path/ names don't work while installing; use the kernel name (e.g. /dev/sda).")
     if missing:
       print("ERROR: fix the disk layout in the mPCC.  No disk was changed.")
       sys.exit(1)
@@ -725,8 +727,13 @@ class mProvStatefulInstaller():
     Wait for a partition we just created to show up (#391).  The kernel
     creates the device node after parted commits the table, so it can be
     missing for a moment (mprov_scripts saw mkswap fail with 'cannot open
-    /dev/sda1').
+    /dev/sda1').  udev is settled first, so its /dev/disk/ links for the
+    new partition exist too (#410).
     """
+    try:
+      sh.udevadm(['settle', f'--timeout={timeout}'])
+    except Exception as e:
+      print(f"Warning: udevadm settle failed ({e}), waiting for {device} anyway.")
     deadline = time.monotonic() + timeout
     while not os.path.exists(device):
       if time.monotonic() > deadline:

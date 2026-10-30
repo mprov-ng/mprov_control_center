@@ -213,15 +213,16 @@ class StatefulMissingDiskTests(StatefulInstallerTestCase):
   def printed(self):
     return "\n".join(" ".join(map(str, c.args)) for c in self.print.call_args_list)
 
-  def test_by_id_disk_stops_before_anything_is_changed(self):
+  def test_missing_by_id_disk_stops_before_anything_is_changed(self):
     with self.assertRaises(SystemExit):
       self.run_installer(disk("root", BY_ID, {"partnum": 1, "mount": "/", "fill": True, "bootable": True}))
     self.assertIn(f"disk {BY_ID} doesn't exist", self.printed())
-    self.assertIn("use the kernel name", self.printed())
+    # by-id names work since #410, so there's no "use the kernel name" hint.
+    self.assertNotIn("kernel name", self.printed())
     self.sh.mdadm.assert_not_called()
     self.sh.mkfs.assert_not_called()
 
-  def test_missing_kernel_name_has_no_by_id_hint(self):
+  def test_missing_kernel_name(self):
     with self.assertRaises(SystemExit):
       self.run_installer(disk("root", "/dev/sda", {"partnum": 1, "mount": "/", "fill": True, "bootable": True}),
                          disk("data", "/dev/sdb", {"partnum": 1, "mount": "/data", "fill": True}), exists={"/dev/sda"})
