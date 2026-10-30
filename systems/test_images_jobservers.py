@@ -58,3 +58,38 @@ class ImagesAPIViewJobserverTests(TestCase):
     response = self.client.get("/images/compute/", REMOTE_ADDR="10.0.0.50")
     self.assertEqual(response.status_code, 404)
     self.assertEqual(sorted(js.name for js in self.image.jobservers.all()), ["bad", "good", "ip"])
+
+
+class ImagesAPIViewIPv6Tests(TestCase):
+  """ Issue #309: an IPv6 job server address is bracketed in image URLs. """
+
+  def setUp(self):
+    from jobqueue.models import JobServer
+    user = User.objects.create(username="images-v6-test")
+    self.image = SystemImage.objects.create(name="compute", created_by=user, needs_rebuild=False)
+    self.v6 = JobServer.objects.create(name="v6", address="fd00::5", one_minute_load=0.1)
+    self.image.jobservers.add(self.v6)
+
+  def test_image_url_brackets_ipv6(self):
+    from systems.views_noauth import ImagesAPIView
+    self.assertEqual(ImagesAPIView.imageURL(self.v6, self.image), "http://[fd00::5]:8080/images/compute/compute.img")
+    self.assertEqual(ImagesAPIView.imageURL(self.v6, self.image, isKernel=True), "http://[fd00::5]:8080/images/compute/compute.vmlinuz")
+    self.assertEqual(ImagesAPIView.imageURL(self.v6, self.image, isInitRamFS=True), "http://[fd00::5]:8080/images/compute/compute.initramfs")
+
+  def test_image_url_leaves_ipv4_and_names_alone(self):
+    from systems.views_noauth import ImagesAPIView
+    for address in ("10.0.0.3", "js.example", "[fd00::5]"):
+      js = SimpleNamespace(address=address, port=8080)
+      self.assertEqual(ImagesAPIView.imageURL(js, self.image), f"http://{address}:8080/images/compute/compute.img")
+
+  @mock.patch("systems.views_noauth.requests.head")
+  def test_redirect_to_ipv6_jobserver_is_bracketed(self, head):
+    head.return_value = SimpleNamespace(status_code=200)
+    for path, suffix in (("/images/compute/", ".img"), ("/images/compute.vmlinuz/", ".vmlinuz"), ("/images/compute.initramfs/", ".initramfs")):
+      response = self.client.get(path, REMOTE_ADDR="fd00::50")
+      self.assertEqual(response.status_code, 302, path)
+      self.assertEqual(response["Location"], f"http://[fd00::5]:8080/images/compute/compute{suffix}")
+      head.assert_called_with(f"http://[fd00::5]:8080/images/compute/compute{suffix}", timeout=1)
+    # the bracketed form is never saved back to the job server.
+    self.v6.refresh_from_db()
+    self.assertEqual(self.v6.address, "fd00::5")
