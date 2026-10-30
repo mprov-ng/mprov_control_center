@@ -363,22 +363,7 @@ class mProvStatefulInstaller():
 
       # collapse the command line into a space separated string
       cmdlinestr = ' '.join(cmdlineFile)
-      newcmdline = []
-
-      # now let's filter out some stuff the new OS doesn't need
-      for arg in cmdlinestr.split(' '):
-          try:
-              argKey, argvalue = arg.split('=', 1)
-              if argKey == 'initrd' or \
-                  argKey == 'rdinit' or \
-                  argKey.startswith('mprov') or \
-                  argKey == 'autorelabel' :
-                  if argKey == "mprov_initial_mods":
-                      self.modules = argvalue.replace(",", " ")
-                  continue
-              newcmdline.append(arg)
-          except Exception:
-              pass
+      newcmdline = self._grubCmdline(cmdlinestr)
 
       # check for auto-detected modules
       if os.path.exists("/tmp/init_mods") :
@@ -506,6 +491,26 @@ class mProvStatefulInstaller():
               "--verbose",
               bootdisk ])
           sh.chroot(["/newroot", "grub2-mkconfig", "-o", "/etc/grub2.cfg"])
+
+  def _grubCmdline(self, cmdlinestr):
+      """
+      The netboot kernel command line's arguments the installed system keeps:
+      everything but initrd, rdinit, autorelabel and the mprov* options.
+      Arguments without '=' (quiet, ro, rhgb) are kept too (#276).  Notes
+      mprov_initial_mods in self.modules.
+      """
+      newcmdline = []
+      for arg in cmdlinestr.split():
+          argKey, sep, argvalue = arg.partition('=')
+          if argKey == 'initrd' or \
+              argKey == 'rdinit' or \
+              argKey.startswith('mprov') or \
+              argKey == 'autorelabel' :
+              if argKey == "mprov_initial_mods" and sep:
+                  self.modules = argvalue.replace(",", " ")
+              continue
+          newcmdline.append(arg)
+      return newcmdline
 
   def realModules(self, mods):
       # dracut stops at a built-in or unknown module and leaves out every
