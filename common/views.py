@@ -1,7 +1,6 @@
 from django.http import HttpResponse, HttpResponseNotAllowed
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework_api_key.permissions import HasAPIKey
+from common.permissions import HasAPIKeyOrIsAuthenticated
 from rest_framework import mixins, generics
 from django.db.models import (
     AutoField, BigAutoField, BigIntegerField, BooleanField, CharField,
@@ -74,7 +73,7 @@ key instead of being ignored, so a typo can't return every row (#390).
     #filter_backends = [DjangoFilterBackend]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
-    permission_classes = [HasAPIKey|IsAuthenticated]
+    permission_classes = [HasAPIKeyOrIsAuthenticated]
 
     model_to_json_type_map = {
         AutoField: 'number',
