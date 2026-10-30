@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Resolve the first-run superuser password (#317).  Sourced by
 # init_mpcc.sh before the superuser is created; never run directly.
 #

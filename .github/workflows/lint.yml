@@ -1,0 +1,30 @@
+name: Lint
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      # errors only; the rules are in ruff.toml (#330)
+      - name: Ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff==0.17.3
+          ruff check --output-format github .
+
+      # every tracked shell script, including the udhcpc scripts
+      - name: ShellCheck
+        run: |
+          shellcheck --version
+          git ls-files -z '*.sh' 'static/*.script' | xargs -0 shellcheck -S error
