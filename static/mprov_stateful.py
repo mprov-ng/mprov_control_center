@@ -146,7 +146,9 @@ class mProvStatefulInstaller():
 
     if len(bootdisks) == 1 :
       self.bootdisk = bootdisks[0]
-      
+
+    self._checkDisks()
+
     print("THIS OPERATION WILL DESTROY THE CONTENTS OF THE FOLLOWING DISKS: ")
     print(f"\t{disks}")
     print("CTRL-C NOW TO STOP IT!")
@@ -193,12 +195,8 @@ class mProvStatefulInstaller():
         start = start + self._createPartition(device, disk, bootpart, sectorsize, start, parttype=parted.PARTITION_NORMAL)
         self._makeFS(bootpart, pdisk)
         
-        if device.path.startswith("/dev/nvme"):
-          part_prefix="p"
-        else:
-          part_prefix=""
         with open("/tmp/fstab", "a") as fstab:
-            fstab.write(f"{device.path}{part_prefix}{partnum}\t/boot/efi\t\tvfat\tdefaults,noauto\t0 0\n")
+            fstab.write(f"{self._partName(pdisk['diskname'], partnum)}\t/boot/efi\t\tvfat\tdefaults,noauto\t0 0\n")
         partnum += 1
 
       pdisk['partitions'] = sorted(pdisk['partitions'], key=lambda d: d['partnum'])
@@ -210,6 +208,7 @@ class mProvStatefulInstaller():
         print(f"Partition Number: {partnum}")
         start = start + self._createPartition(device, disk, part, sectorsize, start) + 1
         self._setPartDevice(pdisk, part, partnum)
+        self._waitForPartition(part['device'])
         if part['filesystem'] != 'raid' and part['mount'] != 'raid':
           partuuid = self._makeFS(part, pdisk)
 
@@ -226,6 +225,7 @@ class mProvStatefulInstaller():
       if fillpart is not None:
         self._createPartition(device, disk, fillpart, sectorsize, start)    
         self._setPartDevice(pdisk, fillpart, partnum)
+        self._waitForPartition(fillpart['device'])
         
         if fillpart['filesystem'] != 'raid' and fillpart['mount'] != 'raid':
           partuuid = self._makeFS(fillpart, pdisk)
@@ -653,41 +653,78 @@ class mProvStatefulInstaller():
       partition.setFlag(parted.PARTITION_SWAP)
     disk.addPartition(partition=partition, constraint=device.optimalAlignedConstraint)
     if part['filesystem'] == 'biosboot':
-      if device.path.startswith("/dev/nvme"):
-        partprefix="p"
-      else:
-        partprefix=""
-      print(f"Setting bios_grub flag on {device.path}{partprefix}{part['partnum']}")
+      print(f"Setting bios_grub flag on {self._partName(device.path, part['partnum'])}")
       partition.setFlag(parted.PARTITION_BIOS_GRUB)
       if device.path != self.bootdisk:
         print("ERROR: Somehow, the disk we detected was not the same as the one we are trying to set.  Bailing out.")
         sys.exit(1)
-      self.bootpart = f"{self.bootdisk}{partprefix}{part['partnum']}"
+      self.bootpart = self._partName(self.bootdisk, part['partnum'])
     disk.commit()
     return self.from_mebibytes(part['size'], sectorsize)
     
 
+  def _partName(self, diskname, partnum):
+    """
+    The device of partition partnum on disk diskname, named the kernel's way
+    (#391, the same rule as mprov_scripts' localTempDisk.py): the disk's
+    kernel name (a /dev/disk/by-id/ or by-path link resolves to sda) plus the
+    number, with a 'p' between when the name ends in a digit (nvme0n1p1,
+    mmcblk0p1, loop0p1, md0p1).
+    """
+    kname = os.path.basename(os.path.realpath(diskname))
+    prefix = "p" if kname[-1].isdigit() else ""
+    return f"/dev/{kname}{prefix}{partnum}"
+
+  def _checkDisks(self):
+    """
+    Stop before touching anything if a layout's disk doesn't exist (#391).
+    The installer runs without udev, so /dev/disk/by-id/ and by-path/ links
+    don't exist here even though the installed system has them.
+    """
+    missing = [d['diskname'] for d in self.disklayout
+               if d['dtype'] != 'mdrd' and not os.path.exists(d['diskname'])]
+    for diskname in missing:
+      print(f"ERROR: disk {diskname} doesn't exist on this node.")
+      if diskname.startswith("/dev/disk/"):
+        print("ERROR: /dev/disk/by-id/ and by-path/ names don't work while installing; use the kernel name (e.g. /dev/sda).")
+    if missing:
+      print("ERROR: fix the disk layout in the mPCC.  No disk was changed.")
+      sys.exit(1)
+
+  def _waitForPartition(self, device, timeout=30):
+    """
+    Wait for a partition we just created to show up (#391).  The kernel
+    creates the device node after parted commits the table, so it can be
+    missing for a moment (mprov_scripts saw mkswap fail with 'cannot open
+    /dev/sda1').
+    """
+    deadline = time.monotonic() + timeout
+    while not os.path.exists(device):
+      if time.monotonic() > deadline:
+        print(f"ERROR: {device} didn't appear within {timeout}s of creating it.")
+        sys.exit(1)
+      time.sleep(0.1)
+
   def _setPartDevice(self, pdisk, part, partnum):
     """ Note the device a layout partition got, for _makeFS() and buildRAIDs(). """
-    prefix = "p" if pdisk['diskname'].startswith("/dev/nvme") else ""
-    part['device'] = f"{pdisk['diskname']}{prefix}{partnum}"
+    part['device'] = self._partName(pdisk['diskname'], partnum)
     self.partDevices[(pdisk['slug'], part['partnum'])] = part['device']
 
   def _makeFS(self, part, pdisk):
     
-    if pdisk['diskname'].startswith("/dev/nvme"):
-      partprefix = "p"
-    else:
-      partprefix = ""
     # if we are building an EFI partition filesystem, it's vfat
     if part['filesystem'] == "efi":
-      print(f"Building EFI vfat file system on {pdisk['diskname']}{partprefix}{part['partnum']}...")
-      sh.mkfs(['-t', 'vfat',f"{pdisk['diskname']}{partprefix}{part['partnum']}"])
+      dev = self._partName(pdisk['diskname'], part['partnum'])
+      self._waitForPartition(dev)
+      print(f"Building EFI vfat file system on {dev}...")
+      sh.mkfs(['-t', 'vfat', dev])
       return None
 
     if part['filesystem'] == "biosboot":
-      print(f"Building biosboot ext2 file system on {pdisk['diskname']}{partprefix}{part['partnum']}...")
-      sh.mkfs(['-t', 'ext2', "-F", f"{pdisk['diskname']}{partprefix}{part['partnum']}"])
+      dev = self._partName(pdisk['diskname'], part['partnum'])
+      self._waitForPartition(dev)
+      print(f"Building biosboot ext2 file system on {dev}...")
+      sh.mkfs(['-t', 'ext2', "-F", dev])
       return None
   
 
