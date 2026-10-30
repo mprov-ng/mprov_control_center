@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Job, JobModule, JobServer
+from .models import Job, JobModule, JobServer, JobServerAddress
 
 class JobAdmin(admin.ModelAdmin):
     model = Job
@@ -27,8 +27,21 @@ class JobModuleAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return ("add" in request.path or "change" in request.path)
 
+class JobServerAddressInline(admin.TabularInline):
+    """ The addresses from the job server's last heartbeat (mprov_jobserver#114). """
+    model = JobServerAddress
+    fields = ('address', 'network', 'heartbeat_time')
+    readonly_fields = fields
+    extra = 0
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 class JobServerAdmin(admin.ModelAdmin):
     model = JobServer
+    inlines = [JobServerAddressInline]
     readonly_fields = ('host_id', 'address','heartbeat_time','jobmodules',)
     list_display = ['name', 'host_id', 'address', 'port', 'registered_jobmodules', 'heartbeat_time', 'one_minute_load'  ]
     def get_queryset(self, request):

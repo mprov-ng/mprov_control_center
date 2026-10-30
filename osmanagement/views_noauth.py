@@ -8,6 +8,7 @@ from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect
 from django.utils.html import format_html
 from bs4 import BeautifulSoup
+from systems.views_noauth import get_client_ip
 
 
 class OSRepoURLAPIView(MProvView, generics.ListAPIView):
@@ -75,13 +76,15 @@ server hosts the repository.
           # if there are no jobservers, return 404
           raise NotFound(detail="No job servers host this repository.", code=404) 
         js = random.choice(js_set)
-        if ":" in js.address:
-          js.address=f"[{js.address}]"
+        # the address it registered on the client's network, if any (mprov_jobserver#114).
+        host = js.address_for(get_client_ip(request))
+        if ":" in host and not host.startswith("["):
+          host = f"[{host}]"
         if 'redirect_url' in kwargs:
           rurl = kwargs['redirect_url']
         else:
           rurl = ""
-        repoURL = f"http://{js.address}:{str(js.port)}/repos/{repo.id}/{rurl}"
+        repoURL = f"http://{host}:{str(js.port)}/repos/{repo.id}/{rurl}"
 
         return redirect(repoURL)        
       def post(self, request, *args, **kwargs):

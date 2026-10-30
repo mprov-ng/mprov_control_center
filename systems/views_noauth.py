@@ -147,7 +147,8 @@ If no jobserver is left, a 404 is returned.
       Returns the URL of the image's kernel, initramfs or image file on
       job server js.  An IPv6 address is wrapped in brackets (#309).
       """
-      host = js.address
+      # the address on the client's network, if getJobserver() found one (mprov_jobserver#114).
+      host = getattr(js, 'route_address', js.address)
       if ":" in host and not host.startswith("["):
         host = f"[{host}]"
       url = f"http://{host}:{js.port}/images/{image.slug}/{image.slug}"
@@ -163,6 +164,8 @@ If no jobserver is left, a 404 is returned.
       leaving out any whose name doesn't resolve for the client's address
       family (AAAA for an IPv6 client).  Job servers registered by IP
       address are always kept.  Raises NotFound if none are left.
+      Each one's route_address is the address it registered on the client's
+      network, or its single address (mprov_jobserver#114).
       """
 
       js_set = list(image.jobservers.all().order_by('one_minute_load'),)
@@ -176,8 +179,9 @@ If no jobserver is left, a 404 is returned.
       resolvable = []
       errors = []
       for js in js_set:
+        js.route_address = js.address_for(clientIP)
         try:
-          ip_address(js.address)
+          ip_address(js.route_address)
           # a valid IP needs no lookup.
           resolvable.append(js)
           continue
@@ -186,7 +190,7 @@ If no jobserver is left, a 404 is returned.
           pass
         try:
           # only checks that the name resolves.
-          dns.resolver.resolve(str(js.address), rdtype, search=True)
+          dns.resolver.resolve(str(js.route_address), rdtype, search=True)
         except Exception as e:
           errors.append(f"{js}: {e}")
           continue

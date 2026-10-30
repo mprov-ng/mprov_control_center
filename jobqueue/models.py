@@ -1,5 +1,6 @@
 import time
 import datetime
+import ipaddress
 from django.db import models, connections
 from django.utils.timezone import make_aware, is_aware
 from django.utils import timezone
@@ -133,6 +134,44 @@ class JobServer(models.Model):
         #if found_net != None:
         #    self.network = found_net
         super().save(*args, **kwargs)
+
+    def address_for(self, client_ip):
+        """
+        The address a client at client_ip should use for this job server:
+        the one it registered on the client's network, if any
+        (mprov_jobserver#114), else its single address.
+        """
+        try:
+            client = ipaddress.ip_address(client_ip)
+        except (TypeError, ValueError):
+            return self.address
+        for entry in self.addresses.select_related('network'):
+            if entry.network is not None and client in entry.network_range():
+                return entry.address
+        return self.address
+
+
+class JobServerAddress(models.Model):
+    """ An address a job server serves on one of its networks, from its
+    last heartbeat (mprov_jobserver#114). """
+    jobserver = models.ForeignKey(JobServer, on_delete=models.CASCADE, related_name='addresses')
+    network = models.ForeignKey('networks.Network', blank=True, null=True, on_delete=models.SET_NULL)
+    address = models.CharField(max_length=1024)
+    heartbeat_time = models.DateTimeField(default=timezone.now, verbose_name="Last Heartbeat")
+
+    class Meta:
+        verbose_name = "Job Server Address"
+        constraints = [models.UniqueConstraint(fields=['jobserver', 'address'], name='unique_jobserver_address')]
+
+    def __str__(self):
+        return f"{self.jobserver}: {self.address}"
+
+    def network_range(self):
+        """ This address's network as an ipaddress network, or an empty one. """
+        try:
+            return ipaddress.ip_network(f"{self.network.subnet}/{self.network.netmask}", strict=False)
+        except (AttributeError, ValueError):
+            return ()
 
 
 @receiver(pre_save, sender=JobServer)
