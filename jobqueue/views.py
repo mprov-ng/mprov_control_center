@@ -8,6 +8,7 @@ import json
 
 from rest_framework.generics import GenericAPIView
 from django.core.cache import cache
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.views import View
 
@@ -15,7 +16,9 @@ from django.views import View
 # reply so a job server only relies on them when they're there (#406).  Add
 # a name here when a client needs to detect a new behaviour.
 # - addjs-version: PATCH /systemimages/<slug>/?addjs accepts "version" (#396).
-FEATURES = ["addjs-version"]
+# - host-id: POST /jobservers/ accepts "host_id" and finds the job server by
+#   it, so a rename keeps the same row (mprov_jobserver#113).
+FEATURES = ["addjs-version", "host-id"]
 
 class JobAPIView(MProvView,
                       GenericAPIView):
@@ -292,13 +295,18 @@ Format returned:
 - GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST is sent to the base URL (no primary key) and creates or updates the job
-    server with the given name.  It requires name, address, one_minute_load, and
-    jobmodules (a list of job module IDs to register); port is optional and
-    defaults to 8080.  It returns 200 with the job server's ID and the optional
+    server.  It requires name, address, one_minute_load, and jobmodules (a list
+    of job module IDs to register); port is optional and defaults to 8080.
+    host_id is optional: with it, the job server is found by host_id, so a new
+    name renames the same job server; a job server registered under that name
+    without a host_id is adopted.  Without it, the job server with the given
+    name is updated.  It returns 200 with the job server's ID and the optional
     API features this mPCC supports, as a JSON-encoded string, e.g.
-    '{"pk": 3, "features": ["addjs-version"]}' (a client ignores feature names
-    it doesn't know), 400 if a required field is missing or the name is blank,
-    or a 500 error if a job module can't be found.
+    '{"pk": 3, "features": ["addjs-version", "host-id"]}' (a client ignores
+    feature names it doesn't know), 400 if a required field is missing, the
+    name is blank or host_id isn't a non-blank string of up to 64 characters,
+    409 if host_id is sent and the name belongs to a different job server, or
+    a 500 error if a job module can't be found.
 
 - PATCH returns the updated object.
 
@@ -330,6 +338,9 @@ Format returned:
                 errors['port'] = "Must be an integer."
         if not isinstance(request.data['jobmodules'], list):
             errors['jobmodules'] = "Must be a list of job module IDs."
+        host_id = request.data.get('host_id')
+        if 'host_id' in request.data and not (isinstance(host_id, str) and 0 < len(host_id.strip()) <= 64):
+            errors['host_id'] = "Must be a non-blank string of up to 64 characters."
         if errors:
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         if 'port' not in request.data:
@@ -344,10 +355,16 @@ Format returned:
         data = {}
         if defaults['port'] is None:
             defaults['port'] = 8080
-        obj, created = JobServer.objects.update_or_create(
-            name=request.data['name'],
-            defaults=defaults,
-        )
+        if host_id is None:
+            # job servers without a host ID are known by name, as before.
+            obj, created = JobServer.objects.update_or_create(
+                name=request.data['name'],
+                defaults=defaults,
+            )
+        else:
+            obj, conflict = self._register_by_host_id(host_id.strip(), defaults)
+            if conflict:
+                return Response({"detail": conflict}, status=status.HTTP_409_CONFLICT)
         for i in request.data['jobmodules']:
             # look up the jobmodule
             try:
@@ -358,6 +375,36 @@ Format returned:
         data['pk'] = obj.pk
         data['features'] = FEATURES
         return Response(status=status.HTTP_200_OK,data=json.dumps(data))
+
+    def _register_by_host_id(self, host_id, defaults):
+        """
+        Create or update the job server with this host ID (mprov_jobserver#113).
+        A rename keeps the same row.  A row with the requested name and no host
+        ID (the same job server before it sent one) is adopted.  Returns
+        (job server, None), or (None, reason) when the name belongs to a
+        different job server.
+        """
+        name = defaults['name']
+        conflict = f"name {name} is registered by another job server"
+        with transaction.atomic():
+            obj = JobServer.objects.select_for_update().filter(host_id=host_id).first()
+            named = JobServer.objects.select_for_update().filter(name=name).first()
+            if named is not None and named != obj:
+                if obj is not None or named.host_id is not None:
+                    return None, conflict
+                obj = named
+            if obj is None:
+                obj = JobServer(host_id=host_id)
+            obj.host_id = host_id
+            for field, value in defaults.items():
+                setattr(obj, field, value)
+            try:
+                with transaction.atomic():
+                    obj.save()
+            except IntegrityError:
+                # another request registered this name or host ID meanwhile.
+                return None, conflict
+        return obj, None
 
 
 class JobStatusChangesView(View):

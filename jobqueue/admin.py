@@ -29,8 +29,8 @@ class JobModuleAdmin(admin.ModelAdmin):
 
 class JobServerAdmin(admin.ModelAdmin):
     model = JobServer
-    readonly_fields = ('address','heartbeat_time','jobmodules',)
-    list_display = ['name', 'address', 'port', 'registered_jobmodules', 'heartbeat_time', 'one_minute_load'  ]
+    readonly_fields = ('host_id', 'address','heartbeat_time','jobmodules',)
+    list_display = ['name', 'host_id', 'address', 'port', 'registered_jobmodules', 'heartbeat_time', 'one_minute_load'  ]
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.prefetch_related('jobmodules')

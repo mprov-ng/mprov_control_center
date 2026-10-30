@@ -23,3 +23,5 @@ class JobServerAPISerializer(serializers.ModelSerializer):
     class Meta:
         model = JobServer
         fields = '__all__'
+        # only registration (POST /jobservers/) sets it (mprov_jobserver#113).
+        read_only_fields = ('host_id',)
