@@ -2,7 +2,7 @@
 
 import socket
 import uuid
-import yaml, os, sys, time
+import yaml, os, sys, time, json
 import parted
 import requests
 import sh
@@ -90,7 +90,9 @@ class mProvStatefulInstaller():
       except AttributeError:
         # ignore unused keys
         pass
-    pass
+    # exactly one trailing slash, so self.mprovURL + "systems/..." never
+    # gives "//systems/" (#278).
+    self.mprovURL = self.mprovURL.rstrip("/") + "/"
 
   def startSession(self):
     
@@ -524,31 +526,52 @@ class mProvStatefulInstaller():
               print(f"Leaving {mod} out of the initramfs: it's built in, or not a module of the installed kernel.")
       return keep
 
-  def cleanupAndSwitchroot(self):
-    # disable netboot
+  def disableNetboot(self, attempts=5, delay=2):
+    """
+    Clear this system's provision flag, so it boots from disk from now on.
+    The install only counts as done once the mPCC confirms it (#323): if
+    the flag stayed set, the next boot would netboot and reinstall.
+    Connection errors and 5xx replies are retried, with the wait doubling
+    each time; a 4xx won't fix itself, so it stops at once.  Each try
+    times out (10 s to connect, 30 s for the reply), so a hung mPCC counts
+    as a connection error instead of holding the install forever.  Exits 1
+    when the mPCC never confirms, which leaves the node at
+    mprov_boot_init.sh's error prompt instead of rebooting.
+    """
+    url = self.mprovURL + "systems/?self"
+    problem = None
+    for attempt in range(1, attempts + 1):
+      try:
+        response = self.session.post(url, data=json.dumps({"netboot": False}), timeout=(10, 30))
+      except Exception as e:
+        problem = f"couldn't reach the mPCC: {e}"
+      else:
+        if response.status_code == 200:
+          try:
+            provision = response.json().get('provision')
+          except Exception:
+            provision = None
+          if provision is not True:
+            print("Netboot disabled: this system boots from disk from now on.")
+            return
+          problem = "the mPCC answered 200 but provision is still set"
+        else:
+          problem = f"the mPCC answered {response.status_code}: {response.text}"
+          if response.status_code < 500:
+            break
+      if attempt < attempts:
+        print(f"Warning: couldn't disable netboot ({problem}); retrying in {delay}s.")
+        time.sleep(delay)
+        delay *= 2
+    print(f"ERROR: couldn't disable netboot: {problem}")
+    print("ERROR: the disk is installed, but the mPCC hasn't confirmed this system's provision flag is cleared; if it's still set, the system would netboot and reinstall.")
+    print("ERROR: check provision for this system in the mPCC (clear it if it's set) before rebooting it.")
+    sys.exit(1)
 
+  def cleanupAndSwitchroot(self):
     # XXX: the unmount and switch_root steps below are commented out and need
     # more testing; mprov_boot_init.sh reboots the system instead.
-    mprovUrl = self.mprovURL
-    apiKey = self.apikey
-
-    reqHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': f'Api-Key {apiKey}'
-    }
-    try: 
-      req = requests.post(f"{mprovUrl}/systems/?self", headers=reqHeaders, data='{"netboot": false}')
-    except Exception as e:
-      print("Error: There was an issue trying to disable netboot.  You should look into this.")
-      print(f"Error: {e}")
-      exit(1)
-    
-    try:
-      if req.status_code != 200:
-        print("Error: There was an issue trying to disable netboot.  You should look into this.")
-        print(f"Error: {req.text}")
-    except Exception as e:
-      print(f"Error: {e}")
+    self.disableNetboot()
 
     # # Unmount all mounts in /newroot
     # mounts = []
