@@ -1,8 +1,6 @@
-from unittest import mock
 import threading
 
 from django.test import SimpleTestCase, RequestFactory
-from django.contrib.auth.models import AnonymousUser
 
 from common.request import CurrentRequestMiddleware, get_current_request
 
@@ -28,7 +26,6 @@ class CurrentRequestMiddlewareTests(SimpleTestCase):
 
     def test_cleared_when_view_raises(self):
         """Item 2: finally path clears even when get_response raises."""
-        from django.test import RequestFactory
         factory = RequestFactory()
         request = factory.get("/")
 
@@ -75,21 +72,7 @@ class CurrentRequestMiddlewareTests(SimpleTestCase):
             text = (base / rel).read_text()
             self.assertNotIn("inspect.stack", text, f"{rel} must not contain inspect.stack (replaced by current-request middleware)")
 
-    def test_inspect_stack_patched_still_works(self):
-        """Item 9 alternative: even if inspect.stack raises, a request-bound save still sets created_by."""
-        # This only checks the middleware path doesn't call inspect.stack;
-        # the full save-through-request is covered in created_by tests.
-        # Here we just assert the middleware/request helper itself doesn't use inspect.stack.
-        factory = RequestFactory()
-        request = factory.get("/")
-        request.user = AnonymousUser()
-
-        def get_response(req):
-            with mock.patch("inspect.stack", side_effect=RuntimeError("should not be called")):
-                # get_current_request should still work without touching inspect.stack
-                self.assertIs(get_current_request(), req)
-            return "ok"
-
-        mw = CurrentRequestMiddleware(get_response)
-        mw(request)
-        self.assertIsNone(get_current_request())
+    # test_inspect_stack_patched_still_works removed: it only checked
+    # get_current_request() without saving a model through a request.
+    # The DB-backed version lives in test_created_by_request.py and
+    # saves a System via the test client with inspect.stack patched to raise.
