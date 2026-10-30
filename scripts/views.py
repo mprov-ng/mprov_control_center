@@ -1,3 +1,6 @@
+from django.shortcuts import get_object_or_404, redirect
+from django.views import View
+
 from common.views import MProvView
 from .models import Script, File, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 from .serializers import (
@@ -128,6 +131,18 @@ list (e.g. ?name=example).
   model = File
   serializer_class = FileAPISerializer
   queryset = File.objects.all()
+
+
+class FileDownloadView(View):
+  '''
+# /scripts/files/<file-slug>/
+
+Redirects (302) to the current version of the named File, so a link to it
+never needs updating when the file is re-uploaded under a new version.
+  '''
+  def get(self, request, pk):
+    file_obj = get_object_or_404(File, pk=pk)
+    return redirect(file_obj.filename.url)
 
 
 class AnsiblePlaybookAPIView(MProvView):
