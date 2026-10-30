@@ -60,7 +60,7 @@ RUN cd mprov_control_center && \
     . bin/activate && \
 	pip install --upgrade pip && \
     pip3 install -r requirements.txt && \
-    pip3 install mysqlclient
+    pip3 install "mysqlclient>=2.2.7,<3"
 
 # grab a copy of memtest.
 WORKDIR /var/www/mprov_control_center/static

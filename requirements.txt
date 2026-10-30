@@ -1,21 +1,26 @@
+# Bounds (#326): each lower bound is the version the image was tested with
+# (Python 3.8, Rocky 8); the upper bound stops at the next major release
+# (next minor for 0.x), so a fresh build can't pull an untested major.
+# Raise them after testing, e.g. with the Rocky 9 move (#197).
+# mysqlclient is installed by the Dockerfile, with the same kind of bound.
 django>=4.2,<5  # https://www.djangoproject.com/ - 3-clause BSD.  <5 until the Rocky 9 move (#197)
-django-dotenv # https://pypi.org/project/django-dotenv/ - MIT
-djangorestframework # https://pypi.org/project/djangorestframework/ - BSD License (BSD)
-pyyaml # https://pypi.org/project/PyYAML/ - MIT
-requests # https://pypi.org/project/requests/ - Apache Software License (Apache 2.0)
-django-cors-headers # https://pypi.org/project/django-cors-headers/ - MIT
-django-jazzmin # https://pypi.org/project/django-jazzmin/ - MIT
-django-autocomplete-light # https://pypi.org/project/django-autocomplete-light/ - MIT
-djangorestframework-api-key # https://pypi.org/project/djangorestframework-api-key/ - MIT
-django-session-timeout # https://pypi.org/project/django-session-timeout/ - MIT
-django-filter # https://pypi.org/project/django-filter/ - BSD
-markdown # https://pypi.org/project/Markdown/ - BSD
-bs4 # https://pypi.org/project/beautifulsoup4/ - MIT
-pymemcache
-python-ipmi
-func_timeout
-dnspython
-django-dbbackup
-djangocodemirror
-netifaces
-django-auth-ldap
+django-dotenv>=1.4.2,<2 # https://pypi.org/project/django-dotenv/ - MIT
+djangorestframework>=3.15.2,<4 # https://pypi.org/project/djangorestframework/ - BSD License (BSD)
+pyyaml>=6.0.3,<7 # https://pypi.org/project/PyYAML/ - MIT
+requests>=2.32.4,<3 # https://pypi.org/project/requests/ - Apache Software License (Apache 2.0)
+django-cors-headers>=4.4.0,<5 # https://pypi.org/project/django-cors-headers/ - MIT
+django-jazzmin>=3.0.1,<4 # https://pypi.org/project/django-jazzmin/ - MIT
+django-autocomplete-light>=3.12.1,<4 # https://pypi.org/project/django-autocomplete-light/ - MIT
+djangorestframework-api-key>=3.1.0,<4 # https://pypi.org/project/djangorestframework-api-key/ - MIT
+django-session-timeout>=0.1.0,<0.2 # https://pypi.org/project/django-session-timeout/ - MIT
+django-filter>=24.3,<25 # https://pypi.org/project/django-filter/ - BSD
+markdown>=3.7,<4 # https://pypi.org/project/Markdown/ - BSD
+beautifulsoup4>=4.15.0,<5 # https://pypi.org/project/beautifulsoup4/ - MIT (was the bs4 stub package)
+pymemcache>=4.0.0,<5
+python-ipmi>=0.5.8,<0.6
+func_timeout>=4.3.5,<5
+dnspython>=2.6.1,<3
+django-dbbackup>=4.3.0,<5
+djangocodemirror>=2.1.0,<3
+netifaces>=0.11.0,<0.12
+django-auth-ldap>=5.0.0,<6
