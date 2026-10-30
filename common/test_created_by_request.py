@@ -1,5 +1,6 @@
 import base64
 import json
+from unittest import mock
 
 from django.contrib.auth.models import User
 from django.db import IntegrityError
@@ -16,7 +17,7 @@ class CreatedByRequestTests(TestCase):
 
     def setUp(self):
         # pk=1 is the AnonymousUser mapping; keep it distinct from actor users.
-        self.anon_target = User.objects.create_superuser("anon_target", "anon@example.com", "password")
+        self.anon_target = User.objects.create(pk=1, username="anon_target", is_staff=True, is_superuser=True)
         assert self.anon_target.pk == 1, f"expected pk=1, got {self.anon_target.pk}"
         self.staff = User.objects.create_superuser("staff", "staff@example.com", "password")
         self.basic_user = User.objects.create_user("basicuser", "basic@example.com", "password")
@@ -94,7 +95,7 @@ class CreatedByRequestTests(TestCase):
         obj = self._create_systemimage_via_api(dummy_created_by=self.anon_target.pk)
         self.assertEqual(obj.created_by, self.staff)
 
-    def test_session_auth_patch_keeps_created_by_as_actor(self):
+    def test_session_patch_sets_created_by_to_the_patcher(self):
         """Item 6 also covers change: PATCH updates created_by to the actor."""
         self.client.force_login(self.staff)
         sys = self._create_system_via_api(hostname="change-me", dummy_created_by=self.anon_target.pk)
@@ -149,3 +150,11 @@ class CreatedByRequestTests(TestCase):
     def test_no_request_create_systemimage_without_created_by_raises(self):
         with self.assertRaises(IntegrityError):
             SystemImage.objects.create(name="img-no-creator")
+
+    # 9 regression: inspect.stack must not be used — save via test client with it patched to raise
+    def test_inspect_stack_patched_still_saves_with_correct_created_by(self):
+        """Even with inspect.stack patched to raise, a request-bound save sets created_by correctly."""
+        self.client.force_login(self.staff)
+        with mock.patch("inspect.stack", side_effect=RuntimeError("should not be called")):
+            obj = self._create_system_via_api(hostname="inspect-ok", dummy_created_by=self.anon_target.pk)
+        self.assertEqual(obj.created_by, self.staff)
