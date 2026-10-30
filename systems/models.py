@@ -362,13 +362,8 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
   
   # SystemImage isn't a sender here; UpdateSystemImages sets its created_by.
   if sender == System:
-    import inspect
-    for frame_record in inspect.stack():
-        if frame_record[3]=='get_response':
-            request = frame_record[0].f_locals['request']
-            break
-    else:
-        request = None
+    from common.request import get_current_request
+    request = get_current_request()
     if request is not None:
       if type(request.user) is AnonymousUser:
           instance.created_by = User.objects.get(pk=1)
@@ -425,13 +420,8 @@ def DeleteSystemImage(sender, instance, **kwargs):
 # emits an image-update job every time an image is saved with needs_rebuild set.
 @receiver(pre_save, sender=SystemImage)
 def UpdateSystemImages(sender, instance, **kwargs):
-  import inspect
-  for frame_record in inspect.stack():
-      if frame_record[3]=='get_response':
-          request = frame_record[0].f_locals['request']
-          break
-  else:
-      request = None
+  from common.request import get_current_request
+  request = get_current_request()
   if request is not None:
       if type(request.user) is AnonymousUser:
           instance.created_by = User.objects.get(pk=1)
