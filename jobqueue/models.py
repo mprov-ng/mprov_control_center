@@ -113,9 +113,7 @@ class JobServer(models.Model):
         # only runs when a save lands on second :00 of a minute
         if int(time.time() % 60) == 0:
             # delete any servers that are older than 1 minute heartbeat.
-            delTime = time.time() - 60
-            delDateTime = datetime.datetime.fromtimestamp(delTime)#.strftime("%Y-%m-%d %H:%M:%S")
-            delDateTime = make_aware(delDateTime)
+            delDateTime = timezone.now() - datetime.timedelta(seconds=60)
             print("Info: Removing stale jobservers.")
             self.__class__.objects.filter(heartbeat_time__lte=delDateTime).delete()
         
