@@ -281,8 +281,9 @@ class mProvStatefulInstaller():
       for line in lines:
         line=line.rstrip()
         fstab_entry = line.split()
-        os.makedirs(f"/newroot{fstab_entry[1]}", exist_ok=True)
+        # swap's mount point is "none": nothing to mount, so no directory (#275).
         if fstab_entry[1] != "none":
+          os.makedirs(f"/newroot{fstab_entry[1]}", exist_ok=True)
           sh.mount(
             [
               fstab_entry[0],
