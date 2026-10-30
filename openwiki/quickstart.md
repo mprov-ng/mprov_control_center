@@ -19,7 +19,7 @@ Stack: Django (pinned `django>=4.2,<5` in `requirements.txt` pending the Rocky 9
 
 mPCC is installed as part of the full mProv stack via [mprov-compose](https://github.com/mprov-ng/mprov-compose) (mPCC + database + a jobserver on one node with Docker). The old bare-metal installer was removed; the container entrypoint [install_scripts/init_mpcc.sh](../install_scripts/init_mpcc.sh) runs migrations, creates the admin superuser, registers the mPCC host, generates the jobserver API key, and loads default scripts on first start.
 
-- Admin UI: `http://<FQDN-or-IP>/admin/` (default credentials admin/admin; change them).
+- Admin UI: `http://<FQDN-or-IP>/admin/`. If `MPROV_SUPERUSER_PASSWORD` is not set, the entrypoint generates a random password on first start, prints it once to the container log, and saves it to `/etc/mprov/superuser_password` (root-only) — see [Architecture Overview](architecture/overview.md#container-bootstrap).
 - After install, create an API key in the admin and run a [jobserver](https://github.com/mprov-ng/mprov_jobserver) so queued jobs execute.
 - Configuration is via environment variables (names documented in [Architecture Overview](architecture/overview.md#configuration)); `env.example` lists the container variables. Never commit real `.env` values.
 
@@ -39,7 +39,7 @@ Every domain app below models its entities and then exposes them through [MProvV
 
 ## Testing and change guidance
 
-CI (`.github/workflows/test-and-publish-dev.yml`) runs on every PR and push to `main`: it builds the shipping Docker image, then runs `python manage.py check && python manage.py test` inside it. The suite includes a `MigrationsTest`, so any model change without a committed migration fails CI. When changing an app, add or run app-local tests (e.g. `systems/test_detail_serializer.py`, `disklayouts/test_dtype_default.py`).
+CI (`.github/workflows/test-and-publish-dev.yml`) runs on every PR and push to `main`: it builds the shipping Docker image, then runs `python manage.py check && python manage.py test` inside it, against SQLite and again against MariaDB 10.11 (#385, see [CI](architecture/overview.md#ci)). The suite includes a `MigrationsTest`, so any model change without a committed migration fails CI. When changing an app, add or run app-local tests (e.g. `systems/test_detail_serializer.py`, `disklayouts/test_dtype_default.py`).
 
 ## Backlog
 

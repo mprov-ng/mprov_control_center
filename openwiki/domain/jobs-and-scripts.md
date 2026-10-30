@@ -19,8 +19,8 @@ Models (`jobqueue/models.py`):
 
 API (`jobqueue/views.py`, all via [MProvView](../architecture/api-foundation.md)):
 
-- `GET /jobs/` supports `module` (single ID or JSON array), `jobserver`, `status`, and `params` — a JSON-object whose keys are matched against the job's params (non-object → 400). This is how jobservers claim work.
-- `POST /jobservers/` is an update_or_create heartbeat/register endpoint returning `{"pk": N}`, authenticated by API key.
+- `GET /jobs/` supports `module` (single ID or JSON array; a malformed array or empty value is a 400/empty result, never a 500 — #328), `jobserver`, `status`, and `params` — a JSON-object whose keys are matched against the job's params (non-object → 400). Param matching goes through `Job.filter_params()`: `JSON_CONTAINS` on MySQL/MariaDB, JSON key lookups elsewhere, because MariaDB leaves the right-hand side of a key lookup as a quoted JSON string and never matches string values (#385). Unknown query keys on this list GET are rejected like everywhere else (#390). This is how jobservers claim work.
+- `POST /jobservers/` is an update_or_create heartbeat/register endpoint returning `{"pk": N}`, authenticated by API key. It validates `one_minute_load` (number), `port` (integer, string accepted), and `jobmodules` (list) up front and answers 400 instead of 500 on bad types (#328).
 - `?detail` on these endpoints nests related objects 3 levels deep (documented in each view docstring; mechanism in [API Foundation](../architecture/api-foundation.md)).
 - `/jobqueue/status-changes/` (`JobStatusChangesView`, staff-only) powers the live admin: the Job changelist auto-reloads (`jobqueue/static/admin/js/auto_reload.js`) and consumes cache-backed toast notifications raised from `jobqueue/signals.py`.
 
@@ -28,7 +28,7 @@ Admin note: add/change permission is gated on the request path containing `add`/
 
 ## Scripts (`scripts/`)
 
-Models (`scripts/models.py`): `Script` (slug PK, `version` BigIntegerField, `scriptType`, `dependsOn`, and either an uploaded `filename` or inline `content`), `File`, and Ansible content: `AnsiblePlaybook`, `AnsibleRole`, `AnsibleCollection` (galaxy/git URLs; execution ordering is collections → roles → playbooks).
+Models (`scripts/models.py`): `Script` (slug PK, `version` BigIntegerField, `scriptType`, `dependsOn`, and either an uploaded `filename` or inline `content`), `File`, and Ansible content: `AnsiblePlaybook`, `AnsibleRole`, `AnsibleCollection` (galaxy/git URLs; execution ordering is collections → roles → playbooks). `Script.scriptType` and `AnsiblePlaybook.scriptType` are `on_delete=PROTECT` (migration `0015_script_type_protect.py`): a type in use can't be deleted, and a script left typeless by an earlier `SET_NULL` deletion answers `save()`/PATCH with a ValidationError/400 asking for a type instead of crashing admin pickers with a 500 (#310, `scripts/test_script_type_protect.py`).
 
 **Content lives on disk, not in the DB**: `Script.save()` writes the body to `MEDIA_ROOT/<type>/<slug>-v<version>`, runs `dos2unix` on it, then blanks the `content` field; a post_delete receiver removes the file. `ScriptAdmin.get_form()` lazily re-populates the textarea from the file when an admin edits a script. Editor UX uses `djangocodemirror`.
 
