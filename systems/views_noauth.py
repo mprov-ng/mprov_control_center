@@ -115,16 +115,7 @@ If no jobserver is left, a 404 is returned.
       js_set = self.getJobserver(image, ip)
       js = None
       js = js_set[0]
-      # if ":" in js.address:
-      #   js.address = f"[{js.address}]"
-      imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
-      if isInitRamFS:
-        imageURL += ".initramfs"
-      else:
-        if isKernel:
-          imageURL += ".vmlinuz"
-        else:
-          imageURL += ".img"  
+      imageURL = self.imageURL(js, image, isKernel, isInitRamFS)
       try: 
         response = requests.head(imageURL,timeout=1)
         statCode = response.status_code
@@ -141,16 +132,7 @@ If no jobserver is left, a 404 is returned.
         if len(js_set) == 0:
           raise NotFound(detail="Error 404, No responsive Jobservers for Image", code=404)
         js = js_set[0]
-        # if ":" in js.name:
-        #   js.address = f"[{js.address}]"
-        imageURL = "http://" + js.address + ":" + str(js.port) + "/images/" + image.slug + "/" + image.slug
-        if isInitRamFS:
-          imageURL += ".initramfs"
-        else:
-          if isKernel:
-            imageURL += ".vmlinuz"
-          else:
-            imageURL += ".img"  
+        imageURL = self.imageURL(js, image, isKernel, isInitRamFS)
         try: 
           response = requests.head(imageURL,timeout=1)
           statCode = response.status_code
@@ -158,6 +140,22 @@ If no jobserver is left, a 404 is returned.
           statCode=0
       print(f"Redirecting client to: {imageURL}")
       return redirect(imageURL)        
+
+    @staticmethod
+    def imageURL(js, image, isKernel=False, isInitRamFS=False):
+      """
+      Returns the URL of the image's kernel, initramfs or image file on
+      job server js.  An IPv6 address is wrapped in brackets (#309).
+      """
+      host = js.address
+      if ":" in host and not host.startswith("["):
+        host = f"[{host}]"
+      url = f"http://{host}:{js.port}/images/{image.slug}/{image.slug}"
+      if isInitRamFS:
+        return url + ".initramfs"
+      if isKernel:
+        return url + ".vmlinuz"
+      return url + ".img"
 
     def getJobserver(self, image, clientIP=None):
       """
