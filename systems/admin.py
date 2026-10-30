@@ -124,6 +124,23 @@ def warn_boot_disk_problems(modeladmin, request, systems):
       modeladmin.message_user(request, f"{problem}  PXE Boot will refuse it until that's fixed.", level=messages.WARNING)
 
 
+def warn_duplicate_ip_assignments(modeladmin, request, systems):
+  """ Warn when a NIC's IP address is already assigned to another system's NIC (#373).
+  It's only a warning: the DB doesn't enforce a unique IP, and some duplicates
+  (e.g. a floating/VIP address) are intentional. """
+  for system in systems:
+    for iface in NetworkInterface.objects.filter(system=system).exclude(ipaddress=None):
+      conflict = NetworkInterface.objects.filter(ipaddress=iface.ipaddress) \
+        .exclude(system=system).select_related('system').first()
+      if conflict is not None:
+        modeladmin.message_user(
+          request,
+          f"IP address {iface.ipaddress} is already in use by {conflict.system.hostname} "
+          f"(interface {conflict.name}).",
+          level=messages.WARNING,
+        )
+
+
 class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
 
@@ -171,6 +188,7 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
     # disks is a many-to-many, saved here after the system itself.
     super().save_related(request, form, formsets, change)
     warn_boot_disk_problems(self, request, [form.instance])
+    warn_duplicate_ip_assignments(self, request, [form.instance])
 
   def response_change(self, request, obj):
         # Check if our custom button was clicked
