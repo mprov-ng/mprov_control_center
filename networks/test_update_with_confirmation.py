@@ -1,21 +1,10 @@
-from unittest import mock
 import json
 
-from rest_framework.permissions import IsAuthenticated
-
-from networks.api_views import update_network_with_confirmation
 from networks.testing import NetworkTestCase
 
 
 class NetworkUpdateWithConfirmationAPITests(NetworkTestCase):
   """ POST /networks/<pk>/update-with-confirmation/ asks before a subnet change. """
-
-  def setUp(self):
-    super().setUp()
-    # The project default needs a login and an API key; a login is enough here.
-    patcher = mock.patch.object(update_network_with_confirmation.cls, "permission_classes", [IsAuthenticated])
-    patcher.start()
-    self.addCleanup(patcher.stop)
 
   def post(self, body):
     return self.client.post(f"/networks/{self.lan.pk}/update-with-confirmation/", body, content_type="application/json")
