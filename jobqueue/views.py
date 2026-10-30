@@ -1,4 +1,4 @@
-from datetime import datetime
+from django.utils import timezone
 from common.views import MProvView
 from jobqueue.models import JobModule, JobServer, Job, filter_params
 from jobqueue.serializers import JobAPISerializer, JobModuleAPISerializer, JobServerAPISerializer
@@ -346,7 +346,7 @@ Format returned:
         if 'port' not in request.data:
             request.data['port'] = None
         defaults = {
-            'heartbeat_time': datetime.now(),
+            'heartbeat_time': timezone.now(),
             'address': request.data['address'],
             'name': request.data['name'],
             'port': request.data['port'],
