@@ -1,4 +1,4 @@
-#!/usr/bin/pyton3.8
+#!/usr/bin/env python3
 
 
 import socket
@@ -31,7 +31,7 @@ class mProvNetworkScriptGenerator():
     # load our config
     self.load_config()
 
-    if self.netscriptDir[:-1] != "/":
+    if not self.netscriptDir.endswith("/"):
       self.netscriptDir += "/"
     # start a session
     if not self.startSession():
@@ -70,6 +70,10 @@ class mProvNetworkScriptGenerator():
         # ignore unused keys
         pass
 
+    # exactly one trailing slash, so mprovURL + "systems/..." is always
+    # a single slash however the config wrote it (#281).
+    self.mprovURL = self.mprovURL.rstrip("/") + "/"
+
   def startSession(self):
     
     self.session.headers.update({
@@ -81,7 +85,8 @@ class mProvNetworkScriptGenerator():
     try:
       response = self.session.get(self.mprovURL, stream=True)
     except requests.exceptions.RequestException as e:
-      print(f"Error: Communication error to the server. (Status: {response.status_code}, Error: {e})", file=sys.stderr)
+      # no response to report: the request itself failed (#280).
+      print(f"Error: Communication error to the server. (Error: {e})", file=sys.stderr)
       self.sessionOk = False
       time.sleep(self.heartbeatInterval)
       return False
@@ -108,7 +113,7 @@ class mProvNetworkScriptGenerator():
         print("Error: Unable to parse server response.")
         sys.exit(1)
       # got a valid record, grab the interfaces.
-      response = self.session.get(f"{self.mprovURL}/networkinterfaces/?system={self.details['id']}")
+      response = self.session.get(f"{self.mprovURL}networkinterfaces/?system={self.details['id']}")
       if response.status_code == 200:
         try:
           self.details['networkinterfaces'] = response.json()
@@ -130,7 +135,7 @@ class mProvNetworkScriptGenerator():
         intf['netmask']="255.0.0.0"
       else:
         # grab the network
-        response = self.session.get(f"{self.mprovURL}/networks/{intf['network']}/")
+        response = self.session.get(f"{self.mprovURL}networks/{intf['network']}/")
         if response.status_code == 200:
           netDetails = {}
           try:
@@ -144,6 +149,9 @@ class mProvNetworkScriptGenerator():
           if netDetails['netmask'] is not None:
             intf['netmask'] = IPv4Network(f"{netDetails['subnet']}/{netDetails['netmask']}").netmask
             # intf['netmask']=netDetails['netmask']
+          else:
+            # same default as the other fallbacks (#282).
+            intf['netmask'] = "255.0.0.0"
       
         else:
           print(f"Error: Unable to retrieve network information for network {intf['network']}. Server returned {response.status_code}")
