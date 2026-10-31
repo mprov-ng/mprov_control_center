@@ -1,7 +1,7 @@
 import time
 import datetime
 import ipaddress
-from django.db import models, connections
+from django.db import models, connections, transaction
 from django.utils.timezone import make_aware, is_aware
 from django.utils import timezone
 from django.dispatch import receiver
@@ -67,6 +67,7 @@ class JobStatus(models.Model):
 
 PENDING = 1
 RUNNING = 2
+ERROR = 3
 
 def filter_params(queryset, params):
     """
@@ -95,6 +96,31 @@ def queue_job(module, params=None):
     if job is None:
         job = Job.objects.create(name=module.name, module=module, status=JobStatus.objects.get(pk=PENDING), params=params)
     return job
+
+def requeue_job(module, name=None):
+    """
+    Queue the job named name (the module's name by default) for module again,
+    for the change signals that re-run one job per module (#312):
+    - a pending one is already queued: leave it;
+    - a running one may be using the old data: leave it alone, and queue a
+      separate pending job so the change runs after it;
+    - otherwise reuse the last finished one as the pending job, so each of
+      these stays one row, or create it.
+    Returns the pending job.
+    """
+    name = module.name if name is None else name
+    with transaction.atomic():
+        jobs = Job.objects.select_for_update().filter(module=module, name=name)
+        pending = jobs.filter(status_id=PENDING).first()
+        if pending is not None:
+            return pending
+        if not jobs.filter(status_id=RUNNING).exists():
+            finished = jobs.order_by('-pk').first()
+            if finished is not None:
+                finished.status_id = PENDING
+                finished.save()
+                return finished
+        return Job.objects.create(name=name, module=module, status_id=PENDING)
 
 class JobServer(models.Model):
     """ This area shows you the status of job servers that have registered themselves with the mPCC.  It will show you the IP address that the 
@@ -126,7 +152,9 @@ class JobServer(models.Model):
             # delete any servers that are older than 1 minute heartbeat.
             delDateTime = timezone.now() - datetime.timedelta(seconds=60)
             print("Info: Removing stale jobservers.")
-            self.__class__.objects.filter(heartbeat_time__lte=delDateTime).delete()
+            # not this one: its row still has the heartbeat before this save,
+            # and deleting it would fail the jobs it's running (#409).
+            self.__class__.objects.filter(heartbeat_time__lte=delDateTime).exclude(pk=self.pk).delete()
         
         # search for a network that our address is in.
         #myaddr = ipaddress.ip_address(self.address)

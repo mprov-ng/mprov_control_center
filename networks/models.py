@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.text import slugify
 from django.dispatch import receiver
 from django.db.models.signals import pre_save, pre_delete
-from jobqueue.models import JobModule, JobStatus, Job
+from jobqueue.models import JobModule, JobStatus, Job, requeue_job
 from django.contrib.auth.models import AnonymousUser, User
 from django.utils import timezone
 
@@ -125,10 +125,7 @@ def UpdateNetwork(sender, instance, **kwargs):
     if JobType is not None:
         # save a new job, if one doesn't already exist.
 
-        Job.objects.update_or_create(
-          name=JobType.name , module=JobType,
-          defaults={'status': JobStatus.objects.get(pk=1)}
-        )      
+        requeue_job(JobType)      
 
 @receiver(pre_delete, sender=Network)
 def DeleteNetwork(sender, instance, **kwargs):
@@ -143,7 +140,4 @@ def DeleteNetwork(sender, instance, **kwargs):
     if JobType is not None:
         # save a new job, if one doesn't already exist.
 
-        Job.objects.update_or_create(
-          name=JobType.name , module=JobType,
-          defaults={'status': JobStatus.objects.get(pk=1)}
-        )      
+        requeue_job(JobType)      
