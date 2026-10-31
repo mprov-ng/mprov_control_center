@@ -39,7 +39,7 @@ Every domain app below models its entities and then exposes them through [MProvV
 
 ## Testing and change guidance
 
-CI (`.github/workflows/test-and-publish-dev.yml`) runs on every PR and push to `main`: it builds the shipping Docker image, then runs `python manage.py check && python manage.py test` inside it, against SQLite and again against MariaDB 10.11 (#385, see [CI](architecture/overview.md#ci)). The suite includes a `MigrationsTest`, so any model change without a committed migration fails CI. When changing an app, add or run app-local tests (e.g. `systems/test_detail_serializer.py`, `disklayouts/test_dtype_default.py`).
+CI (`.github/workflows/test-and-publish-dev.yml`) runs on every PR and push to `main`: it builds the shipping Docker image, then runs `python manage.py check && python manage.py test` inside it, against SQLite and again against MariaDB 10.11 (#385, see [CI](architecture/overview.md#ci)). A separate lint gate (`.github/workflows/lint.yml`) fails on ruff or ShellCheck errors (#330). The suite includes a `MigrationsTest`, so any model change without a committed migration fails CI. When changing an app, add or run app-local tests (e.g. `systems/test_detail_serializer.py`, `disklayouts/test_dtype_default.py`).
 
 ## Backlog
 

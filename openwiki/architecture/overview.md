@@ -57,7 +57,7 @@ Auth options (API keys, Basic/Session/Token, LDAP backend ordering) are detailed
 
 ## CI
 
-`.github/workflows/test-and-publish-dev.yml` runs on every PR and push to `main` (doc-only paths are ignored): build the image, then inside the container run `python manage.py check && python manage.py test`. The test suite includes a `MigrationsTest` that fails if a model change lacks a committed migration. Passing `main` pushes publish the `:dev` image. `.github/dependabot.yml` keeps GitHub Actions versions current, and `.github/workflows/openwiki-update.yml` regenerates this wiki daily.
+`.github/workflows/test-and-publish-dev.yml` runs on every PR and push to `main` (doc-only paths are ignored): build the image, then inside the container run `python manage.py check && python manage.py test`. The test suite includes a `MigrationsTest` that fails if a model change lacks a committed migration. The same test run is a reusable action (`.github/actions/mpcc-tests/`) that also gates the release-image workflow, so no image publishes untested (#333). Passing `main` pushes publish the `:dev` image, with workflow concurrency set so only the newest push publishes (#404). `.github/workflows/lint.yml` is a separate gate on PRs and `main`: `ruff check` (error rules in `ruff.toml`) plus `shellcheck -S error` over every tracked `.sh` file and `static/*.script` (#330). `.github/dependabot.yml` keeps GitHub Actions versions current, and `.github/workflows/openwiki-update.yml` regenerates this wiki daily.
 
 ## Change guidance
 

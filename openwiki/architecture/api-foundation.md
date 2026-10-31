@@ -11,7 +11,7 @@ Nearly every JSON endpoint in mPCC subclasses `MProvView` (`common/views.py`), w
 
 ## MProvView behavior
 
-- **Permissions**: `HasAPIKey | IsAuthenticated` — an `X-API-Key` header or any authenticated session/Basic/Token identity.
+- **Permissions**: `HasAPIKeyOrIsAuthenticated` (`common/permissions.py`) — an `X-API-Key` header or any authenticated session/Basic/Token identity. The same class is the DRF `DEFAULT_PERMISSION_CLASSES` in settings, so non-`MProvView` API views get identical behavior; a plain tuple of the two permissions would have required both (#272).
 - **Verbs**: `GET` list/retrieve, `POST` create, `PATCH` update, `DELETE` delete. `PUT` is explicitly rejected with `HttpResponseNotAllowed(["GET","POST","PATCH","DELETE"])`. `patch()`/`delete()` unpack `*args, **kwargs` into `partial_update`/`destroy` so the URL pk reaches the DRF mixins (this was a bug fixed recently — earlier versions dropped the kwargs). An API-key (anonymous session) `PATCH` records `created_by` as `admin`.
 - **Query-param filtering**: `filter_by_query_params()` applies any `?FIELD=VALUE` exact match against model fields; invalid fields return a 400 body, and an empty result set returns 404. Unknown keys — including lookups like `?hostname__startswith=` — are errors, not silently ignored, so a typo'd filter can't return every row (#390). `?detail`, `?search` and `?format` are always accepted (`base_query_params`); a view lists its own accepted keys in `extra_query_params` (e.g. `SystemAPIView`: `self`), and views that filter themselves (e.g. `JobAPIView` for `module`/`params`/`jobserver`/`status`) apply the same check.
 - **Self-documenting**: a non-JSON `GET` returns the view class docstring rendered as Markdown into a styled HTML page. Docstrings are therefore user-facing API docs — update them when endpoint behavior changes.
@@ -47,3 +47,4 @@ Configured in `mprov_control_center/settings.py`:
 - Behavior changes in `MProvView` affect **every** endpoint — run the full `manage.py test` suite, not just one app.
 - `common/testing.py` holds shared test helpers; recent regression tests (`systems/test_detail_serializer.py`, `common/test_foundation.py`) are the reference for base-class changes.
 - Key sources: `common/views.py`, `common/serializers.py` (`NestedPrimaryKeyRelatedField`), `mprov_control_center/{views,urls,settings}.py`.
+ings}.py`.
