@@ -2,6 +2,7 @@ from django.utils import timezone
 from common.views import MProvView
 from jobqueue.models import JobModule, JobServer, JobServerAddress, Job, filter_params, PENDING, RUNNING
 from jobqueue.signals import record_status_change
+from systems.views_noauth import get_client_ip
 from common.permissions import HasAPIKeyOrIsAuthenticated
 from jobqueue.serializers import JobAPISerializer, JobModuleAPISerializer, JobServerAPISerializer
 from rest_framework import status, generics
@@ -26,7 +27,11 @@ from django.views import View
 #   network (mprov_jobserver#114).
 # - job-claim: POST /jobs/<id>/claim/ claims a pending job for one job server,
 #   atomically, or answers 409 (#296, mprov_jobserver#112).
-FEATURES = ["addjs-version", "host-id", "jobserver-addresses", "job-claim"]
+# - jobserver-address-heartbeat: POST /jobservers/<id>/heartbeat/ keeps one
+#   of a job server's addresses fresh; an address without a heartbeat for a
+#   minute isn't routed to (#435).  A job server sends "addresses" only when
+#   both this and jobserver-addresses are listed.
+FEATURES = ["addjs-version", "host-id", "jobserver-addresses", "job-claim", "jobserver-address-heartbeat"]
 
 class JobAPIView(MProvView,
                       GenericAPIView):
@@ -371,8 +376,11 @@ Format returned:
     name is updated.  addresses is optional: a list of {"address": ...,
     "network": <network ID>}, one per network it serves (a missing network
     is found from the networks' subnets).  Each heartbeat's list replaces
-    the last; image and repository redirects send a client to the address on
-    its own network, else to address.  It returns 200 with the job server's ID and the optional
+    the last; an address that stays on the list keeps its last heartbeat, and
+    only a new one starts fresh.  Image and repository redirects send a client
+    to the address on its own network if it has heartbeated in the last
+    minute (POST /jobservers/1/heartbeat/, see that page), else to address.
+    It returns 200 with the job server's ID and the optional
     API features this mPCC supports, as a JSON-encoded string, e.g.
     '{"pk": 3, "features": ["addjs-version", "host-id"]}' (a client ignores
     feature names it doesn't know), 400 if a required field is missing, the
@@ -450,12 +458,21 @@ Format returned:
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
         obj.save()
         # the heartbeat's list replaces the last one; a heartbeat without it
-        # (an older job server) leaves only the single address.
+        # (an older job server) leaves only the single address.  An address
+        # still listed keeps its heartbeat_time, so only its own heartbeat
+        # keeps it fresh (#435); a new one starts fresh.
         with transaction.atomic():
-            obj.addresses.all().delete()
-            for address, network in addresses or []:
-                JobServerAddress.objects.create(jobserver=obj, address=address, network=network,
-                                                heartbeat_time=defaults['heartbeat_time'])
+            listed = dict(addresses or [])
+            obj.addresses.exclude(address__in=listed).delete()
+            kept = {entry.address: entry for entry in obj.addresses.all()}
+            for address, network in listed.items():
+                if address in kept:
+                    if kept[address].network != network:
+                        kept[address].network = network
+                        kept[address].save(update_fields=['network'])
+                else:
+                    JobServerAddress.objects.create(jobserver=obj, address=address, network=network,
+                                                    heartbeat_time=defaults['heartbeat_time'])
         data['pk'] = obj.pk
         data['features'] = FEATURES
         return Response(status=status.HTTP_200_OK,data=json.dumps(data))
@@ -535,6 +552,51 @@ Format returned:
                 # another request registered this name or host ID meanwhile.
                 return None, conflict
         return obj, None
+
+
+class JobServerAddressHeartbeatAPIView(GenericAPIView):
+    '''
+# /jobservers/1/heartbeat/
+
+## Accepted HTTP Methods:
+- POST (with Primary Key, e.g. /jobservers/1/heartbeat/)
+
+## Documentation
+Keeps one of a job server's addresses fresh (#435).  Image and repository
+redirects only send a client to an address that has heartbeated in the last
+minute; a stale one is skipped (not deleted) and the client gets the job
+server's single address.  The address must be registered first, with the
+"addresses" list of POST /jobservers/.
+
+Body:
+
+    {"address": "10.20.0.5"}
+
+- 200: returns {"address": ..., "heartbeat_time": ...}.  The address the
+    request came from, and the network that's on, are recorded on the
+    address (shown on the job server's admin page).
+- 400: address is missing or blank.
+- 404: no such job server, or it hasn't registered that address.
+
+Job servers use this when the POST /jobservers/ reply lists the
+"jobserver-address-heartbeat" feature.
+    '''
+    permission_classes = [HasAPIKeyOrIsAuthenticated]
+    queryset = JobServerAddress.objects.all()
+
+    def post(self, request, pk, format=None):
+        from networks.models import Network
+        address = request.data.get('address') if isinstance(request.data, dict) else None
+        if not isinstance(address, str) or not address.strip():
+            return Response({'address': "Required: one of the job server's registered addresses."}, status=400)
+        entry = JobServerAddress.objects.filter(jobserver_id=pk, address=address.strip()).first()
+        if entry is None:
+            return Response({'detail': "No such job server, or it hasn't registered that address."}, status=404)
+        entry.heartbeat_time = timezone.now()
+        entry.heard_from = get_client_ip(request)
+        entry.heard_from_network = JobServersAPIView._networkOf(entry.heard_from, Network.objects.all())
+        entry.save(update_fields=['heartbeat_time', 'heard_from', 'heard_from_network'])
+        return Response({'address': entry.address, 'heartbeat_time': entry.heartbeat_time})
 
 
 class JobStatusChangesView(View):

@@ -1,9 +1,12 @@
 import json
+from datetime import timedelta
 from types import SimpleNamespace
 from unittest import mock
 
+from django.utils import timezone
+
 from common.testing import APITestCase
-from jobqueue.models import JobServer, JobServerAddress
+from jobqueue.models import STALE_AFTER, JobServer, JobServerAddress
 from networks.models import Network, NetworkType
 from osmanagement.models import OSRepo
 from systems.models import SystemImage
@@ -24,6 +27,9 @@ class JobServerAddressTestCase(APITestCase):
 
   def addresses(self, server):
     return sorted((a.address, a.network_id) for a in server.addresses.all())
+
+  def make_stale(self, **filters):
+    JobServerAddress.objects.filter(**filters).update(heartbeat_time=timezone.now() - STALE_AFTER - timedelta(seconds=1))
 
 
 class JobServerAddressRegisterTests(JobServerAddressTestCase):
@@ -63,9 +69,20 @@ class JobServerAddressRegisterTests(JobServerAddressTestCase):
         self.assertIn("addresses", response.json())
     self.assertFalse(JobServer.objects.exists())
 
+  def test_a_kept_address_keeps_its_heartbeat(self):
+    """ #435: only an address's own heartbeat keeps it fresh, not the registration. """
+    server = self.registered(self.post(addresses=[{"address": "172.16.0.5"}, {"address": "10.20.0.5"}]))
+    self.make_stale(address="172.16.0.5")
+    stale = JobServerAddress.objects.get(address="172.16.0.5").heartbeat_time
+    self.registered(self.post(addresses=[{"address": "172.16.0.5", "network": self.ib.pk}, {"address": "172.16.0.6"}]))
+    self.assertEqual(self.addresses(server), [("172.16.0.5", self.ib.pk), ("172.16.0.6", self.lan.pk)])
+    self.assertEqual(JobServerAddress.objects.get(address="172.16.0.5").heartbeat_time, stale)
+    self.assertGreater(JobServerAddress.objects.get(address="172.16.0.6").heartbeat_time, stale)
+
   def test_reply_lists_the_feature(self):
     response = self.post()
     self.assertIn("jobserver-addresses", json.loads(response.json())["features"])
+    self.assertIn("jobserver-address-heartbeat", json.loads(response.json())["features"])
 
   def test_admin_lists_the_addresses(self):
     server = self.registered(self.post(addresses=[{"address": "10.20.0.5"}]))
@@ -93,6 +110,13 @@ class JobServerAddressForTests(JobServerAddressTestCase):
       with self.subTest(client=client):
         self.assertEqual(self.server.address_for(client), "192.168.1.5")
 
+  def test_a_stale_address_is_skipped_not_deleted(self):
+    """ #435: the single address, not another network's fresh one. """
+    self.make_stale(address="10.20.0.5")
+    self.assertEqual(self.server.address_for("10.20.0.77"), "192.168.1.5")
+    self.assertEqual(self.server.address_for("172.16.9.9"), "172.16.0.5")
+    self.assertTrue(JobServerAddress.objects.filter(address="10.20.0.5").exists())
+
 
 class JobServerAddressRoutingTests(JobServerAddressTestCase):
   """ /images/ and /osrepos/ redirects send a client to the address on its network. """
@@ -117,6 +141,11 @@ class JobServerAddressRoutingTests(JobServerAddressTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], f"http://{host}:8080/images/compute/compute.img")
 
+  def test_image_redirect_skips_a_stale_address(self):
+    self.make_stale(address="10.20.0.5")
+    response = self.client.get("/images/compute/", REMOTE_ADDR="10.20.0.77")
+    self.assertEqual(response["Location"], "http://192.168.1.5:8080/images/compute/compute.img")
+
   def test_image_redirect_checks_the_routed_address(self):
     self.client.get("/images/compute.vmlinuz/", REMOTE_ADDR="10.20.0.77")
     self.head.assert_called_once_with("http://10.20.0.5:8080/images/compute/compute.vmlinuz", timeout=1)
@@ -127,3 +156,53 @@ class JobServerAddressRoutingTests(JobServerAddressTestCase):
         response = self.client.get(f"/osrepos/{self.repo.pk}/repodata/repomd.xml", REMOTE_ADDR=client)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], f"http://{host}:8080/repos/{self.repo.pk}/repodata/repomd.xml")
+
+
+class JobServerAddressHeartbeatTests(JobServerAddressTestCase):
+  """ POST /jobservers/<pk>/heartbeat/ keeps one address fresh (#435). """
+
+  def setUp(self):
+    super().setUp()
+    self.server = JobServer.objects.create(name="js1", address="192.168.1.5")
+    self.other = JobServer.objects.create(name="js2", address="192.168.1.6")
+    JobServerAddress.objects.create(jobserver=self.server, address="10.20.0.5", network=self.ib)
+    JobServerAddress.objects.create(jobserver=self.other, address="172.16.0.6", network=self.lan)
+
+  def beat(self, pk, body, client="172.16.3.3"):
+    return self.client.post(f"/jobservers/{pk}/heartbeat/", json.dumps(body), content_type="application/json",
+                            REMOTE_ADDR=client)
+
+  def test_heartbeat_freshens_the_address_and_records_where_from(self):
+    self.make_stale(address="10.20.0.5")
+    self.assertEqual(self.server.address_for("10.20.0.77"), "192.168.1.5")
+    response = self.beat(self.server.pk, {"address": "10.20.0.5"})
+    self.assertEqual(response.status_code, 200, response.content)
+    # plain JSON, not double-encoded (#268).
+    self.assertEqual(response.json()["address"], "10.20.0.5")
+    entry = JobServerAddress.objects.get(address="10.20.0.5")
+    self.assertEqual((entry.heard_from, entry.heard_from_network), ("172.16.3.3", self.lan))
+    self.assertEqual(self.server.address_for("10.20.0.77"), "10.20.0.5")
+
+  def test_heard_from_off_any_network_has_no_network(self):
+    self.beat(self.server.pk, {"address": "10.20.0.5"}, client="192.0.2.1")
+    entry = JobServerAddress.objects.get(address="10.20.0.5")
+    self.assertEqual((entry.heard_from, entry.heard_from_network), ("192.0.2.1", None))
+
+  def test_unknown_server_or_address_is_404(self):
+    for pk, address in ((999, "10.20.0.5"), (self.server.pk, "10.20.0.9"), (self.server.pk, "172.16.0.6")):
+      with self.subTest(pk=pk, address=address):
+        self.assertEqual(self.beat(pk, {"address": address}).status_code, 404)
+
+  def test_missing_or_blank_address_is_400(self):
+    for body in ({}, {"address": ""}, {"address": "  "}, {"address": 5}, ["10.20.0.5"]):
+      with self.subTest(body=body):
+        response = self.beat(self.server.pk, body)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("address", response.json())
+
+  def test_needs_a_login_or_api_key(self):
+    self.client.logout()
+    self.assertIn(self.beat(self.server.pk, {"address": "10.20.0.5"}).status_code, (401, 403))
+
+  def test_only_post(self):
+    self.assertEqual(self.client.get(f"/jobservers/{self.server.pk}/heartbeat/", CONTENT_TYPE="application/json").status_code, 405)

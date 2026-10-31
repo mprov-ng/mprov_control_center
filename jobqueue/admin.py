@@ -30,7 +30,7 @@ class JobModuleAdmin(admin.ModelAdmin):
 class JobServerAddressInline(admin.TabularInline):
     """ The addresses from the job server's last heartbeat (mprov_jobserver#114). """
     model = JobServerAddress
-    fields = ('address', 'network', 'heartbeat_time')
+    fields = ('address', 'network', 'heartbeat_time', 'heard_from', 'heard_from_network')
     readonly_fields = fields
     extra = 0
     can_delete = False
