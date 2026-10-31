@@ -1,5 +1,6 @@
 
 from .models import SystemImage, NetworkInterface
+from jobqueue.models import route_order
 from django.shortcuts import redirect
 from django.conf import settings
 from rest_framework.exceptions import NotFound
@@ -67,7 +68,8 @@ returned, or a JSON list of all images if the request content type is applicatio
 ## Documentation
 
 ### GET (with primary key)
-- Will redirect (302) to the image requested on the least loaded jobserver hosting it,
+- Will redirect (302) to the image requested on a responsive jobserver hosting it:
+one with an address on the client's network first, then the least loaded (#254),
 regardless of requested content type.  A primary key ending in .initramfs or .vmlinuz
 redirects to that file, otherwise the .img is used.
 - Jobservers registered by host name are skipped if the name doesn't resolve for the
@@ -111,7 +113,7 @@ If no jobserver is left, a 404 is returned.
         # no pk in image, spit out a list then.
         self.queryset = SystemImage.objects.all()
         return(generics.ListAPIView.get(self, request, format=None)) 
-      # choose a jobserver with the lowest one minute load avg.
+      # on the client's network first, then the lowest one minute load avg.
       js_set = self.getJobserver(image, ip)
       js = None
       js = js_set[0]
@@ -160,8 +162,9 @@ If no jobserver is left, a 404 is returned.
 
     def getJobserver(self, image, clientIP=None):
       """
-      Returns the image's job servers, lowest one minute load avg. first,
-      leaving out any whose name doesn't resolve for the client's address
+      Returns the image's responsive job servers in route_order(): those
+      on the client's network first, then by one minute load avg. (#254).
+      Leaves out any whose name doesn't resolve for the client's address
       family (AAAA for an IPv6 client).  Job servers registered by IP
       address are always kept.  Raises NotFound if none are left.
       Each one's route_address is the address it registered on the client's
@@ -172,7 +175,7 @@ If no jobserver is left, a 404 is returned.
         # if there are no jobservers, return 404
         raise NotFound(detail="Error 404, No Jobservers in mPCC for Image", code=404)
       # unresponsive ones are kept on the image but not routed to (#254).
-      js_set = list(image.jobservers.fresh().order_by('one_minute_load'),)
+      js_set = route_order(image.jobservers.all(), clientIP)
       if(len(js_set)==0):
         raise NotFound(detail="Error 404, No responsive Jobservers for Image", code=404)
       if clientIP is None:
@@ -182,7 +185,6 @@ If no jobserver is left, a 404 is returned.
       resolvable = []
       errors = []
       for js in js_set:
-        js.route_address = js.address_for(clientIP)
         try:
           ip_address(js.route_address)
           # a valid IP needs no lookup.

@@ -3,12 +3,12 @@ from common.views import MProvView
 from rest_framework import generics
 from .serializers import OSRepoAPISerializer
 from rest_framework.exceptions import NotFound
-import random
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect
 from django.utils.html import format_html
 from bs4 import BeautifulSoup
 from systems.views_noauth import get_client_ip
+from jobqueue.models import route_order
 
 
 class OSRepoURLAPIView(MProvView, generics.ListAPIView):
@@ -29,9 +29,10 @@ Returns the list of repositories.  Managed repositories link to /osrepos/&lt;id&
 unmanaged ones link to their package URL.
 
 ### GET method (with primary key)
-Redirects (302) to a randomly chosen job server that hosts the repository.  Any
-path after the primary key is appended to the redirect.  Returns 404 if no job
-server hosts the repository.
+Redirects (302) to a responsive job server that hosts the repository: one with
+an address on the client's network first, then the least loaded, ties at random
+(#254).  Any path after the primary key is appended to the redirect.  Returns
+404 if no responsive job server hosts the repository.
       '''
       model = OSRepo
       authentication_classes = [] #disables authentication
@@ -69,18 +70,18 @@ server hosts the repository.
               return result 
           # no pk in the request, spit out a list then.
           return(generics.ListAPIView.get(self, request, format=None))
-        # choose a random jobserver
         if not repo.hosted_by.exists():
           # if there are no jobservers, return 404
           raise NotFound(detail="No job servers host this repository.", code=404)
-        # unresponsive ones are kept on the repo but not routed to (#254).
-        js_set = list(repo.hosted_by.fresh())
-        js = None
+        # a responsive job server on the client's network, least loaded
+        # first (#254); unresponsive ones are kept on the repo but not
+        # routed to.
+        js_set = route_order(repo.hosted_by.all(), get_client_ip(request))
         if(len(js_set)==0):
           raise NotFound(detail="No responsive job servers host this repository.", code=404)
-        js = random.choice(js_set)
+        js = js_set[0]
         # the address it registered on the client's network, if any (mprov_jobserver#114).
-        host = js.address_for(get_client_ip(request))
+        host = js.route_address
         if ":" in host and not host.startswith("["):
           host = f"[{host}]"
         if 'redirect_url' in kwargs:
