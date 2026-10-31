@@ -17,6 +17,20 @@ The merge rules below must match common/__init__.py.  Each section is a card
   {% endfor %}
 
   <div class="card card-secondary card-outline">
+    <div class="card-header"><h3 class="card-title">{% trans 'How this is merged' %}</h3></div>
+    <div class="card-body">
+  <ul>
+    <li>{% trans 'The layers apply in the order above, each over the one before: OS Distribution, then System Groups (by name), then the System Image, then the System.' %}
+      {% if kind == 'system' %}{% trans "A system's groups are its own groups plus its image's groups, each applied once." %}{% endif %}</li>
+    <li>{% trans 'Install kernel command line and initial modules add to what is inherited (the command line with spaces, modules with commas). A value starting with = replaces everything inherited instead.' %}</li>
+    <li>{% trans 'Root tmpfs size and provisioning interface replace the inherited value. 0 or empty inherits.' %}</li>
+    <li>{% trans "Configuration Parameters are merged by top-level key: a key set lower down replaces that key's whole value, and other keys are kept. A block that is only comments inherits. A block that isn't valid YAML, or isn't a mapping, is skipped and shown above." %}</li>
+    <li>{% trans 'Scripts and Ansible playbooks, roles and collections are the union of every layer. Which ones run depends on their type (image generation or post-boot).' %}</li>
+  </ul>
+    </div>
+  </div>
+
+  <div class="card card-secondary card-outline">
     <div class="card-header"><h3 class="card-title">{% trans 'Boot options' %}</h3></div>
     {% if fields %}
     <div class="card-body p-0">
@@ -74,20 +88,6 @@ The merge rules below must match common/__init__.py.  Each section is a card
     {% endif %}
   </div>
   {% endfor %}
-
-  <div class="card card-secondary card-outline">
-    <div class="card-header"><h3 class="card-title">{% trans 'How this is merged' %}</h3></div>
-    <div class="card-body">
-  <ul>
-    <li>{% trans 'The layers apply in the order above, each over the one before: OS Distribution, then System Groups (by name), then the System Image, then the System.' %}
-      {% if kind == 'system' %}{% trans "A system's groups are its own groups plus its image's groups, each applied once." %}{% endif %}</li>
-    <li>{% trans 'Install kernel command line and initial modules add to what is inherited (the command line with spaces, modules with commas). A value starting with = replaces everything inherited instead.' %}</li>
-    <li>{% trans 'Root tmpfs size and provisioning interface replace the inherited value. 0 or empty inherits.' %}</li>
-    <li>{% trans "Configuration Parameters are merged by top-level key: a key set lower down replaces that key's whole value, and other keys are kept. A block that is only comments inherits. A block that isn't valid YAML, or isn't a mapping, is skipped and shown above." %}</li>
-    <li>{% trans 'Scripts and Ansible playbooks, roles and collections are the union of every layer. Which ones run depends on their type (image generation or post-boot).' %}</li>
-  </ul>
-    </div>
-  </div>
 
   <div class="card card-secondary card-outline">
     <div class="card-header"><h3 class="card-title">{% trans 'Merged result' %}</h3></div>
