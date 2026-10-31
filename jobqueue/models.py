@@ -18,7 +18,8 @@ class Job(models.Model):
     create_time=models.DateTimeField(default=timezone.now, verbose_name="Created Time")
     start_time=models.DateTimeField(blank=True, null=True, verbose_name="Start Time")
     end_time = models.DateTimeField(blank=True, null=True, verbose_name="End Time")
-    last_update = models.DateTimeField(default=timezone.now, blank=True, null=True, verbose_name="Last Update")
+    # set on every save (#440); a queryset .update() must set it itself.
+    last_update = models.DateTimeField(auto_now=True, blank=True, null=True, verbose_name="Last Update")
     return_code = models.IntegerField(blank=True, null=True, verbose_name='Return Code')
     module = models.ForeignKey('JobModule', on_delete=models.CASCADE)
     params = models.JSONField(verbose_name="Job Parameters", default=dict, null=True)
