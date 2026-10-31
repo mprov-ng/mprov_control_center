@@ -28,3 +28,11 @@ class IPXEAPIViewTests(TestCase):
     self.assertIn("mprov_stateful=1", content)
     # mprov_stateful.py finds the boot disk from the disk layouts itself.
     self.assertNotIn("mprov_bootdisk", content)
+
+  def test_ships_only_the_ipv4_udhcpc_script(self):
+    # mprov_boot_init.sh runs only udhcpc with default.script; the IPv6
+    # default6.script was never run and is gone (#287).
+    NetworkInterface.objects.create(system=self.system, name="eth0", ipaddress="10.0.0.8", bootable=True)
+    content = self.get_ipxe("10.0.0.8").content.decode()
+    self.assertIn("initrd /static/default.script /bin/default.script", content)
+    self.assertNotIn("default6.script", content)
