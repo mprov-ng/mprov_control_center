@@ -168,10 +168,13 @@ If no jobserver is left, a 404 is returned.
       network, or its single address (mprov_jobserver#114).
       """
 
-      js_set = list(image.jobservers.all().order_by('one_minute_load'),)
-      if(len(js_set)==0):
+      if not image.jobservers.exists():
         # if there are no jobservers, return 404
         raise NotFound(detail="Error 404, No Jobservers in mPCC for Image", code=404)
+      # unresponsive ones are kept on the image but not routed to (#254).
+      js_set = list(image.jobservers.fresh().order_by('one_minute_load'),)
+      if(len(js_set)==0):
+        raise NotFound(detail="Error 404, No responsive Jobservers for Image", code=404)
       if clientIP is None:
         return js_set
 

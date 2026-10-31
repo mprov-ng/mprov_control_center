@@ -188,6 +188,14 @@ SESSION_EXPIRE_AFTER_LAST_ACTIVITY = True
 # is never honored and those endpoints identify clients by their actual
 # socket peer address only.
 TRUSTED_PROXIES = [p.strip() for p in os.environ.get('TRUSTED_PROXIES', '').split(',') if p.strip()]
+
+# A job server with no heartbeat for a minute is unresponsive: it's left out
+# of image and repository routing, but kept (#254).  After this many minutes
+# unresponsive its RUNNING jobs are failed, and after this many days it's
+# deleted.  0 turns either off; deleting is off by default.  Both are checked
+# at most once a minute, when a job server heartbeats.
+JOBSERVER_FAIL_JOBS_AFTER_MINUTES = float(os.environ.get('JOBSERVER_FAIL_JOBS_AFTER_MINUTES', '10'))
+JOBSERVER_DELETE_AFTER_DAYS = float(os.environ.get('JOBSERVER_DELETE_AFTER_DAYS', '0'))
 ROOT_URLCONF = 'mprov_control_center.urls'
 TEMPLATES = [
     {

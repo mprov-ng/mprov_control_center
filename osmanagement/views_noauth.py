@@ -70,11 +70,14 @@ server hosts the repository.
           # no pk in the request, spit out a list then.
           return(generics.ListAPIView.get(self, request, format=None))
         # choose a random jobserver
-        js_set = list(repo.hosted_by.all())
+        if not repo.hosted_by.exists():
+          # if there are no jobservers, return 404
+          raise NotFound(detail="No job servers host this repository.", code=404)
+        # unresponsive ones are kept on the repo but not routed to (#254).
+        js_set = list(repo.hosted_by.fresh())
         js = None
         if(len(js_set)==0):
-          # if there are no jobservers, return 404
-          raise NotFound(detail="No job servers host this repository.", code=404) 
+          raise NotFound(detail="No responsive job servers host this repository.", code=404)
         js = random.choice(js_set)
         # the address it registered on the client's network, if any (mprov_jobserver#114).
         host = js.address_for(get_client_ip(request))

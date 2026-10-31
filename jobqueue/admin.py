@@ -39,14 +39,38 @@ class JobServerAddressInline(admin.TabularInline):
         return False
 
 
+class ResponsiveFilter(admin.SimpleListFilter):
+    """ Job servers by whether they've heartbeated in the last minute (#254). """
+    title = 'responsive'
+    parameter_name = 'responsive'
+
+    def lookups(self, request, model_admin):
+        return (('yes', 'Yes'), ('no', 'No'))
+
+    def queryset(self, request, queryset):
+        fresh = queryset.fresh()
+        if self.value() == 'yes':
+            return fresh
+        if self.value() == 'no':
+            return queryset.exclude(pk__in=fresh.values('pk'))
+        return queryset
+
+
 class JobServerAdmin(admin.ModelAdmin):
     model = JobServer
     inlines = [JobServerAddressInline]
-    readonly_fields = ('host_id', 'address','heartbeat_time','jobmodules',)
-    list_display = ['name', 'host_id', 'address', 'port', 'registered_jobmodules', 'heartbeat_time', 'one_minute_load'  ]
+    readonly_fields = ('host_id', 'address','heartbeat_time','responsive','jobmodules',)
+    list_display = ['name', 'host_id', 'address', 'port', 'registered_jobmodules', 'heartbeat_time', 'responsive', 'one_minute_load'  ]
+    list_filter = [ResponsiveFilter]
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.prefetch_related('jobmodules')
+
+    @admin.display(boolean=True, description='Responsive')
+    def responsive(self, obj):
+        """ Heartbeated in the last minute; an unresponsive job server isn't
+        routed to, and is kept until it's deleted (#254). """
+        return obj.responsive
 
     def registered_jobmodules(self, obj):
         return ", ".join([jm.slug for jm in obj.jobmodules.all()])
