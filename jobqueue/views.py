@@ -5,7 +5,7 @@ from jobqueue.models import JobModule, JobServer, JobServerAddress, Job, filter_
 from jobqueue.signals import record_status_change
 from systems.views_noauth import get_client_ip
 from common.permissions import HasAPIKeyOrIsAuthenticated
-from jobqueue.serializers import JobAPISerializer, JobModuleAPISerializer, JobServerAPISerializer
+from jobqueue.serializers import JobAPISerializer, JobDetailSerializer, JobModuleAPISerializer, JobServerAPISerializer
 from rest_framework import status, generics
 from rest_framework.response import Response
 import ipaddress
@@ -73,6 +73,8 @@ filtered with these optional query parameters:
 - jobserver: ID of the assigned job server
 - status: ID of the job's status
 - search: a job module ID to search for
+- detail: returns the jobs with their module, status and job server nested
+    3 levels deep (#298)
 
 Any other query parameter returns 400.
 
@@ -100,7 +102,9 @@ Format returned:
     key) and will Create a new entry; it requires ALL required fields.  PATCH
     will only update the fields passed; fields that are not changing can be omitted.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with IDs for its relations, or 404.
+    Unlike the other endpoints it isn't nested: job servers read status as an
+    ID (#298).  Use ?detail on the list for nested jobs.
 
 - POST returns the new object created, or a 400 error if validation fails
 
@@ -111,6 +115,7 @@ Format returned:
     '''
     model = Job
     serializer_class = JobAPISerializer
+    detail_serializer_class = JobDetailSerializer
     queryset = Job.objects.all()
     search_fields = ['module__slug']
     extra_query_params = ('module', 'params', 'jobserver', 'status')
@@ -127,8 +132,12 @@ Format returned:
             return Response(None)
         
         if 'pk' in kwargs:
-            # someone is looking for a specific item.
+            # someone is looking for a specific item.  It stays flat, unlike
+            # the other views: job servers read it and compare status as an
+            # ID (mprov_jobserver update_job_status(), #298).
             return self.retrieve(request, pk=kwargs['pk'])
+        # ?detail nests the list (#298).
+        self.serve_detail = 'detail' in request.query_params
 
         # Let's see if someone is looking for something specific.  Only the
         # keys below are filters; anything else is a 400, not ignored (#390).

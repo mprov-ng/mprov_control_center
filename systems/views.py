@@ -273,7 +273,7 @@ Format returned:
     collection URL without a primary key.  POST requires ALL required fields.  PATCH
     will only update the fields passed, required fields can be omitted if unchanged.
 
-- GET returns the object specified (IDs only, no nested objects) or 404
+- GET returns the object specified, with nested details as for ?detail, or 404
 
 - POST returns the new object created or a 400 error if validation fails
 
@@ -284,6 +284,7 @@ Format returned:
     '''
     model = System
     serializer_class = SystemSerializer
+    detail_serializer_class = SystemDetailSerializer
     queryset = None
     extra_query_params = ('self',)
 
@@ -354,9 +355,9 @@ Format returned:
                 return redirect("/static/images/power_unknown.svg")
         
         if 'pk' in kwargs:
-            self.serializer_class = SystemSerializer
-
-            # someone is looking for a specific item.
+            # someone is looking for a specific item, with nested details
+            # like ?detail (#298).
+            self.serve_detail = True
             return self.retrieve(request, pk=kwargs['pk'])
          
         result = self.checkContentType(request, format=format)
@@ -371,7 +372,7 @@ Format returned:
 
         # post-query filters and such.
         if 'detail' in request.query_params:
-            self.serializer_class = SystemDetailSerializer
+            self.serve_detail = True
 
         if 'hostname' in request.query_params:
             # someone is looking for a specific item.
@@ -392,7 +393,7 @@ Format returned:
             # self.model = Network
             # self.serializer_class = NetworkInterfaceDetailsSerializer
             self.queryset = self.queryset.filter(pk=nicQueryset[0].system.id)
-            self.serializer_class = SystemDetailSerializer
+            self.serve_detail = True
             # return self.retrieve(self, request, format=None,pk=nicQueryset[0].system.id)
 
         return generics.ListAPIView.get(self, request, format=None)

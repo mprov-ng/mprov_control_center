@@ -12,6 +12,14 @@ class JobAPISerializer(serializers.ModelSerializer):
         model = Job
         fields = '__all__'
 
+class JobDetailSerializer(serializers.ModelSerializer):
+    """ GET /jobs/?detail: relations nested 3 levels deep (#298).  Not used
+    for /jobs/<pk>/, which job servers read with status as an ID. """
+    class Meta:
+        model = Job
+        fields = '__all__'
+        depth = 3
+
 class JobModuleAPISerializer(serializers.ModelSerializer):
     class Meta:
         model = JobModule

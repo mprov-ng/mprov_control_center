@@ -3,6 +3,7 @@ from common.views import MProvView
 from networks.models import Network, NetworkType, Switch, SwitchPort
 from .serializers import (
     NetworkAPISerializer, 
+    NetworkDetailSerializer,
     SwitchAPISerializer, 
     NetworkTypeAPISerializer, 
     SwitchPortAPISerializer,
@@ -45,7 +46,8 @@ class NetworkAPIView(MProvView):
 Returns a JSON list of all networks in the mPCC.  The list can be filtered
 with the optional ?isdhcp= and ?managedns= query parameters (true/false in any
 case, or 1/0), and by any other field with ?FIELD=VALUE (exact match).  An
-invalid filter returns 400; no matches returns an empty list.
+invalid filter returns 400; no matches returns an empty list.  With ?detail,
+each network's relations are nested 3 levels deep (#298).
 
 Format returned:
 
@@ -76,7 +78,7 @@ Format returned:
     primary key, will Create a new entry and requires ALL required fields.  PATCH
     will only update the fields passed; required fields can be omitted if unchanged.
 
-- GET returns the object specified or 404
+- GET returns the object specified, with related objects nested 3 levels deep, or 404
 
 - POST returns the new object created, or 400 with the validation errors
 
@@ -87,6 +89,7 @@ Format returned:
     '''
     model = Network 
     serializer_class = NetworkAPISerializer
+    detail_serializer_class = NetworkDetailSerializer
 
     # Override the default get func, we need a bit more specialized query here
     def get(self, request, format=None, **kwargs):
@@ -98,6 +101,8 @@ Format returned:
         if self.model is None:
             return Response(None)
         
+        # a single network, and ?detail, are nested (#298).
+        self.serve_detail = 'pk' in kwargs or 'detail' in request.query_params
         if 'pk' in kwargs:
             # someone is looking for a specific item.
             return self.retrieve(request, pk=kwargs['pk'])
