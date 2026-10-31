@@ -30,7 +30,7 @@ def resync_repos(modeladmin, request, queryset):
 
 class OSRepoAdmin(admin.ModelAdmin):
   model=OSRepo
-  list_display=['id', 'name', 'repo_package_url', 'managed', 'version']
+  list_display=['id', 'name', 'repo_package_url', 'managed', 'newest_only', 'version']
   list_display_links=['id','name']
   readonly_fields=['hosted_by']
   actions = [resync_repos]

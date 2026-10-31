@@ -111,6 +111,8 @@ class OSRepoAPIView(MProvView):
 - name: A human-readable name 
 - repo_package_url: The URL of the repo install package
 - managed: Whether mProv downloads and manages this repo
+- newest_only: If true (the default) and managed, repo-update mirrors only the
+    newest version of each package.  Read at each re-sync.
 - resync: If true (and managed), saving queues a repo-update job, bumps the
     version, and clears hosted_by.  resync is then cleared again, so it reads
     back false.

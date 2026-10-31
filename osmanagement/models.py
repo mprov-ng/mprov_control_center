@@ -103,6 +103,7 @@ class OSRepo(models.Model):
   name=models.CharField(max_length=100)
   repo_package_url=models.CharField(max_length=2048, verbose_name='Repo Package URL')
   managed = models.BooleanField(default=False, verbose_name="Mirror locally", help_text="Download this repository and serve a local copy from the job servers (repo-update/reposync). Unchecked, nodes and image builds use the Repo Package URL directly.")
+  newest_only = models.BooleanField(default=True, verbose_name="Newest packages only", help_text="On a mirrored repository, download only the newest version of each package, not every version upstream still lists. Takes effect at the next re-sync; older versions already mirrored stay.")
   resync = models.BooleanField(default=False, verbose_name="Re-sync on save", help_text="On a mirrored repository, saving with this checked bumps the local version and queues a repo-update job to download it again, then clears this box. No effect on a repository that isn't mirrored.")
   hosted_by = models.ManyToManyField('jobqueue.JobServer', blank=True, verbose_name="Hosted by")
   ostype = models.ForeignKey(OSType, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="OS Type")
