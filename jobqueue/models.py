@@ -29,6 +29,15 @@ class Job(models.Model):
         verbose_name="Job"
         verbose_name_plural="Jobs"
     def save(self, *args, **kwargs):
+        # A pending job belongs to no job server: whatever sets one back to
+        # pending (a change signal re-queueing it, an admin edit, a PATCH)
+        # frees it, so any job server can claim it again (#296).
+        if self.status_id == PENDING:
+            self.jobserver = None
+            # update_or_create() saves only the fields it was given.
+            update_fields = kwargs.get('update_fields')
+            if update_fields is not None and 'jobserver' not in update_fields:
+                kwargs['update_fields'] = list(update_fields) + ['jobserver']
         # add some default dependencies
         if self.module.slug == "image-update":
             self.params.update({"deps": "repo-sync"})
@@ -57,6 +66,7 @@ class JobStatus(models.Model):
         verbose_name="Job Status"
 
 PENDING = 1
+RUNNING = 2
 
 def filter_params(queryset, params):
     """
