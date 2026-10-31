@@ -1,4 +1,5 @@
 from django.utils import timezone
+from django.utils.text import slugify
 from common.views import MProvView
 from jobqueue.models import JobModule, JobServer, JobServerAddress, Job, filter_params, sweep_stale_jobservers, PENDING, RUNNING
 from jobqueue.signals import record_status_change
@@ -238,9 +239,11 @@ class JobModulesAPIView(MProvView):
 ## Accepted HTTP Methods:
 - GET (no primary key)
 - GET (with Primary Key, e.g. /jobmodules/pxe-update/)
-- POST (no primary key, e.g. /jobmodules/)
 - PATCH (with primary key, e.g. /jobmodules/pxe-update/)
 - DELETE (with primary key, e.g. /jobmodules/pxe-update/)
+
+Job modules are created when a job server registers one it runs, through
+POST /jobservers/.  POST here is 405 (#256).
 
 ## Documentation
 
@@ -277,15 +280,13 @@ Format returned:
     }
     ]
 
-### GET, PATCH, DELETE (with primary key) and POST (without primary key)
+### GET, PATCH, DELETE (with primary key)
 - GET, PATCH, and DELETE, when passed a primary key, will Retrieve, Update, or
-    Delete that entry in the database.  POST is sent to the base URL (no primary
-    key) and will Create a new entry; it requires ALL required fields.  PATCH
-    will only update the fields passed; fields that are not changing can be omitted.
+    Delete that entry in the database.  PATCH will only update the fields
+    passed; fields that are not changing can be omitted.  The ID (slug) can't
+    be changed.
 
 - GET returns the object specified, with related objects nested 3 levels deep, or 404
-
-- POST returns the new object created, or a 400 error if validation fails
 
 - PATCH returns the updated object.
 
@@ -296,6 +297,11 @@ Format returned:
     serializer_class = JobModuleAPISerializer
     queryset = JobModule.objects.all()
     search_fields =['name', 'slug']
+
+    def post(self, request, *args, **kwargs):
+        # job modules come from job server registration only (#256).
+        return Response({"detail": "Job modules are created when a job server registers through POST /jobservers/."},
+                        status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class JobServersAPIView(MProvView):
@@ -389,9 +395,11 @@ Format returned:
     API features this mPCC supports, as a JSON-encoded string, e.g.
     '{"pk": 3, "features": ["addjs-version", "host-id"]}' (a client ignores
     feature names it doesn't know), 400 if a required field is missing, the
-    name is blank or host_id isn't a non-blank string of up to 64 characters,
-    409 if host_id is sent and the name belongs to a different job server, or
-    a 500 error if a job module can't be found.
+    name is blank, a job module ID isn't a slug (lowercase letters, digits, -
+    and _) or host_id isn't a non-blank string of up to 64 characters, or 409
+    if host_id is sent and the name belongs to a different job server.  A job
+    module the mPCC doesn't have yet is created, named after its ID; this is
+    the only way job modules are created (#256).
 
 - PATCH returns the updated object.
 
@@ -423,6 +431,12 @@ Format returned:
                 errors['port'] = "Must be an integer."
         if not isinstance(request.data['jobmodules'], list):
             errors['jobmodules'] = "Must be a list of job module IDs."
+        else:
+            # a job server creates the modules it runs (#256), so each ID
+            # must be one a module can have.
+            bad = [i for i in request.data['jobmodules'] if not self._module_id(i)]
+            if bad:
+                errors['jobmodules'] = f"Not valid job module IDs (lowercase letters, digits, - and _): {bad}"
         host_id = request.data.get('host_id')
         if 'host_id' in request.data and not (isinstance(host_id, str) and 0 < len(host_id.strip()) <= 64):
             errors['host_id'] = "Must be a non-blank string of up to 64 characters."
@@ -456,11 +470,10 @@ Format returned:
             if conflict:
                 return Response({"detail": conflict}, status=status.HTTP_409_CONFLICT)
         for i in request.data['jobmodules']:
-            # look up the jobmodule
-            try:
-                obj.jobmodules.add(JobModule.objects.get(pk=i))
-            except JobModule.DoesNotExist:
-                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
+            # job modules are created by the job servers that run them (#256);
+            # an admin can rename one afterwards.
+            module, created = JobModule.objects.get_or_create(slug=i, defaults={'name': i})
+            obj.jobmodules.add(module)
         obj.save()
         # unresponsive job servers are kept, not deleted (#254); fail their
         # jobs or delete them once the settings say so, at most once a minute.
@@ -485,6 +498,12 @@ Format returned:
         data['pk'] = obj.pk
         data['features'] = FEATURES
         return Response(status=status.HTTP_200_OK,data=json.dumps(data))
+
+    @staticmethod
+    def _module_id(value):
+        """ Whether value can be a job module ID: a slug, as slugify() makes
+        them, of at most 255 characters. """
+        return isinstance(value, str) and 0 < len(value) <= 255 and slugify(value) == value
 
     def _addresses(self, entries):
         """
