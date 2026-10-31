@@ -98,7 +98,8 @@ class BMCDetailSerializerTests(TestCase):
   def test_detail_get_and_list_after_it(self):
     bmc = self.get_json(f"/systembmcs/{self.bmc.id}/")
     self.assertEqual(bmc["system"]["hostname"], "bmc-detail-node")
-    self.assertEqual(bmc["password"], "bmc-secret")
+    # a logged-in user isn't the system, so no password (#316).
+    self.assertNotIn("password", bmc)
     bmc = self.get_json("/systembmcs/")[0]
     self.assertEqual(bmc["system"], self.system.id)
     self.assertNotIn("password", bmc)

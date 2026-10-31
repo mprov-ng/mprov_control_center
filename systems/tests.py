@@ -59,7 +59,8 @@ class SystemPowerAPIViewResetTests(SimpleTestCase):
 
 class SystemBMCPasswordTests(TestCase):
   """ The BMC password is write-only, except for a single entry or a per-system
-  detail query (?system=ID&detail), which mprov_scripts' setupBMC.py reads.
+  detail query (?system=ID&detail) from the system itself, which is how
+  mprov_scripts' setupBMC.py reads it.
   An unscoped ?detail must not return any password: one GET must not harvest
   every BMC credential (issue #316). """
 
@@ -92,15 +93,22 @@ class SystemBMCPasswordTests(TestCase):
     for entry in response.json():
       self.assertNotIn("password", entry)
 
-  def test_detail_returns_password(self):
-    response = self.get_json(f"/systembmcs/?system={self.system.id}&detail")
+  def test_detail_returns_password_to_the_system_only(self):
+    # only from one of the system's own addresses (#316).
+    NetworkInterface.objects.create(system=self.system, name="ens18", ipaddress="10.0.0.5")
+    url = f"/systembmcs/?system={self.system.id}&detail"
+    response = self.client.get(url, CONTENT_TYPE="application/json", REMOTE_ADDR="10.0.0.5")
     self.assertEqual(response.status_code, 200)
     self.assertEqual(response.json()[0]["password"], "bmc-secret")
+    self.assertNotIn("password", self.get_json(url).json()[0])
 
-  def test_single_entry_returns_password(self):
-    response = self.get_json(f"/systembmcs/{self.bmc.id}/")
+  def test_single_entry_returns_password_to_the_system_only(self):
+    NetworkInterface.objects.create(system=self.system, name="ens18", ipaddress="10.0.0.5")
+    url = f"/systembmcs/{self.bmc.id}/"
+    response = self.client.get(url, CONTENT_TYPE="application/json", REMOTE_ADDR="10.0.0.5")
     self.assertEqual(response.status_code, 200)
     self.assertEqual(response.json()["password"], "bmc-secret")
+    self.assertNotIn("password", self.get_json(url).json())
 
   def test_patch_sets_password_without_echo_or_print(self):
     out = io.StringIO()

@@ -13,6 +13,7 @@ from .serializers import (
 )
 from rest_framework.response import Response
 from django.db import transaction
+from django.core.exceptions import ValidationError
 
 from common.views import MProvView
 from systems.views_noauth import get_client_ip
@@ -783,10 +784,12 @@ class SystemBMCAPIView(MProvView):
 - ipaddress: The IP of the entry
 - mac: The MAC address of the entry
 - username: The username for authentication with this entry
-- password: The password for authentication with this entry. It is write-only:
-    GET returns it only for a single entry (/systembmcs/1/) or a per-system
-    detail query (?system=ID&detail). An empty password on POST or PATCH is
-    ignored.
+- password: The password for authentication with this entry. It is write-only,
+    except to the system itself (#316): GET returns it only for a single entry
+    (/systembmcs/1/), a per-system detail query (?system=ID&detail) or ?self,
+    and only when the request comes from one of that system's network
+    interface addresses.  Anyone else gets the entry without it.  An empty
+    password on POST or PATCH is ignored.
 - system: ID of the system this entry is associated with.
 - switch_port: ID of the switchport this entry resides on.
 - network: ID of the network this entry is on.
@@ -796,7 +799,10 @@ class SystemBMCAPIView(MProvView):
 ### Query Parameters
 - ?detail: GET (no primary key) returns entries with their system, switch port and network
     nested one level. The password is only included when the query is also
-    scoped to a single system with ?system=ID.
+    scoped to a single system with ?system=ID, and comes from that system.
+- ?self: GET returns the calling system's own entries, nested as for ?detail and
+    with the password.  The caller is the system with a network interface at the
+    request's address; 404 if there is none.
 - ?FIELD=VALUE: GET (no primary key) only returns entries where that field matches exactly.
 
 ### GET method (no parameters)
@@ -837,13 +843,56 @@ Format returned:
     serializer_class = SystemBMCSerializer
     detail_serializer_class = SystemBMCDetailSerializer
     queryset = None
+    extra_query_params = ('self',)
+    # the system that sent a ?self request, found from its address.
+    self_system = None
+
+    def get(self, request, format=None, **kwargs):
+        if 'self' not in request.query_params or 'pk' in kwargs:
+            return super().get(request, format=format, **kwargs)
+        result = self.checkContentType(request, format=format)
+        if result is not None:
+            return result
+        # identify the caller by its socket peer, as /systems/?self does (#320).
+        ip = get_client_ip(request)
+        nic = NetworkInterface.objects.filter(ipaddress=ip).select_related('system').first()
+        if nic is None:
+            return Response({"detail": f"No network interface has the IP address {ip}."}, status=404)
+        self.self_system = nic.system
+        queryset, error_body = self.filter_by_query_params(request, kwargs)
+        if len(error_body) > 0:
+            return Response(error_body, status=400)
+        self.queryset = queryset.filter(system=nic.system)
+        if self.queryset.count() == 0:
+            return Response(None, status=404)
+        self.serve_detail = True
+        return generics.ListAPIView.get(self, request, format=None)
+
+    def requested_by_its_system(self):
+        '''
+        Whether this request comes from the system whose entries it reads
+        (#316): ?self, or /systembmcs/<pk>/ or ?system=ID from one of that
+        system's network interface addresses.  That's how mprov_scripts'
+        setupBMC.py reads its own row, from the node.  Anything else, such
+        as the shared API key used elsewhere or a logged-in user, isn't.
+        '''
+        if self.self_system is not None:
+            return True
+        if 'pk' in self.kwargs:
+            system_id = SystemBMC.objects.filter(pk=self.kwargs['pk']).values_list('system_id', flat=True).first()
+        else:
+            system_id = self.request.query_params.get('system')
+        if not system_id:
+            return False
+        try:
+            return NetworkInterface.objects.filter(system_id=system_id, ipaddress=get_client_ip(self.request)).exists()
+        except (TypeError, ValueError, ValidationError):
+            return False
 
     def get_serializer_class(self):
-        # issue #316: only a request scoped to one system gets the password:
-        # GET /systembmcs/<pk>/ or GET /systembmcs/?system=ID (which is how
-        # mprov_scripts' setupBMC.py fetches its row). An unscoped ?detail
-        # returns the same entries with the password left out.
-        if self.serve_detail and 'pk' not in self.kwargs and 'system' not in self.request.query_params:
+        # issue #316: only the system itself gets its BMC password.  Every
+        # other detail read returns the same entries without it.
+        if self.serve_detail and not self.requested_by_its_system():
             return SystemBMCDetailNoPasswordSerializer
         return super().get_serializer_class()
 
