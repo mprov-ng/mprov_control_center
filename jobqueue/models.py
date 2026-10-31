@@ -122,6 +122,10 @@ def requeue_job(module, name=None):
                 return finished
         return Job.objects.create(name=name, module=module, status_id=PENDING)
 
+# a job server, or one of its addresses, with no heartbeat for this long is
+# stale: the server is deleted, and the address is left out of routing (#435).
+STALE_AFTER = datetime.timedelta(seconds=60)
+
 class JobServer(models.Model):
     """ This area shows you the status of job servers that have registered themselves with the mPCC.  It will show you the IP address that the 
     job server registered with, the port, any job modules it can run, its load average, and when the mPCC last heard from it.
@@ -150,7 +154,7 @@ class JobServer(models.Model):
         # only runs when a save lands on second :00 of a minute
         if int(time.time() % 60) == 0:
             # delete any servers that are older than 1 minute heartbeat.
-            delDateTime = timezone.now() - datetime.timedelta(seconds=60)
+            delDateTime = timezone.now() - STALE_AFTER
             print("Info: Removing stale jobservers.")
             # not this one: its row still has the heartbeat before this save,
             # and deleting it would fail the jobs it's running (#409).
@@ -177,13 +181,16 @@ class JobServer(models.Model):
         """
         The address a client at client_ip should use for this job server:
         the one it registered on the client's network, if any
-        (mprov_jobserver#114), else its single address.
+        (mprov_jobserver#114) and it has heartbeated within STALE_AFTER
+        (#435), else its single address.  Stale addresses are skipped, not
+        deleted.
         """
         try:
             client = ipaddress.ip_address(client_ip)
         except (TypeError, ValueError):
             return self.address
-        for entry in self.addresses.select_related('network'):
+        fresh = self.addresses.filter(heartbeat_time__gt=timezone.now() - STALE_AFTER)
+        for entry in fresh.select_related('network').order_by('pk'):
             if entry.network is not None and client in entry.network_range():
                 return entry.address
         return self.address
@@ -196,6 +203,11 @@ class JobServerAddress(models.Model):
     network = models.ForeignKey('networks.Network', blank=True, null=True, on_delete=models.SET_NULL)
     address = models.CharField(max_length=1024)
     heartbeat_time = models.DateTimeField(default=timezone.now, verbose_name="Last Heartbeat")
+    # where this address's last heartbeat (POST /jobservers/<pk>/heartbeat/)
+    # came from, and the network that's on (#435).  NULL until it has one.
+    heard_from = models.CharField(max_length=1024, blank=True, null=True, verbose_name="Heard From")
+    heard_from_network = models.ForeignKey('networks.Network', blank=True, null=True, on_delete=models.SET_NULL,
+                                           related_name='+', verbose_name="Heard From Network")
 
     class Meta:
         verbose_name = "Job Server Address"

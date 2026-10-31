@@ -16,7 +16,7 @@ class JobServerRegisterTests(APITestCase):
     self.assertEqual(response.status_code, 200)
     server = JobServer.objects.get(name="js1")
     # the jobserver json.loads() the body, so it stays a JSON-encoded string (D-33).
-    self.assertEqual(json.loads(response.json()), {"pk": server.pk, "features": ["addjs-version", "host-id", "jobserver-addresses", "job-claim"]})
+    self.assertEqual(json.loads(response.json()), {"pk": server.pk, "features": ["addjs-version", "host-id", "jobserver-addresses", "job-claim", "jobserver-address-heartbeat"]})
     self.assertEqual(server.port, 8080)
     self.assertEqual(list(server.jobmodules.values_list("slug", flat=True)), ["nads"])
 
