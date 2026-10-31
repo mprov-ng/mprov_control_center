@@ -53,6 +53,8 @@ class OSDistroAdmin(admin.ModelAdmin):
         'managed',
         'update',
         'baseurl',
+        'base_image_url',
+        'base_image_checksum',
         'baserepo',
         'osrepos',
         'extrarepos',

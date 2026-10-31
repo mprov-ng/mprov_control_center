@@ -1,4 +1,4 @@
-from osmanagement.models import OSDistro, OSRepo, OSType
+from osmanagement.models import OSDistro, OSRepo, OSType, base_image_problem
 from scripts.models import Script
 from jobqueue.models import JobServer
 
@@ -16,6 +16,18 @@ class OSDistroAPISerializer(serializers.ModelSerializer):
         # password. The jobserver reads it from the osdistro nested inside
         # /systemimages/<slug>/, where it is still present. (#313)
         extra_kwargs = {'rootpw': {'write_only': True}}
+
+    def validate(self, attrs):
+        # DRF doesn't call OSDistro.clean().  On a PATCH, a field that isn't
+        # sent keeps its stored value. (#429)
+        def value(field):
+            if field in attrs:
+                return attrs[field]
+            return getattr(self.instance, field, "") if self.instance else ""
+        problem = base_image_problem(value('base_image_url'), value('base_image_checksum'))
+        if problem:
+            raise serializers.ValidationError({'base_image_checksum': problem})
+        return attrs
 
 class OSRepoAPISerializer(serializers.ModelSerializer):
     hosted_by=serializers.PrimaryKeyRelatedField(queryset=JobServer.objects.all(), many=True, required=False)
