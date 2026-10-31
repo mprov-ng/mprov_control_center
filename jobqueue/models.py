@@ -1,5 +1,6 @@
 import datetime
 import ipaddress
+import random
 from django.conf import settings
 from django.db import models, connections, transaction
 from django.utils.timezone import make_aware, is_aware
@@ -233,10 +234,49 @@ class JobServerAddress(models.Model):
 
     def network_range(self):
         """ This address's network as an ipaddress network, or an empty one. """
+        return network_range(self.network)
+
+
+def network_range(network):
+    """ A Network as an ipaddress network, or an empty one. """
+    try:
+        return ipaddress.ip_network(f"{network.subnet}/{network.netmask}", strict=False)
+    except (AttributeError, ValueError):
+        return ()
+
+
+def route_order(jobservers, client_ip):
+    """
+    The responsive job servers of a queryset (an image's or a repo's), in
+    the order a client at client_ip should try them (#254): those with an
+    address on the client's network first, then the rest, each by one
+    minute load (unknown last), ties in random order.  An address on the
+    client's network is one it registered there (address_for(),
+    mprov_jobserver#114) or its single address, if that's in one of the
+    networks the client is in.  Each one's route_address is the address
+    the client should use.
+    """
+    from networks.models import Network
+    try:
+        client = ipaddress.ip_address(client_ip)
+        client_networks = [r for r in map(network_range, Network.objects.all()) if client in r]
+    except (TypeError, ValueError):
+        client_networks = []
+
+    def on_client_network(address):
         try:
-            return ipaddress.ip_network(f"{self.network.subnet}/{self.network.netmask}", strict=False)
-        except (AttributeError, ValueError):
-            return ()
+            address = ipaddress.ip_address(address)
+        except ValueError:
+            return False
+        return any(address in r for r in client_networks)
+
+    servers = list(jobservers.fresh())
+    for server in servers:
+        server.route_address = server.address_for(client_ip)
+    random.shuffle(servers)
+    servers.sort(key=lambda s: (not on_client_network(s.route_address),
+                                float('inf') if s.one_minute_load is None else s.one_minute_load))
+    return servers
 
 
 def sweep_stale_jobservers():
