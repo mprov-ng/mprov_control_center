@@ -1,6 +1,6 @@
 from django.utils import timezone
 from common.views import MProvView
-from jobqueue.models import JobModule, JobServer, JobServerAddress, Job, filter_params, PENDING, RUNNING
+from jobqueue.models import JobModule, JobServer, JobServerAddress, Job, filter_params, sweep_stale_jobservers, PENDING, RUNNING
 from jobqueue.signals import record_status_change
 from systems.views_noauth import get_client_ip
 from common.permissions import HasAPIKeyOrIsAuthenticated
@@ -321,6 +321,11 @@ class JobServersAPIView(MProvView):
 - one_minute_load: The job server's 1 minute load average
 - network: (Optional) ID of the network the job server is on.  POST ignores it;
     set it with PATCH.
+- responsive: (Read-only) whether the job server has heartbeated in the last
+    minute.  An unresponsive job server isn't routed to, but is kept: its
+    running jobs are failed after JOBSERVER_FAIL_JOBS_AFTER_MINUTES (default
+    10), and it's deleted after JOBSERVER_DELETE_AFTER_DAYS (default 0, never),
+    or by hand with DELETE (#254).
 
     
 ### Query Parameters
@@ -457,6 +462,10 @@ Format returned:
             except JobModule.DoesNotExist:
                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data=json.dumps({"msg": f"Error locating jobmodule: {i}"}))
         obj.save()
+        # unresponsive job servers are kept, not deleted (#254); fail their
+        # jobs or delete them once the settings say so, at most once a minute.
+        if cache.add('jobserver-stale-sweep', True, 60):
+            sweep_stale_jobservers()
         # the heartbeat's list replaces the last one; a heartbeat without it
         # (an older job server) leaves only the single address.  An address
         # still listed keeps its heartbeat_time, so only its own heartbeat

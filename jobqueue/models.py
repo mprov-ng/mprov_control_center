@@ -1,6 +1,6 @@
-import time
 import datetime
 import ipaddress
+from django.conf import settings
 from django.db import models, connections, transaction
 from django.utils.timezone import make_aware, is_aware
 from django.utils import timezone
@@ -123,8 +123,17 @@ def requeue_job(module, name=None):
         return Job.objects.create(name=name, module=module, status_id=PENDING)
 
 # a job server, or one of its addresses, with no heartbeat for this long is
-# stale: the server is deleted, and the address is left out of routing (#435).
+# stale: it's left out of routing, not deleted (#254, #435).
 STALE_AFTER = datetime.timedelta(seconds=60)
+
+class JobServerQuerySet(models.QuerySet):
+    def fresh(self):
+        """ The job servers that have heartbeated within STALE_AFTER. """
+        return self.filter(heartbeat_time__gt=timezone.now() - STALE_AFTER)
+
+    def stale_for(self, age):
+        """ The job servers with no heartbeat for at least age. """
+        return self.filter(heartbeat_time__lte=timezone.now() - age)
 
 class JobServer(models.Model):
     """ This area shows you the status of job servers that have registered themselves with the mPCC.  It will show you the IP address that the 
@@ -144,22 +153,28 @@ class JobServer(models.Model):
     jobmodules=models.ManyToManyField(JobModule, verbose_name="Handled Job Modules")
     one_minute_load=models.FloatField(verbose_name="1 Minute Load Avg.", default=0.00, null=True)
     network=models.ForeignKey('networks.Network', blank=True, null=True, on_delete=models.SET_NULL)
+    objects = JobServerQuerySet.as_manager()
     def __str__(self):
         return self.name
     class Meta:
         verbose_name="Job Server"
 
+    @property
+    def responsive(self):
+        """ Whether this job server has heartbeated within STALE_AFTER.  An
+        unresponsive one is left out of routing, not deleted (#254). """
+        return self.heartbeat_time > timezone.now() - STALE_AFTER
+
+    def fail_running_jobs(self):
+        """ Fail the jobs this job server is running.  Not re-queued: a
+        half-done image build or repo mirror may not be safe to run again
+        (#409). """
+        for job in Job.objects.filter(jobserver=self, status_id=RUNNING):
+            job.status_id = ERROR
+            job.end_time = timezone.now()
+            job.save()
+
     def save(self, *args, **kwargs):
-        # check for stale servers
-        # only runs when a save lands on second :00 of a minute
-        if int(time.time() % 60) == 0:
-            # delete any servers that are older than 1 minute heartbeat.
-            delDateTime = timezone.now() - STALE_AFTER
-            print("Info: Removing stale jobservers.")
-            # not this one: its row still has the heartbeat before this save,
-            # and deleting it would fail the jobs it's running (#409).
-            self.__class__.objects.filter(heartbeat_time__lte=delDateTime).exclude(pk=self.pk).delete()
-        
         # search for a network that our address is in.
         #myaddr = ipaddress.ip_address(self.address)
         # get a ref to the networks class
@@ -222,6 +237,26 @@ class JobServerAddress(models.Model):
             return ipaddress.ip_network(f"{self.network.subnet}/{self.network.netmask}", strict=False)
         except (AttributeError, ValueError):
             return ()
+
+
+def sweep_stale_jobservers():
+    """
+    Stale job servers are kept, not deleted (#254).  Fail the RUNNING jobs of
+    those stale for JOBSERVER_FAIL_JOBS_AFTER_MINUTES, and delete those stale
+    for JOBSERVER_DELETE_AFTER_DAYS (0 turns either off).  Deleting goes
+    through the usual signals, which also fail its jobs and queue repo
+    updates.  Run from registration heartbeats, at most once a minute.
+    """
+    if settings.JOBSERVER_FAIL_JOBS_AFTER_MINUTES > 0:
+        age = datetime.timedelta(minutes=settings.JOBSERVER_FAIL_JOBS_AFTER_MINUTES)
+        for server in JobServer.objects.stale_for(age).filter(job__status_id=RUNNING).distinct():
+            print(f"Info: failing the running jobs of unresponsive job server {server}.")
+            server.fail_running_jobs()
+    if settings.JOBSERVER_DELETE_AFTER_DAYS > 0:
+        age = datetime.timedelta(days=settings.JOBSERVER_DELETE_AFTER_DAYS)
+        for server in JobServer.objects.stale_for(age):
+            print(f"Info: deleting job server {server}, unresponsive for over {settings.JOBSERVER_DELETE_AFTER_DAYS} days.")
+            server.delete()
 
 
 @receiver(pre_save, sender=JobServer)

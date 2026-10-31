@@ -1,10 +1,14 @@
 import importlib
+import json
+from datetime import timedelta
 from unittest import mock
 
 from django.apps import apps
+from django.test import override_settings
+from django.utils import timezone
 
 from common.testing import APITestCase
-from jobqueue.models import Job, JobModule, JobServer, JobStatus, requeue_job
+from jobqueue.models import Job, JobModule, JobServer, JobStatus, requeue_job, sweep_stale_jobservers
 from networks.models import Network, NetworkType
 from osmanagement.models import OSRepo
 from systems.models import System
@@ -123,8 +127,8 @@ class ChangeSignalTests(JobsTestCase):
     self.assertRequeued("repo-delete")
 
 
-class DeletedJobServerTests(JobsTestCase):
-  """ Deleting a job server fails the jobs it was running; nothing else would ever finish them (#409). """
+class RunningJobsTestCase(JobsTestCase):
+  """ A running job on each job server, plus a finished and a pending one. """
 
   def setUp(self):
     super().setUp()
@@ -143,6 +147,10 @@ class DeletedJobServerTests(JobsTestCase):
     self.assertEqual(self.pending.status_id, PENDING)
     self.assertEqual((self.theirs.status_id, self.theirs.jobserver_id), (RUNNING, self.js2.pk))
 
+
+class DeletedJobServerTests(RunningJobsTestCase):
+  """ Deleting a job server fails the jobs it was running; nothing else would ever finish them (#409). """
+
   def test_delete_fails_its_running_jobs(self):
     self.js1.delete()
     self.assertOnlyMineFailed()
@@ -152,18 +160,11 @@ class DeletedJobServerTests(JobsTestCase):
     self.assertEqual(response.status_code, 302)
     self.assertOnlyMineFailed()
 
-  def test_stale_sweep_fails_its_running_jobs(self):
+  def test_saving_never_deletes_a_stale_server(self):
+    """ #254: the stale delete in JobServer.save() is gone. """
     JobServer.objects.filter(pk=self.js1.pk).update(heartbeat_time="2020-01-01T00:00:00Z")
-    with mock.patch("jobqueue.models.time.time", return_value=1800000000.0):  # on a :00 second
-      self.js2.save()
-    self.assertFalse(JobServer.objects.filter(pk=self.js1.pk).exists())
-    self.assertOnlyMineFailed()
-
-  def test_stale_sweep_spares_the_server_being_saved(self):
-    # its row still holds the old heartbeat until this save writes the new one.
-    JobServer.objects.filter(pk=self.js1.pk).update(heartbeat_time="2020-01-01T00:00:00Z")
-    with mock.patch("jobqueue.models.time.time", return_value=1800000000.0):
-      self.js1.save()
+    self.js2.save()
+    self.assertTrue(JobServer.objects.filter(pk=self.js1.pk).exists())
     self.mine.refresh_from_db()
     self.assertEqual((self.mine.status_id, self.mine.jobserver_id), (RUNNING, self.js1.pk))
 
@@ -176,3 +177,67 @@ class DeletedJobServerTests(JobsTestCase):
     self.assertIsNotNone(orphan.end_time)
     self.mine.refresh_from_db()
     self.assertEqual(self.mine.status_id, RUNNING)
+
+
+class StaleJobServerSweepTests(RunningJobsTestCase):
+  """ Unresponsive job servers are kept; their jobs are failed after a grace
+  period, and they're deleted only if JOBSERVER_DELETE_AFTER_DAYS is set (#254). """
+
+  def unresponsive_for(self, server, age):
+    JobServer.objects.filter(pk=server.pk).update(heartbeat_time=timezone.now() - age)
+
+  def assertNothingFailed(self):
+    for job in (self.mine, self.theirs):
+      job.refresh_from_db()
+      self.assertEqual(job.status_id, RUNNING)
+
+  def test_running_jobs_fail_after_the_grace_period(self):
+    self.unresponsive_for(self.js1, timedelta(minutes=11))
+    sweep_stale_jobservers()
+    self.assertTrue(JobServer.objects.filter(pk=self.js1.pk).exists())
+    for job in (self.mine, self.mine_done, self.pending, self.theirs):
+      job.refresh_from_db()
+    self.assertEqual((self.mine.status_id, self.mine.jobserver_id), (ERROR, self.js1.pk))
+    self.assertIsNotNone(self.mine.end_time)
+    self.assertEqual((self.mine_done.status_id, self.pending.status_id), (COMPLETE, PENDING))
+    self.assertEqual(self.theirs.status_id, RUNNING)
+
+  def test_running_jobs_are_kept_within_the_grace_period(self):
+    self.unresponsive_for(self.js1, timedelta(minutes=5))
+    sweep_stale_jobservers()
+    self.assertNothingFailed()
+
+  @override_settings(JOBSERVER_FAIL_JOBS_AFTER_MINUTES=0)
+  def test_zero_turns_job_failing_off(self):
+    self.unresponsive_for(self.js1, timedelta(days=30))
+    sweep_stale_jobservers()
+    self.assertNothingFailed()
+
+  def test_no_delete_by_default(self):
+    self.unresponsive_for(self.js1, timedelta(days=365))
+    sweep_stale_jobservers()
+    self.assertTrue(JobServer.objects.filter(pk=self.js1.pk).exists())
+
+  @override_settings(JOBSERVER_DELETE_AFTER_DAYS=7, JOBSERVER_FAIL_JOBS_AFTER_MINUTES=0)
+  def test_delete_after_the_configured_days(self):
+    self.unresponsive_for(self.js1, timedelta(days=8))
+    self.unresponsive_for(self.js2, timedelta(days=6))
+    sweep_stale_jobservers()
+    self.assertFalse(JobServer.objects.filter(pk=self.js1.pk).exists())
+    self.assertTrue(JobServer.objects.filter(pk=self.js2.pk).exists())
+    # through the delete signals: its jobs are failed even with job failing off.
+    self.assertOnlyMineFailed()
+
+  def test_registration_sweeps_at_most_once_a_minute(self):
+    body = json.dumps({"name": "js3", "address": "10.0.0.3", "one_minute_load": 0.1, "jobmodules": []})
+    with mock.patch("jobqueue.views.sweep_stale_jobservers") as sweep:
+      for _ in range(3):
+        self.assertEqual(self.client.post("/jobservers/", body, content_type="application/json").status_code, 200)
+    sweep.assert_called_once_with()
+
+  def test_registration_sweep_fails_the_jobs(self):
+    self.unresponsive_for(self.js1, timedelta(minutes=11))
+    body = json.dumps({"name": "js2", "address": "10.0.0.2", "one_minute_load": 0.1, "jobmodules": []})
+    self.client.post("/jobservers/", body, content_type="application/json")
+    self.mine.refresh_from_db()
+    self.assertEqual(self.mine.status_id, ERROR)

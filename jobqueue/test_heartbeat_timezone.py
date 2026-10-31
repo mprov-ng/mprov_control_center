@@ -1,6 +1,5 @@
 import json
 from datetime import timedelta
-from unittest import mock
 
 from django.test import override_settings
 from django.utils import timezone
@@ -25,11 +24,9 @@ class HeartbeatTimezoneTests(APITestCase):
     self.assertTrue(timezone.is_aware(server.heartbeat_time))
     self.assertLess(abs((timezone.now() - server.heartbeat_time).total_seconds()), 5)
 
-  def test_stale_cleanup_uses_an_aware_cutoff_regardless_of_os_time(self):
+  @override_settings(TIME_ZONE="America/New_York")
+  def test_staleness_uses_an_aware_cutoff_regardless_of_os_time(self):
     stale = JobServer.objects.create(name="stale", heartbeat_time=timezone.now() - timedelta(seconds=90))
     fresh = JobServer.objects.create(name="fresh", heartbeat_time=timezone.now())
-    # Force the save() path's periodic stale-sweep to run (it only runs on a :00 second).
-    with mock.patch("jobqueue.models.time.time", return_value=0.0):
-      fresh.save()
-    self.assertFalse(JobServer.objects.filter(pk=stale.pk).exists())
-    self.assertTrue(JobServer.objects.filter(pk=fresh.pk).exists())
+    self.assertEqual(list(JobServer.objects.fresh()), [fresh])
+    self.assertEqual((stale.responsive, fresh.responsive), (False, True))
