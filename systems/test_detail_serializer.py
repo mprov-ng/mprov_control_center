@@ -65,9 +65,9 @@ class DetailSerializerTests(TestCase):
     distros = {d["name"]: d for d in self.get_json("/distros/?detail")}
     self.assertEqual(distros["distro-a"]["distType"]["slug"], "rhel")
 
-  def test_systems_detail_unchanged(self):
-    # SystemAPIView has its own get() and isn't part of this change (#298).
-    self.assertEqual(self.get_json(f"/systems/{self.system.id}/")["systemimage"], self.image.slug)
+  def test_systems_detail_is_nested(self):
+    # a single system is nested like ?detail (#298).
+    self.assertEqual(self.get_json(f"/systems/{self.system.id}/")["systemimage"]["slug"], self.image.slug)
 
 
 class BMCDetailSerializerTests(TestCase):
