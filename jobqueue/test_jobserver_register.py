@@ -32,6 +32,21 @@ class JobServerRegisterTests(APITestCase):
     self.assertEqual(reply["features"], FEATURES)
     self.assertIn("addjs-version", reply["features"])
 
+  def test_reply_is_an_object_with_host_id(self):
+    """ #268: a job server that sends host_id (mprov_jobserver main, which
+    accepts both shapes) gets the reply as an object. """
+    from jobqueue.views import FEATURES
+    response = self.post({"name": "js1", "address": "10.0.0.1", "one_minute_load": 0.5, "jobmodules": [], "host_id": "abc"})
+    self.assertEqual(response.status_code, 200)
+    self.assertEqual(response.json(), {"pk": JobServer.objects.get(name="js1").pk, "features": FEATURES})
+
+  def test_v0_0_62_parse_still_works_without_host_id(self):
+    # what mprov_jobserver v0.0.62 does with the reply: reject an object,
+    # then json.loads() the string.
+    response = self.post({"name": "js1", "address": "10.0.0.1", "one_minute_load": 0.5, "jobmodules": []})
+    self.assertIsNot(type(response.json()), dict)
+    self.assertEqual(json.loads(response.json())["pk"], JobServer.objects.get(name="js1").pk)
+
   def test_unknown_module_is_created(self):
     # a job server creates the modules it runs (#256); it used to be a 500.
     response = self.post({"name": "js1", "address": "10.0.0.1", "one_minute_load": 0.5, "jobmodules": ["new-module"]})
