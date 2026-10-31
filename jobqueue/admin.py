@@ -25,7 +25,9 @@ class JobModuleAdmin(admin.ModelAdmin):
     exclude = ('slug', )
 
     def has_add_permission(self, request):
-        return ("add" in request.path or "change" in request.path)
+        # job modules come from job server registration only (#256); the
+        # add form couldn't set the ID anyway.
+        return False
 
 class JobServerAddressInline(admin.TabularInline):
     """ The addresses from the job server's last heartbeat (mprov_jobserver#114). """
