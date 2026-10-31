@@ -345,6 +345,14 @@ else
   date >> /image/tmp/boot_timing
   trap EXIT
   trap ERR
+  # take the provisioning NIC down: udev can't rename an interface that's
+  # up, so it would keep its initramfs name (eth0) and NetworkManager would
+  # never activate the mPCC's profile for it (#367).  The image is in RAM,
+  # so nothing needs the network until NetworkManager brings it back up.
+  echo "Shutting down $MPROV_PROV_INTF"
+  pkill udhcpc
+  ip addr flush dev "$MPROV_PROV_INTF"
+  ip link set "$MPROV_PROV_INTF" down
   umount /sys
   umount /dev
   umount /run
@@ -354,11 +362,6 @@ else
   kill -s SIGQUIT 1
   exit 0
 fi
-
-# echo "Shutting down network"
-# pkill udhcpc
-# ifconfig $MPROV_PROV_INTF down
-# ip link set $MPROV_PROV_INTF down
 
 # disable error trap
 trap ERR
