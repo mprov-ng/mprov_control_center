@@ -32,6 +32,10 @@ class OSDistroAPIView(MProvView):
 - update: If true, saving the distro creates/updates its AppStream, BaseOS, extras,
     CRB (version 9+) or PowerTools, and EPEL repos from baseurl, then resets to false
 - baseurl: The base URL the generated repos are built from
+- base_image_url: (Optional) A published OS image (http/https) the job server builds
+    images from instead of installing with dnf.  Empty by default.
+- base_image_checksum: (Optional, required with base_image_url) sha256:<64 hex digits>,
+    or an http(s) URL to a checksum file.  Empty by default.
 - extrarepos: (Optional) IDs of extra repos
 - rootpw: (Optional) Root password for the image. It is write-only: no GET
     returns it.

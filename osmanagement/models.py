@@ -1,8 +1,31 @@
+import re
+
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import pre_delete, post_save
 from jobqueue.models import JobModule, Job, JobStatus, JobServer, queue_job
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
+
+validate_http_url = URLValidator(schemes=['http', 'https'])
+
+def validate_base_image_checksum(value):
+  """ A base image checksum is sha256:<64 hex digits> or an http(s) URL to a checksum file (#429). """
+  if value == "" or re.fullmatch(r"sha256:[0-9a-fA-F]{64}", value):
+    return
+  if value.startswith("sha256:"):
+    raise ValidationError("A sha256: checksum is 64 hexadecimal digits.")
+  try:
+    validate_http_url(value)
+  except ValidationError:
+    raise ValidationError("Enter sha256:<64 hex digits> or an http(s) URL to a checksum file.")
+
+def base_image_problem(url, checksum):
+  """ Why this base image URL / checksum pair can't be used, or None. The job server won't build from an unverified image. """
+  if url and not checksum:
+    return "A base image URL needs a checksum."
+  return None
 
 # This will be an object managed by the jobserver image-update and repo-update modules.
 class OSType(models.Model):
@@ -47,6 +70,27 @@ class OSDistro(models.Model):
     verbose_name="Base URL",
     help_text="The distribution's repository root, e.g. https://download.rockylinux.org/pub/rocky/8. "
               "Repositories are generated as <Base URL>/<repo>/<arch>/os/.",
+  )
+  base_image_url=models.CharField(
+    # 2048, not 4096: two more 4096-character columns don't fit in a
+    # MariaDB utf8mb4 row (65535 bytes) next to baseurl and install_kernel_cmdline.
+    max_length=2048,
+    blank=True,
+    default="",
+    validators=[validate_http_url],
+    verbose_name="Base image URL",
+    help_text="A published OS image to build images from, e.g. "
+              "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-Container-Base.latest.x86_64.tar.xz. "
+              "Empty: images are built with dnf from the repositories, as before.",
+  )
+  base_image_checksum=models.CharField(
+    max_length=2048,
+    blank=True,
+    default="",
+    validators=[validate_base_image_checksum],
+    verbose_name="Base image checksum",
+    help_text="Required with a base image URL: sha256:<64 hex digits>, or an http(s) URL to a checksum file "
+              "(sha256sum style, or BSD style \"SHA256 (file) = hex\" as Rocky publishes).",
   )
   baserepo=models.ForeignKey(
     'OSRepo', 
@@ -95,7 +139,11 @@ class OSDistro(models.Model):
   def __str__(self):
       return self.name
 
-  
+  def clean(self):
+    problem = base_image_problem(self.base_image_url, self.base_image_checksum)
+    if problem:
+      raise ValidationError({'base_image_checksum': problem})
+
 
 class OSRepo(models.Model):
   """ This is where you would define the OS Repositories that you would like to use in OS Distribution management."""
