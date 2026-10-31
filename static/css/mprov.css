@@ -163,3 +163,7 @@ td.delete input {
 .form-group.field-rendered_config > .row > div { flex: 0 0 100%; width: 100%; max-width: 100%; }
 .rendered-config pre { margin: 0; padding: 0; background: none; border: 0; white-space: pre-wrap; font-size: 87.5%; }
 .rendered-config td { vertical-align: top; }
+/* its sections are cards inside the tab's own card (#423). */
+.rendered-config .card { margin-bottom: 1rem; }
+.rendered-config .card-title { font-size: 1rem; font-weight: 600; }
+.rendered-config .card-body > p:last-child, .rendered-config .card-body > ul:last-child { margin-bottom: 0; }

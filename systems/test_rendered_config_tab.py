@@ -1,7 +1,9 @@
+import re
 import tempfile
 
 from django.test import override_settings
 
+from common.rendered_config import LIST_LABELS
 from common.testing import APITestCase
 from osmanagement.models import OSDistro
 from scripts.models import Script, ScriptType
@@ -76,3 +78,37 @@ class RenderedConfigTabTests(APITestCase):
   def test_rendered_config_is_not_a_form_input(self):
     html = self.page(f"/admin/systems/system/{self.system.pk}/change/")
     self.assertNotIn('name="rendered_config"', html)
+
+
+  def tab(self, url):
+    """ The tab's own markup, from its root <div> to the </div> closing it. """
+    html = self.page(url)
+    start = html.index('<div class="rendered-config">')
+    depth = 0
+    for match in re.finditer(r"<div\b|</div>", html[start:]):
+      depth += 1 if match.group() != "</div>" else -1
+      if depth == 0:
+        return html[start:start + match.end()]
+    self.fail("the Rendered Config tab's <div> never closes")
+
+  def assertCards(self, url):
+    """ Each section is a card inside the tab, empty ones too (#423). """
+    html = self.tab(url)
+    titles = re.findall(r'<div class="card card-secondary card-outline"><div class="card-header">'
+                        r'<h3 class="card-title">([^<]*)</h3></div>', html)
+    self.assertEqual(titles, ["Boot options", "Configuration Parameters", *LIST_LABELS.values(),
+                              "How this is merged", "Merged result"])
+    return html
+
+  def test_system_tab_sections_are_cards(self):
+    html = self.assertCards(f"/admin/systems/system/{self.system.pk}/change/")
+    # the inheritance line stays above the cards; an empty list still says so.
+    self.assertLess(html.index("Inherits from"), html.index('class="card '))
+    self.assertIn("None.", html)
+
+  def test_image_tab_sections_are_cards(self):
+    self.assertCards(f"/admin/systems/systemimage/{self.image.pk}/change/")
+
+  def test_empty_sections_are_cards_too(self):
+    bare = System.objects.create(hostname="bare", created_by=self.user)
+    self.assertIn("None set.", self.assertCards(f"/admin/systems/system/{bare.pk}/change/"))
