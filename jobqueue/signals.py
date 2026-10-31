@@ -1,6 +1,7 @@
-from django.db.models.signals import pre_save, post_save
+from django.db.models.signals import pre_save, post_save, pre_delete
 from django.dispatch import receiver
-from .models import Job
+from django.utils import timezone
+from .models import Job, JobServer, RUNNING, ERROR
 import time
 
 # Dictionary to store old status values during pre_save
@@ -90,3 +91,18 @@ def record_status_change(instance, old_status_id):
     except Exception:
         # If there's any error, just clean up and continue
         pass
+
+
+@receiver(pre_delete, sender=JobServer)
+def fail_running_jobs(sender, instance, **kwargs):
+    """
+    Fail the jobs a job server is running when the mPCC deletes it (by hand,
+    or the stale sweep in JobServer.save()).  Without a job server nothing
+    finds them again: job servers claim only pending jobs and fail only their
+    own (#409).  Not re-queued: a half-done image build or repo mirror may not
+    be safe to run again.
+    """
+    for job in Job.objects.filter(jobserver=instance, status_id=RUNNING):
+        job.status_id = ERROR
+        job.end_time = timezone.now()
+        job.save()

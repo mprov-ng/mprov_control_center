@@ -19,7 +19,7 @@ from systems.views_noauth import get_client_ip
 from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, NADSSystem
 from networks.models import SwitchPort, Network, Switch
 from rest_framework import generics
-from jobqueue.models import Job, JobModule, JobStatus
+from jobqueue.models import Job, JobModule, JobStatus, requeue_job
 from django.utils.text import slugify
 import pyipmi
 import pyipmi.interfaces
@@ -156,10 +156,7 @@ NADS Packet:
                         if JobType is not None:
                             # save a new job, if one doesn't already exist.
 
-                            Job.objects.update_or_create(
-                            name=JobType.name , module=JobType,
-                            defaults={'status': JobStatus.objects.get(pk=1)}
-                            ) 
+                            requeue_job(JobType) 
                         # return the system object.    
                         self.queryset = [system]
                         return  generics.ListAPIView.get(self, request, format=None)

@@ -5,7 +5,7 @@ from django.core.validators import URLValidator
 from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import pre_delete, post_save
-from jobqueue.models import JobModule, Job, JobStatus, JobServer, queue_job
+from jobqueue.models import JobModule, Job, JobStatus, JobServer, queue_job, requeue_job
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 
 validate_http_url = URLValidator(schemes=['http', 'https'])
@@ -278,10 +278,7 @@ def RepoDeleteJob(sender, **kwargs):
   # get the jobtype, do nothing if it's not defined.
   if RepoJobType is not None:
       # save a new job, if one doesn't already exist.
-      Job.objects.update_or_create(
-        name="Delete Repos", module=RepoJobType,
-        defaults={'status': JobStatus.objects.get(pk=1)}
-      )        
+      requeue_job(RepoJobType, "Delete Repos")        
 
 
 @receiver(pre_delete, sender=JobServer)

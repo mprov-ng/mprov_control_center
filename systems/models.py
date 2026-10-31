@@ -6,7 +6,7 @@ from disklayouts.models import DiskLayout
 from networks.models import SwitchPort, Network
 from osmanagement.models import OSDistro, OSRepo
 from django.db.models.signals import pre_save, pre_delete, post_save
-from jobqueue.models import JobModule, JobStatus, Job, JobServer
+from jobqueue.models import JobModule, JobStatus, Job, JobServer, requeue_job
 from django.utils.text import slugify
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 from django.contrib.auth.models import AnonymousUser, User
@@ -345,10 +345,7 @@ def UpdateGenders (sender, instance, **kwargs):
   if JobType is not None:
     # save a new job, if one doesn't already exist.
 
-    Job.objects.update_or_create(
-      name=JobType.name , module=JobType,
-      defaults={'status': JobStatus.objects.get(pk=1)}
-    )
+    requeue_job(JobType)
 
 # emits jobs to update dns, dhcp, and pxe config if a
 # system, NIC, or BMC is changed.
@@ -382,10 +379,7 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
     if JobType is not None:
         # save a new job, if one doesn't already exist.
 
-        Job.objects.update_or_create(
-          name=JobType.name , module=JobType,
-          defaults={'status': JobStatus.objects.get(pk=1)}
-        )
+        requeue_job(JobType)
 
 # emit image-delete jobs for every server that currently 
 # hosts a deleted image.
