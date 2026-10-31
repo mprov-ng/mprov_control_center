@@ -38,46 +38,55 @@ def job_status_changed(sender, instance, created, **kwargs):
     
     # Check if status actually changed
     if old_status_id != instance.status_id:
-        # We need to get the status names, so we need to fetch the status objects
-        try:
-            from django.core.cache import cache
-            
-            # Get the old and new status names
-            old_status = instance.__class__.status.field.related_model.objects.get(pk=old_status_id)
-            new_status = instance.status
-            
-            # Create a unique key for this change
-            change_key = f"job_status_change_{instance.pk}_{int(time.time())}"
-            
-            # Store the change information
-            change_data = {
-                'job_id': instance.pk,
-                'job_name': instance.name,
-                'old_status': old_status.name,
-                'new_status': new_status.name,
-                'timestamp': int(time.time())
-            }
-            
-            # Store in cache for 5 minutes (should be plenty for notification display)
-            cache.set(change_key, change_data, 300)
-            
-            # Also store a list of recent changes for easy retrieval
-            recent_changes_key = "recent_job_status_changes"
-            recent_changes = cache.get(recent_changes_key, [])
-            
-            # Add this change to the recent changes list
-            recent_changes.append(change_key)
-            
-            # Keep only the last 50 changes to prevent memory issues
-            if len(recent_changes) > 50:
-                # Remove oldest entries
-                removed_keys = recent_changes[:-50]
-                recent_changes = recent_changes[-50:]
-                # Clean up removed keys from cache
-                cache.delete_many(removed_keys)
-            
-            # Store the updated recent changes list
-            cache.set(recent_changes_key, recent_changes, 300)
-        except Exception:
-            # If there's any error, just clean up and continue
-            pass
+        record_status_change(instance, old_status_id)
+
+
+def record_status_change(instance, old_status_id):
+    """
+    Store a job's status change for display as a toast notification.  The
+    claim endpoint calls it directly: its conditional update() sends no
+    post_save (#296).
+    """
+    # We need to get the status names, so we need to fetch the status objects
+    try:
+        from django.core.cache import cache
+        
+        # Get the old and new status names
+        old_status = instance.__class__.status.field.related_model.objects.get(pk=old_status_id)
+        new_status = instance.status
+        
+        # Create a unique key for this change
+        change_key = f"job_status_change_{instance.pk}_{int(time.time())}"
+        
+        # Store the change information
+        change_data = {
+            'job_id': instance.pk,
+            'job_name': instance.name,
+            'old_status': old_status.name,
+            'new_status': new_status.name,
+            'timestamp': int(time.time())
+        }
+        
+        # Store in cache for 5 minutes (should be plenty for notification display)
+        cache.set(change_key, change_data, 300)
+        
+        # Also store a list of recent changes for easy retrieval
+        recent_changes_key = "recent_job_status_changes"
+        recent_changes = cache.get(recent_changes_key, [])
+        
+        # Add this change to the recent changes list
+        recent_changes.append(change_key)
+        
+        # Keep only the last 50 changes to prevent memory issues
+        if len(recent_changes) > 50:
+            # Remove oldest entries
+            removed_keys = recent_changes[:-50]
+            recent_changes = recent_changes[-50:]
+            # Clean up removed keys from cache
+            cache.delete_many(removed_keys)
+        
+        # Store the updated recent changes list
+        cache.set(recent_changes_key, recent_changes, 300)
+    except Exception:
+        # If there's any error, just clean up and continue
+        pass

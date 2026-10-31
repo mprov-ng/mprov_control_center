@@ -1,6 +1,8 @@
 from django.utils import timezone
 from common.views import MProvView
-from jobqueue.models import JobModule, JobServer, JobServerAddress, Job, filter_params
+from jobqueue.models import JobModule, JobServer, JobServerAddress, Job, filter_params, PENDING, RUNNING
+from jobqueue.signals import record_status_change
+from common.permissions import HasAPIKeyOrIsAuthenticated
 from jobqueue.serializers import JobAPISerializer, JobModuleAPISerializer, JobServerAPISerializer
 from rest_framework import status, generics
 from rest_framework.response import Response
@@ -22,7 +24,9 @@ from django.views import View
 # - jobserver-addresses: POST /jobservers/ accepts "addresses", one per
 #   network the job server serves, and clients are sent to the one on their
 #   network (mprov_jobserver#114).
-FEATURES = ["addjs-version", "host-id", "jobserver-addresses"]
+# - job-claim: POST /jobs/<id>/claim/ claims a pending job for one job server,
+#   atomically, or answers 409 (#296, mprov_jobserver#112).
+FEATURES = ["addjs-version", "host-id", "jobserver-addresses", "job-claim"]
 
 class JobAPIView(MProvView,
                       GenericAPIView):
@@ -35,6 +39,7 @@ class JobAPIView(MProvView,
 - POST (no primary key, e.g. /jobs/)
 - PATCH (with primary key, e.g. /jobs/1/)
 - DELETE (with primary key, e.g. /jobs/1/)
+- POST /jobs/1/claim/: claim a pending job for a job server, atomically (see that page)
 
 ## Documentation
 
@@ -49,7 +54,8 @@ class JobAPIView(MProvView,
 - params: (Optional) Any params for the job, in JSON
 - module: ID of the job module this job is defined as
 - status: ID of the current status of the job.
-- jobserver: (Optional) ID of the job server currently assigned to this job
+- jobserver: (Optional) ID of the job server currently assigned to this job.  Always null
+    on a pending job: setting a job to pending clears it.
 
 ### GET method (no primary key)
 Returns a JSON list of all objects of this type in the mPCC.  The list can be
@@ -160,6 +166,64 @@ Format returned:
         self.queryset=queryset
         # return the super call for get.
         return generics.ListAPIView.get(self, request, format=None)
+
+
+class JobClaimAPIView(GenericAPIView):
+    '''
+# /jobs/1/claim/
+
+## Accepted HTTP Methods:
+- POST (with Primary Key, e.g. /jobs/1/claim/)
+
+## Documentation
+
+Claims a pending job for one job server, atomically (#296).  Two job servers
+claiming the same job can't both get it: exactly one gets 200.
+
+Body:
+
+    {"jobserver": 3}
+
+- 200: the job is now RUNNING on that job server (start_time set, end_time
+    cleared).  Returns the job, as GET /jobs/1/.
+- 409: the job isn't pending any more (another job server claimed it, or it
+    finished).  Returns {"detail": ..., "status": ..., "jobserver": ...}, the
+    job's current status and job server.
+- 400: jobserver is missing, not an integer, or not a registered job server.
+- 404: no such job.
+
+Pending jobs never have a job server: setting a job back to pending clears it.
+Job servers use this when the POST /jobservers/ reply lists the "job-claim"
+feature.
+    '''
+    permission_classes = [HasAPIKeyOrIsAuthenticated]
+    serializer_class = JobAPISerializer
+    queryset = Job.objects.all()
+
+    def post(self, request, pk, format=None):
+        jobserver_id = request.data.get('jobserver') if isinstance(request.data, dict) else None
+        if isinstance(jobserver_id, bool) or not isinstance(jobserver_id, (int, str)):
+            return Response({'jobserver': "Required: the ID of the job server claiming the job."}, status=400)
+        try:
+            jobserver_id = int(jobserver_id)
+        except ValueError:
+            return Response({'jobserver': "Must be a job server ID (an integer)."}, status=400)
+        if not JobServer.objects.filter(pk=jobserver_id).exists():
+            return Response({'jobserver': f"No job server has ID {jobserver_id}."}, status=400)
+        if not Job.objects.filter(pk=pk).exists():
+            return Response({'detail': "No such job."}, status=404)
+
+        # One conditional UPDATE: the database decides which claim wins, on
+        # SQLite and MariaDB alike.
+        now = timezone.now()
+        claimed = Job.objects.filter(pk=pk, status_id=PENDING, jobserver=None).update(
+            status_id=RUNNING, jobserver_id=jobserver_id, start_time=now, end_time=None, last_update=now)
+        job = Job.objects.get(pk=pk)
+        if claimed == 0:
+            return Response({'detail': "The job isn't pending any more.",
+                             'status': job.status_id, 'jobserver': job.jobserver_id}, status=409)
+        record_status_change(job, PENDING)
+        return Response(JobAPISerializer(job).data)
 
 
 class JobModulesAPIView(MProvView):
