@@ -51,3 +51,36 @@ runs:
           export SECRET_KEY="$(python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())")" &&
           python manage.py test --noinput
         '
+
+    # Apache serves media/ for the scripts nodes fetch, and the default
+    # SQLite database lives there too, so start the image as a site would
+    # and check over HTTP that the database and backups aren't served while
+    # a script still is.
+    -
+      name: Check what Apache serves from media/
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+      run: |
+        docker run -d --name mpcc-ci-http "$IMAGE"
+        for i in $(seq 1 90); do
+          docker exec mpcc-ci-http curl -sf -o /dev/null http://localhost/ && break
+          sleep 5
+        done
+        docker exec mpcc-ci-http bash -c '
+          cd /var/www/mprov_control_center && . bin/activate &&
+          python manage.py mprov_backup --output-dir media >/dev/null'
+        status() { docker exec mpcc-ci-http curl -s --path-as-is -o /dev/null -w '%{http_code}' "http://localhost$1"; }
+        script=$(docker exec mpcc-ci-http bash -c 'cd /var/www/mprov_control_center/media && ls -d */* | grep -v mprov-backup- | head -1')
+        backup=$(docker exec mpcc-ci-http bash -c 'cd /var/www/mprov_control_center/media && ls -d mprov-backup-*/manifest.json')
+        fail=0
+        for path in /media/db.sqlite3 //media//db.sqlite3 /media/x/../db.sqlite3 "/media/$backup"; do
+          code=$(status "$path")
+          echo "$path: $code"
+          [ "$code" = 403 ] || { echo "::error::$path is served ($code)"; fail=1; }
+        done
+        code=$(status "/media/$script")
+        echo "/media/$script: $code"
+        [ "$code" = 200 ] || { echo "::error::the script /media/$script isn't served ($code)"; fail=1; }
+        docker rm -f mpcc-ci-http >/dev/null
+        exit $fail
