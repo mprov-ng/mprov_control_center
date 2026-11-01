@@ -20,7 +20,7 @@ Stack: Django (pinned `django>=4.2,<5` in `requirements.txt` pending the Rocky 9
 mPCC is installed as part of the full mProv stack via [mprov-compose](https://github.com/mprov-ng/mprov-compose) (mPCC + database + a jobserver on one node with Docker). The old bare-metal installer was removed; the container entrypoint [install_scripts/init_mpcc.sh](../install_scripts/init_mpcc.sh) runs migrations, creates the admin superuser, registers the mPCC host, generates the jobserver API key, and loads default scripts on first start.
 
 - Admin UI: `http://<FQDN-or-IP>/admin/`. If `MPROV_SUPERUSER_PASSWORD` is not set, the entrypoint generates a random password on first start, prints it once to the container log, and saves it to `/etc/mprov/superuser_password` (root-only) — see [Architecture Overview](architecture/overview.md#container-bootstrap).
-- After install, create an API key in the admin and run a [jobserver](https://github.com/mprov-ng/mprov_jobserver) so queued jobs execute.
+- After install, create an API key in the admin and run a [jobserver](https://github.com/mprov-ng/mprov_jobserver) so queued jobs execute. The mPCC, its jobservers, and mash must all run the same major.minor version: API-key clients that don't send a matching `mProv-Version` header get 426 Upgrade Required — see [API Version Lock](architecture/api-foundation.md#api-version-lock).
 - Configuration is via environment variables (names documented in [Architecture Overview](architecture/overview.md#configuration)); `env.example` lists the container variables. Never commit real `.env` values.
 
 ## Where to go next

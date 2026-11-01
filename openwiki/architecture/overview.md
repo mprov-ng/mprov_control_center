@@ -41,7 +41,7 @@ Root urlconf is `mprov_control_center/urls.py`:
 
 ## Configuration
 
-`settings.py` reads environment variables by name (values are never documented here): `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `SESSION_EXPIRE_SECONDS` (default 1800s via `django_session_timeout`), `TIME_ZONE`, `DB_ENGINE`/`DB_NAME`/`DB_USER`/`DB_PASS`/`DB_HOST`/`DB_PORT` (default sqlite3), and the LDAP group `LDAP_ENABLED`, `LDAP_URI`, `LDAP_BASE`, `LDAP_USER_DN_TEMPLATE`, `LDAP_ADMIN_GROUP`, `LDAP_SELF_SIGNED_CERT`, `LDAP_STAFF_GROUP`, `LDAP_SUPER_GROUP`. `env.example` additionally documents container-only vars consumed by `install_scripts/init_mpcc.sh` (`DJANGO_SUPERUSER_USERNAME`/`DJANGO_SUPERUSER_EMAIL`, optional `MPROV_SUPERUSER_PASSWORD`, `MPROV_MPCC_HOSTNAME`, `MPROV_MPCC_IPs`, `MPROV_DOMAINNAME`, `MPROV_DEVEL`). `django-dotenv` loads a sibling `.env` from `wsgi.py`.
+`settings.py` reads environment variables by name (values are never documented here): `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `SESSION_EXPIRE_SECONDS` (default 1800s via `django_session_timeout`), `TIME_ZONE`, `DB_ENGINE`/`DB_NAME`/`DB_USER`/`DB_PASS`/`DB_HOST`/`DB_PORT` (default sqlite3), `TRUSTED_PROXIES` (see [API Foundation](api-foundation.md#api-version-lock)), the job-server housekeeping limits `JOBSERVER_FAIL_JOBS_AFTER_MINUTES` (default 10) and `JOBSERVER_DELETE_AFTER_DAYS` (default 0 = never, #254), the version-lock escapes `MPROV_SKIP_VERSION_CHECK` and `MPROV_VERSION_EXEMPT` (see [API Version Lock](api-foundation.md#api-version-lock)), and the LDAP group `LDAP_ENABLED`, `LDAP_URI`, `LDAP_BASE`, `LDAP_USER_DN_TEMPLATE`, `LDAP_ADMIN_GROUP`, `LDAP_SELF_SIGNED_CERT`, `LDAP_STAFF_GROUP`, `LDAP_SUPER_GROUP`. `env.example` additionally documents container-only vars consumed by `install_scripts/init_mpcc.sh` (`DJANGO_SUPERUSER_USERNAME`/`DJANGO_SUPERUSER_EMAIL`, optional `MPROV_SUPERUSER_PASSWORD`, `MPROV_MPCC_HOSTNAME`, `MPROV_MPCC_IPs`, `MPROV_DOMAINNAME`, `MPROV_DEVEL`). `django-dotenv` loads a sibling `.env` from `wsgi.py`.
 
 Auth options (API keys, Basic/Session/Token, LDAP backend ordering) are detailed in [Authentication](api-foundation.md#authentication).
 
@@ -50,6 +50,7 @@ Auth options (API keys, Basic/Session/Token, LDAP backend ordering) are detailed
 - Default DB is sqlite at `BASE_DIR/db/db.sqlite3`; production containers set `DB_*` env vars (the compose stack ships its own database).
 - Database-backed cache (`mprov_cache` table), `USE_TZ=True`.
 - `django-dbbackup` writes to `/var/www/mprov_control_center/backups/` via `FileSystemStorage` (the `backups/` directory in the repo is just that README).
+- `manage.py mprov_backup` / `manage.py mprov_restore` (added with #445, `utils/management/commands/`) are the standalone backup path: `dumpdata` writes one numbered fixture per app plus a `manifest.json` into a timestamped directory under `--output-dir` (default `backups/`), and restore loads **all** fixture files in a single `loaddata` call because the systems↔disklayouts M2M cycle has no linear app order (`utils/backup_apps.py`). The README's upgrade flow runs `mprov_backup` and copies the archive out of the container — the default directory is inside the container and lost on upgrade, and backups must not live under served `media/` (#457).
 
 ## Container bootstrap
 

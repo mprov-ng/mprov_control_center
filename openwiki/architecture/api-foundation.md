@@ -1,7 +1,7 @@
 ---
 type: Reference
 title: mPCC API Foundation
-description: How MProvView in common/views.py powers every mProv Control Center API endpoint — authentication (API keys, LDAP, sessions), the ?detail nested-detail serializer mechanism, query-param filtering, self-documenting endpoints, and the /datamodel/ introspection endpoint.
+description: How MProvView in common/views.py powers every mProv Control Center API endpoint — authentication (API keys, LDAP, sessions), the mProv-Version API version lock (426 Upgrade Required), the ?detail nested-detail serializer mechanism, query-param filtering, self-documenting endpoints, and the /datamodel/ introspection endpoint.
 tags: [mprov, drf, api, authentication, serializers, datamodel]
 ---
 
@@ -23,7 +23,15 @@ A `GET` with a URL pk, or with `?detail`, sets a per-request `serve_detail` flag
 
 This replaced an earlier design that mutated the shared serializer's `Meta.depth` at request time, which leaked nesting into subsequent flat requests and caused write failures (GitHub issues #266/#267; regression coverage in `systems/test_detail_serializer.py`). Endpoint docstrings on affected views now document `?detail` depth explicitly. When adding nested output to an endpoint, define a `detail_serializer_class` — never raise `Meta.depth`.
 
-`SystemAPIView` is the main exception that manages its own `get()` and selects `SystemDetailSerializer` directly (`systems/views.py`).
+Views that keep their own `get()` — `SystemAPIView` (`?powerstate`/`?hostname`/`?self`), `NetworkAPIView` (boolean `isdhcp`/`managedns` filters), `SystemBMCAPIView` (`?self`) — participate in the same mechanism by setting `serve_detail` and delegating to `self.retrieve()`, instead of each selecting a detail serializer by hand (#298, `common/test_view_detail_handling.py`). `JobAPIView` is the deliberate exception: a **single job fetched by pk stays flat** because mprov_jobserver's `update_job_status()` compares `status` as an ID; only `?detail` nests.
+
+## API version lock
+
+The mPCC, its jobservers, and mash must run the same major.minor version. `mprov_control_center/version.py` defines `__version__` and derives `API_VERSION` (major.minor only); `APIVersionMiddleware` (`common/version.py`, installed right after `SecurityMiddleware` in settings) enforces it (#452, `common/test_api_version.py`):
+
+- **Every response** carries an `mProv-Version: <API_VERSION>` header — including 426s, 404s, and anonymous/browser replies. A jobserver's `startSession()` does `GET /` and treats a header-less reply as a mismatch, so `/` must always answer with the header even for exempt node IPs.
+- **Only API-key (`Authorization: Api-Key`) requests are checked**: a missing, garbled, or different major.minor `mProv-Version` header → **426 Upgrade Required** with `{"detail", "expected", "got"}`. Matching forms (`0.6`, `0.6.1.dev0`) pass. Session/Basic auth is never checked.
+- **Escape hatches** (`MPROV_SKIP_VERSION_CHECK=1` for dev/CI only; `MPROV_VERSION_EXEMPT` list of `path`/`path?querykey` entries with `<pk>` wildcards): an exempt endpoint passes a mismatched/missing version **only when the request comes from a known system's NIC address** (socket-peer identity per `TRUSTED_PROXIES`, same rule as #319), with a warning logged — this lets node scripts baked into older images keep working. Defaults cover `/`, `systems/?self|?hostname`, `systembmcs/?self|?system|<pk>/`, `networkinterfaces/?hostname|?system|<pk>/`, `networks/<pk>/` (see [Configuration](overview.md#configuration)).
 
 ## Authentication
 
@@ -47,4 +55,3 @@ Configured in `mprov_control_center/settings.py`:
 - Behavior changes in `MProvView` affect **every** endpoint — run the full `manage.py test` suite, not just one app.
 - `common/testing.py` holds shared test helpers; recent regression tests (`systems/test_detail_serializer.py`, `common/test_foundation.py`) are the reference for base-class changes.
 - Key sources: `common/views.py`, `common/serializers.py` (`NestedPrimaryKeyRelatedField`), `mprov_control_center/{views,urls,settings}.py`.
-ings}.py`.
