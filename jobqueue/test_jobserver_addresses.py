@@ -37,7 +37,7 @@ class JobServerAddressRegisterTests(JobServerAddressTestCase):
 
   def registered(self, response):
     self.assertEqual(response.status_code, 200, response.content)
-    return JobServer.objects.get(pk=json.loads(response.json())["pk"])
+    return JobServer.objects.get(pk=response.json()["pk"])
 
   def test_addresses_are_stored_with_their_networks(self):
     server = self.registered(self.post(addresses=[
@@ -81,8 +81,8 @@ class JobServerAddressRegisterTests(JobServerAddressTestCase):
 
   def test_reply_lists_the_feature(self):
     response = self.post()
-    self.assertIn("jobserver-addresses", json.loads(response.json())["features"])
-    self.assertIn("jobserver-address-heartbeat", json.loads(response.json())["features"])
+    self.assertIn("jobserver-addresses", response.json()["features"])
+    self.assertIn("jobserver-address-heartbeat", response.json()["features"])
 
   def test_admin_lists_the_addresses(self):
     server = self.registered(self.post(addresses=[{"address": "10.20.0.5"}]))

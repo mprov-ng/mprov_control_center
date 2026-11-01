@@ -403,9 +403,7 @@ Format returned:
     It returns 200 with the job server's ID and the optional
     API features this mPCC supports, e.g.
     {"pk": 3, "features": ["addjs-version", "host-id"]} (a client ignores
-    feature names it doesn't know).  The reply is that object when the
-    request includes host_id, and the same object as a JSON-encoded string
-    when it doesn't, for older job servers that expect one (#268).  It
+    feature names it doesn't know).  It
     returns 400 if a required field is missing, the
     name is blank, a job module ID isn't a slug (lowercase letters, digits, -
     and _) or host_id isn't a non-blank string of up to 64 characters, or 409
@@ -509,13 +507,11 @@ Format returned:
                                                     heartbeat_time=defaults['heartbeat_time'])
         data['pk'] = obj.pk
         data['features'] = FEATURES
-        # a job server that sends host_id (mprov_jobserver main, once it has
-        # seen the host-id feature) takes the reply as an object; one that
-        # doesn't (v0.0.62) rejects an object and needs the JSON-encoded
-        # string (#268).  Drop the string once v0.0.62 is retired.
-        if host_id is not None:
-            return Response(status=status.HTTP_200_OK, data=data)
-        return Response(status=status.HTTP_200_OK,data=json.dumps(data))
+        # a plain object (#268, #447).  It used to be a JSON-encoded string
+        # for job servers that don't send host_id (v0.0.62), which reject an
+        # object.  They can't get here any more: they send no mProv-Version,
+        # so the version lock answers them 426 first (#452).
+        return Response(status=status.HTTP_200_OK, data=data)
 
     @staticmethod
     def _module_id(value):
