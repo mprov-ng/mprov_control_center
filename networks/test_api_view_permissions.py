@@ -2,6 +2,7 @@ from django.test import TestCase
 from rest_framework_api_key.models import APIKey
 
 from networks.models import Network, NetworkType
+from mprov_control_center.version import API_VERSION
 
 
 class NetworkFunctionViewPermissionTests(TestCase):
@@ -20,8 +21,8 @@ class NetworkFunctionViewPermissionTests(TestCase):
                             content_type="application/json", **extra)
 
   def test_api_key_alone_is_enough(self):
-    self.assertEqual(self.preview(HTTP_AUTHORIZATION=f"Api-Key {self.key}").status_code, 200)
-    self.assertEqual(self.update(HTTP_AUTHORIZATION=f"Api-Key {self.key}").status_code, 200)
+    self.assertEqual(self.preview(HTTP_AUTHORIZATION=f"Api-Key {self.key}", HTTP_MPROV_VERSION=API_VERSION).status_code, 200)
+    self.assertEqual(self.update(HTTP_AUTHORIZATION=f"Api-Key {self.key}", HTTP_MPROV_VERSION=API_VERSION).status_code, 200)
 
   def test_login_alone_is_enough(self):
     from django.contrib.auth.models import User
@@ -32,6 +33,6 @@ class NetworkFunctionViewPermissionTests(TestCase):
   def test_neither_is_refused(self):
     self.assertIn(self.preview().status_code, (401, 403))
     self.assertIn(self.update().status_code, (401, 403))
-    self.assertIn(self.preview(HTTP_AUTHORIZATION="Api-Key not-a-key").status_code, (401, 403))
+    self.assertIn(self.preview(HTTP_AUTHORIZATION="Api-Key not-a-key", HTTP_MPROV_VERSION=API_VERSION).status_code, (401, 403))
     self.lan.refresh_from_db()
     self.assertNotEqual(self.lan.domain, "perm-test")

@@ -16,6 +16,20 @@ jobs:
         name: Checkout 
         uses: actions/checkout@v7
       
+      -
+        # mprov_control_center/version.py's __version__ is what the API
+        # advertises and checks (#452); a release must be tagged with it.
+        name: Check the release tag matches the version
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' mprov_control_center/version.py)
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::release tag $TAG doesn't match mprov_control_center/version.py ($version)"
+            exit 1
+          fi
+
       - 
         name: Setup buildx
         id: buildx
