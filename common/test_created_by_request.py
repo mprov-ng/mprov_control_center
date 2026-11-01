@@ -10,6 +10,7 @@ from rest_framework_api_key.models import APIKey
 
 from networks.models import Switch
 from systems.models import System, SystemImage
+from mprov_control_center.version import API_VERSION
 
 
 class CreatedByRequestTests(TestCase):
@@ -67,15 +68,15 @@ class CreatedByRequestTests(TestCase):
 
     def test_api_key_sets_created_by_to_pk1_system(self):
         # Item 5 System
-        obj = self._create_system_via_api(HTTP_AUTHORIZATION=f"Api-Key {self.api_key}", dummy_created_by=self.staff.pk)
+        obj = self._create_system_via_api(HTTP_AUTHORIZATION=f"Api-Key {self.api_key}", HTTP_MPROV_VERSION=API_VERSION, dummy_created_by=self.staff.pk)
         self.assertEqual(obj.created_by_id, 1)
 
     def test_api_key_sets_created_by_to_pk1_switch(self):
-        obj = self._create_switch_via_api(HTTP_AUTHORIZATION=f"Api-Key {self.api_key}")
+        obj = self._create_switch_via_api(HTTP_AUTHORIZATION=f"Api-Key {self.api_key}", HTTP_MPROV_VERSION=API_VERSION)
         self.assertEqual(obj.created_by_id, 1)
 
     def test_api_key_sets_created_by_to_pk1_systemimage(self):
-        obj = self._create_systemimage_via_api(HTTP_AUTHORIZATION=f"Api-Key {self.api_key}", dummy_created_by=self.staff.pk)
+        obj = self._create_systemimage_via_api(HTTP_AUTHORIZATION=f"Api-Key {self.api_key}", HTTP_MPROV_VERSION=API_VERSION, dummy_created_by=self.staff.pk)
         self.assertEqual(obj.created_by_id, 1)
 
     # 6: logged-in staff via session auth (admin/API) -> created_by is that user
@@ -113,17 +114,17 @@ class CreatedByRequestTests(TestCase):
 
     def test_basic_auth_sets_created_by_to_basic_user_system(self):
         hdr = self._basic_auth_header("basicuser", "password")
-        obj = self._create_system_via_api(HTTP_AUTHORIZATION=hdr, dummy_created_by=self.anon_target.pk)
+        obj = self._create_system_via_api(HTTP_AUTHORIZATION=hdr, HTTP_MPROV_VERSION=API_VERSION, dummy_created_by=self.anon_target.pk)
         self.assertEqual(obj.created_by, self.basic_user)
 
     def test_basic_auth_sets_created_by_to_basic_user_switch(self):
         hdr = self._basic_auth_header("basicuser", "password")
-        obj = self._create_switch_via_api(HTTP_AUTHORIZATION=hdr)
+        obj = self._create_switch_via_api(HTTP_AUTHORIZATION=hdr, HTTP_MPROV_VERSION=API_VERSION)
         self.assertEqual(obj.created_by, self.basic_user)
 
     def test_basic_auth_sets_created_by_to_basic_user_systemimage(self):
         hdr = self._basic_auth_header("basicuser", "password")
-        obj = self._create_systemimage_via_api(HTTP_AUTHORIZATION=hdr, dummy_created_by=self.anon_target.pk)
+        obj = self._create_systemimage_via_api(HTTP_AUTHORIZATION=hdr, HTTP_MPROV_VERSION=API_VERSION, dummy_created_by=self.anon_target.pk)
         self.assertEqual(obj.created_by, self.basic_user)
 
     # 8: no request path

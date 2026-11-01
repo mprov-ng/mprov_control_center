@@ -168,6 +168,7 @@ JAZZMIN_UI_TWEAKS = {
 MIDDLEWARE = [
     #'mprov_esxiprovisioner.middleware.ESXiProvisionerMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'common.version.APIVersionMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django_session_timeout.middleware.SessionTimeoutMiddleware',   
     'django.middleware.common.CommonMiddleware',
@@ -188,6 +189,23 @@ SESSION_EXPIRE_AFTER_LAST_ACTIVITY = True
 # is never honored and those endpoints identify clients by their actual
 # socket peer address only.
 TRUSTED_PROXIES = [p.strip() for p in os.environ.get('TRUSTED_PROXIES', '').split(',') if p.strip()]
+
+# The API version lock (#452, common/version.py).  A request made with the
+# API key must send this mPCC's major.minor in its mProv-Version header, or
+# it gets 426.  MPROV_SKIP_VERSION_CHECK=1 turns the check off, for
+# development and CI only; never set it in production.
+MPROV_SKIP_VERSION_CHECK = os.environ.get('MPROV_SKIP_VERSION_CHECK', '0') == '1'
+# Endpoints node scripts baked into images call, which can't be upgraded
+# with the mPCC: a request to one of these from a known system's network
+# interface address passes whatever version it sends, with a warning logged.
+# Comma-separated "path" or "path?query-key" entries; <pk> is any one path
+# segment and / is the API index.
+MPROV_VERSION_EXEMPT = [e.strip() for e in os.environ.get('MPROV_VERSION_EXEMPT', ','.join([
+    '/', 'systems/?self', 'systems/?hostname',
+    'systembmcs/?self', 'systembmcs/?system', 'systembmcs/<pk>/',
+    'networkinterfaces/?hostname', 'networkinterfaces/?system', 'networkinterfaces/<pk>/',
+    'networks/<pk>/',
+])).split(',') if e.strip()]
 
 # A job server with no heartbeat for a minute is unresponsive: it's left out
 # of image and repository routing, but kept (#254).  After this many minutes
