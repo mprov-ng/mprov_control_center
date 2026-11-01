@@ -18,9 +18,7 @@ class JobServerHostIdTests(APITestCase):
 
   def registered(self, response):
     self.assertEqual(response.status_code, 200, response.content)
-    # an object with host_id, a JSON string without it (#268).
-    reply = response.json()
-    return JobServer.objects.get(pk=(json.loads(reply) if isinstance(reply, str) else reply)["pk"])
+    return JobServer.objects.get(pk=response.json()["pk"])
 
   def test_new_job_server_gets_its_host_id(self):
     server = self.registered(self.post(host_id="abc"))
