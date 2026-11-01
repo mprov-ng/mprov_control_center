@@ -104,15 +104,31 @@ Each extra job server, beyond the one mprov-compose starts, needs an API key: cr
 When creating an API key in the mPCC, you only need to specify a name for the API key, the expire times are only if your security protocols dictate the need for expiring keys.
 
 # Upgrading
-1. Back up the database, and copy the backup out of the container to the host:
-   ```
-   docker compose exec mpcc bash -c 'cd /var/www/mprov_control_center && . bin/activate && \
-     python manage.py mprov_backup --output-dir /root/mprov-backups'
-   docker compose cp mpcc:/root/mprov-backups ./mprov-backups
-   ```
-   Keep the copy somewhere safe: it contains user accounts, API keys and BMC credentials. Don't write backups under `media/`, which the web server serves ([#457](https://github.com/mprov-ng/mprov_control_center/issues/457)). The default output directory is inside the container and is lost on upgrade, so always copy the backup out. `mprov_restore` loads a backup back in.
-2. Pull the new image and recreate the container: `docker compose pull && docker compose --env-file .env up -d`. Migrations run automatically when it starts.
-3. Upgrade the job servers and mash to the same major.minor version at the same time; until you do, they get `426 Upgrade Required`.
+Upgrade the mPCC, its job servers and mash in the same window. They must run the same major.minor version, and anything older than the mPCC gets `426 Upgrade Required`. Don't upgrade the mPCC and leave its job server for later: in testing, an old job server facing a new mPCC hung, and wrote a broken dnsmasq config that stopped DHCP and PXE boot.
+
+Before you start:
+- Remove `MPROV_SKIP_VERSION_CHECK` from mprov-compose's `.env` if it's there. Compose passes `.env` to every container, so a setting meant for the job server also turns off the mPCC's version check.
+- Choose the release. mprov-compose's `docker-compose.yml` uses `:dev` for the mPCC and `:latest` for the job server, so `docker compose pull` on its own doesn't give you a particular release. Set both `image:` lines to the same release tag, for example `ghcr.io/mprov-ng/mprov-control-center:v0.6.0` and `ghcr.io/mprov-ng/mprov-jobserver:v0.6.0`.
+
+1. Back up the database, and copy the backup out of the container to the host.
+   - On 0.6.0 or newer, use `mprov_backup`:
+     ```
+     docker compose exec mpcc bash -c 'cd /var/www/mprov_control_center && . bin/activate && \
+       python manage.py mprov_backup --output-dir /root/mprov-backups'
+     docker compose cp mpcc:/root/mprov-backups ./mprov-backups
+     ```
+     The default output directory is inside the container and is lost on upgrade, so always copy the backup out. Don't write backups under `media/`, which the web server serves ([#457](https://github.com/mprov-ng/mprov_control_center/issues/457)). `mprov_restore` loads a backup back in.
+   - Before 0.6.0 there's no `mprov_backup`. Dump the database from the `db` container instead:
+     ```
+     docker compose exec -T db sh -c 'mariadb-dump -u root -p"$MYSQL_ROOT_PASSWORD" \
+       --single-transaction --databases "$MYSQL_DATABASE"' > mprov-db.sql
+     ```
+   - Also copy `/etc/mprov`: `docker compose cp mpcc:/etc/mprov ./mprov-conf`. It holds the Django secret key, the admin password file and the job server API key. An upgrade in place keeps it (it's the `mprov-conf` volume), but you need it to rebuild the stack from the backup.
+
+   Keep these copies somewhere safe: they contain user accounts, API keys and BMC credentials.
+2. Pull the new images and recreate the containers: `docker compose pull && docker compose --env-file .env up -d`. Migrations run automatically when the mPCC starts. If you also updated mprov-compose itself, the `db` container may be recreated too, which is a short, expected outage.
+3. Upgrade job servers on other hosts, and mash, to the same major.minor version.
+4. If you first installed before 0.6, change the `admin` password now. Older versions created `admin` with a fixed, published default password ([#337](https://github.com/mprov-ng/mprov_control_center/pull/337)), and upgrading doesn't change it.
 
 # Bare-metal installs
 The old bare-metal installer (`install_mpcc.sh`) has been removed and is no longer supported. It also set up an NFS-exported `/export/mprov` share, built Slurm into it, and installed MLX OFED, NVIDIA drivers and Ansible on the mPCC host. None of that is provided by the container image; if you need those, set them up separately.
