@@ -83,6 +83,29 @@ class APIVersionCheckTests(APIVersionTestCase):
     self.assertEqual(response.status_code, 404)
     self.assertEqual(response["mProv-Version"], API_VERSION)
 
+  def test_a_job_servers_first_request_gets_the_version(self):
+    """ mprov_jobserver's startSession() opens with GET / (an exempt endpoint)
+    and treats a reply without mProv-Version as a mismatch, so every reply
+    to it must carry the header: from a job server's address (not a known
+    system), and from a node's address, with the right version or none. """
+    for client, version in (("192.0.2.1", API_VERSION), ("10.0.0.11", API_VERSION), ("10.0.0.11", None)):
+      with self.subTest(client=client, version=version):
+        response = self.api("/", version=version, client=client)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["mProv-Version"], API_VERSION)
+    # with no version, from anywhere else, it's refused, and says which version it wants.
+    response = self.api("/", version=None, client="192.0.2.1")
+    self.assertEqual(response.status_code, 426)
+    self.assertEqual(response["mProv-Version"], API_VERSION)
+
+  def test_a_server_error_carries_the_version(self):
+    from unittest import mock
+    self.client.raise_request_exception = False
+    with mock.patch("mprov_control_center.views.IndexAPIView.get", side_effect=RuntimeError("boom")):
+      response = self.api("/")
+    self.assertEqual(response.status_code, 500)
+    self.assertEqual(response["mProv-Version"], API_VERSION)
+
   @override_settings(MPROV_SKIP_VERSION_CHECK=True)
   def test_the_escape_hatch_turns_the_check_off(self):
     response = self.api("/systems/", version=OLD)
