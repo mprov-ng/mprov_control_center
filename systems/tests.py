@@ -269,9 +269,11 @@ class FlattenConfigTests(TestCase):
 
 @skipIf(connection.vendor == "sqlite", "SQLite allows only 999 variables per query, too few for a group this big (#464)")
 class LargeSystemGroupAdminTests(TestCase):
-  """ The admin posts one field per member system, so a System Group with
-  more than about 990 systems went over Django's default limit of 1000 POST
-  fields and couldn't be saved (#464). """
+  """ A System Group with a very large membership needs to be saveable.  A
+  plain multi-select widget posted one field per member system, which went
+  over Django's default limit of 1000 POST fields (#464).  The admin now
+  uses raw_id_fields for `systems` (#467), which posts the member ids as a
+  single comma-separated field instead. """
 
   def test_save_group_with_many_systems(self):
     admin_user = User.objects.create_superuser("group-admin", password="x")
@@ -283,7 +285,7 @@ class LargeSystemGroupAdminTests(TestCase):
     ids = list(System.objects.values_list("id", flat=True))
     data = {
       "name": "big-group",
-      "systems": ids,
+      "systems": ",".join(str(i) for i in ids),
       "install_kernel_cmdline": "",
       "tmpfs_root_size": 0,
       "initial_mods": "",

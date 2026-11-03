@@ -49,6 +49,7 @@ class DiskLayoutAdmin(WarnBootDisksMixin, AdminWizardModel):
   readonly_fields = ['dtype', 'slug']
   list_display = ['name', 'dtype', 'diskname']
   exclude=['slug']
+  raw_id_fields = ['systems']
   def get_queryset(self, request):
     qs = super(DiskLayoutAdmin, self).get_queryset(request)
     return qs.filter(~Q(dtype=DiskLayout.DiskTypes.MDRD))
