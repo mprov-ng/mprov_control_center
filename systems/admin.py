@@ -500,6 +500,7 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
 class SystemGroupAdmin(admin.ModelAdmin):
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
+  raw_id_fields = ['systems']
 
 class SystemModelAdmin(admin.ModelAdmin):
   list_display = ['slug', 'vendor', 'name']
