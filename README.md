@@ -124,6 +124,11 @@ Before you start:
        --single-transaction --databases "$MYSQL_DATABASE"' > mprov-db.sql
      ```
    - Also copy `/etc/mprov`: `docker compose cp mpcc:/etc/mprov ./mprov-conf`. It holds the Django secret key, the admin password file and the job server API key. An upgrade in place keeps it (it's the `mprov-conf` volume), but you need it to rebuild the stack from the backup.
+   - And copy `media/`: `docker compose cp mpcc:/var/www/mprov_control_center/media ./mprov-media`. Neither backup above includes it, and it holds the script files and uploaded files; the database only records their names. An upgrade in place keeps it (it's the `mpcc-media` volume), but a stack rebuilt from the database alone has no scripts, so image builds and post-boot scripts fail. To put it back, copy it in and give it to the web server's user:
+     ```
+     docker compose cp ./mprov-media/. mpcc:/var/www/mprov_control_center/media/
+     docker compose exec mpcc chown -R apache: /var/www/mprov_control_center/media
+     ```
 
    Keep these copies somewhere safe: they contain user accounts, API keys and BMC credentials.
 2. Pull the new images and recreate the containers: `docker compose pull && docker compose --env-file .env up -d`. Migrations run automatically when the mPCC starts. If you also updated mprov-compose itself, the `db` container may be recreated too, which is a short, expected outage.
