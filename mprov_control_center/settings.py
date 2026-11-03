@@ -182,6 +182,11 @@ SESSION_EXPIRE_SECONDS = float(os.environ.get('SESSION_EXPIRE_SECONDS', '1800'))
 SESSION_TIMEOUT_REDIRECT = '/admin/login/'
 SESSION_EXPIRE_AFTER_LAST_ACTIVITY = True
 
+# The most fields a request may post.  Django's default of 1000 is too few
+# for the admin: a System Group posts one field per member system, so a
+# group of about 990 systems or more can't be saved (#464).
+DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.environ.get('DATA_UPLOAD_MAX_NUMBER_FIELDS', '10000'))
+
 # Reverse proxies whose X-Forwarded-For header may be trusted when the
 # mPCC works out which node is calling (/images/, /ipxe/ and
 # /systems/?self), comma-separated: exact IPs or CIDR networks, e.g.

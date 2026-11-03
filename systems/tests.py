@@ -1,11 +1,12 @@
 import io
 from contextlib import redirect_stdout
 from types import SimpleNamespace
-from unittest import mock
+from unittest import mock, skipIf
 
 from django.test import SimpleTestCase
 from systems.views import SystemPowerAPIView
 from django.test import TestCase
+from django.db import connection
 from django.contrib.auth.models import User
 from osmanagement.models import OSDistro
 from systems.models import System, SystemGroup, SystemImage, NetworkInterface, SystemBMC, SystemBMCForm
@@ -264,3 +265,31 @@ class FlattenConfigTests(TestCase):
     configs = {s.hostname: s.config for s in System.objects.all()}
     self.assertEqual(configs["list-a"]["prov_interface"], "ib0")
     self.assertEqual(configs["list-b"]["prov_interface"], "eno2")
+
+
+@skipIf(connection.vendor == "sqlite", "SQLite allows only 999 variables per query, too few for a group this big (#464)")
+class LargeSystemGroupAdminTests(TestCase):
+  """ The admin posts one field per member system, so a System Group with
+  more than about 990 systems went over Django's default limit of 1000 POST
+  fields and couldn't be saved (#464). """
+
+  def test_save_group_with_many_systems(self):
+    admin_user = User.objects.create_superuser("group-admin", password="x")
+    self.client.force_login(admin_user)
+    System.objects.bulk_create(
+      [System(hostname=f"node{i:04d}", created_by=admin_user) for i in range(1100)]
+    )
+    group = SystemGroup.objects.create(name="big-group")
+    ids = list(System.objects.values_list("id", flat=True))
+    data = {
+      "name": "big-group",
+      "systems": ids,
+      "install_kernel_cmdline": "",
+      "tmpfs_root_size": 0,
+      "initial_mods": "",
+      "prov_interface": "",
+      "config_params": "# Inherit from OS",
+    }
+    response = self.client.post(f"/admin/systems/systemgroup/{group.id}/change/", data)
+    self.assertEqual(response.status_code, 302)
+    self.assertEqual(group.systems.count(), 1100)

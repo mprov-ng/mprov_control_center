@@ -33,7 +33,7 @@ The first start migrates and loads a new database before the web server comes up
 mprov-compose's `.env` sets `TZ`, but the mPCC itself only reads `TIME_ZONE` ([#456](https://github.com/mprov-ng/mprov_control_center/issues/456)). Add `TIME_ZONE=America/New_York` (or your zone) to `.env` as well, or the admin UI shows times in UTC.
 
 ## Running the image without compose
-The image runs on its own with SQLite, which is enough to try the mPCC out locally. SQLite is only for a local trial: for a real site, or anything reachable by other hosts, point it at MariaDB with the `DB_*` variables (see [Configuration](#configuration)).
+The image runs on its own with SQLite, which is enough to try the mPCC out locally. SQLite is only for a local trial: for a real site, or anything reachable by other hosts, point it at MariaDB with the `DB_*` variables (see [Configuration](#configuration)). On SQLite, a System Group of more than 999 systems can't be saved either: the admin checks the selected systems in one query, and the image's SQLite allows only 999 values in a query.
 
 ```
 docker run -d --name mpcc \
@@ -72,6 +72,7 @@ The mPCC is configured through environment variables: mprov-compose passes in it
 | `JOBSERVER_FAIL_JOBS_AFTER_MINUTES` | Fail a job server's running jobs after it hasn't been heard from for this many minutes. `0` turns this off. Default: `10`. |
 | `JOBSERVER_DELETE_AFTER_DAYS` | Delete a job server after this many days without a heartbeat. Default: `0`, never. |
 | `SESSION_EXPIRE_SECONDS` | Log admin users out after this many idle seconds. Default: `1800`. |
+| `DATA_UPLOAD_MAX_NUMBER_FIELDS` | The most fields an admin form may post. A System Group posts one per member system, so raise this if saving a very large group fails with `TooManyFieldsSent`. Default: `10000`. |
 | `TRUSTED_PROXIES` | Reverse proxies whose `X-Forwarded-For` header is trusted for node requests. Unset: none are trusted. |
 | `LDAP_ENABLED` and `LDAP_*` | LDAP login for the admin UI; see `env.example`. |
 | `MPROV_SKIP_VERSION_CHECK` | `1` turns off the API version check. For development and CI only, never in production. |
