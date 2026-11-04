@@ -50,7 +50,7 @@ Auth options (API keys, Basic/Session/Token, LDAP backend ordering) are detailed
 - Default DB is sqlite at `BASE_DIR/db/db.sqlite3`; production containers set `DB_*` env vars (the compose stack ships its own database).
 - Database-backed cache (`mprov_cache` table), `USE_TZ=True`.
 - `django-dbbackup` writes to `/var/www/mprov_control_center/backups/` via `FileSystemStorage` (the `backups/` directory in the repo is just that README).
-- `manage.py mprov_backup` / `manage.py mprov_restore` (added with #445, `utils/management/commands/`) are the standalone backup path: `dumpdata` writes one numbered fixture per app plus a `manifest.json` into a timestamped directory under `--output-dir` (default `backups/`), and restore loads **all** fixture files in a single `loaddata` call because the systems↔disklayouts M2M cycle has no linear app order (`utils/backup_apps.py`). The README's upgrade flow runs `mprov_backup` and copies the archive out of the container — the default directory is inside the container and lost on upgrade, and backups must not live under served `media/` (#457); the Apache config now also hard-denies them there (below). Installations upgrading from before 0.6.0 have no `mprov_backup` and must `mariadb-dump` from the `db` container instead; the README's Upgrading section also calls out copying `/etc/mprov` (secret key, admin password file, jobserver API key) so the stack can be rebuilt from a backup.
+- `manage.py mprov_backup` / `manage.py mprov_restore` (added with #445, `utils/management/commands/`) are the standalone backup path: `dumpdata` writes one numbered fixture per app plus a `manifest.json` into a timestamped directory under `--output-dir` (default `backups/`), and restore loads **all** fixture files in a single `loaddata` call because the systems↔disklayouts M2M cycle has no linear app order (`utils/backup_apps.py`). The README's upgrade flow runs `mprov_backup` and copies the archive out of the container — the default directory is inside the container and lost on upgrade, and backups must not live under served `media/` (#457); the Apache config now also hard-denies them there (below). Installations upgrading from before 0.6.0 have no `mprov_backup` and must `mariadb-dump` from the `db` container instead; the README's Upgrading section also calls out copying `/etc/mprov` (secret key, admin password file, jobserver API key) and the `media/` directory out of the container (#465) — `media/` holds the script and uploaded files that the database only records by name, so a stack rebuilt from the database alone has no scripts.
 
 ## Web server serving and media hardening
 
@@ -69,5 +69,8 @@ Apache serves `media/` publicly because nodes and jobservers fetch scripts and f
 - Model change → always add a migration (CI enforces) and consider whether signals should queue [jobs](../domain/jobs-and-scripts.md).
 - New API endpoint → subclass [MProvView](api-foundation.md), write the docstring (it becomes the rendered HTML docs page), and register the route in the app's `*_urls.py` or root urlconf.
 - Admin changes → follow the per-app `admin.py` patterns (inlines, custom forms, confirm-view flows); use `common/admin.py` `AdminWizardModel` for multi-step creation wizards.
+
+Key sources: `mprov_control_center/{settings,urls,views,wsgi}.py`, `install_scripts/`, `Dockerfile`, `.github/workflows/`, `env.example`.
+ep creation wizards.
 
 Key sources: `mprov_control_center/{settings,urls,views,wsgi}.py`, `install_scripts/`, `Dockerfile`, `.github/workflows/`, `env.example`.
