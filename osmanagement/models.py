@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import models
 from django.dispatch import receiver
-from django.db.models.signals import pre_delete, post_save
+from django.db.models.signals import pre_delete, post_delete, post_save
 from jobqueue.models import JobModule, Job, JobStatus, JobServer, queue_job, requeue_job
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 
@@ -283,16 +283,24 @@ def RepoDeleteJob(sender, **kwargs):
 
 @receiver(pre_delete, sender=JobServer)
 def DeleteJobserver(sender, instance, **kwargs):
+    # note the mirrored repos this job server hosts; once it's gone,
+    # RehostRepos queues those left with no host.  Unmanaged repos are used
+    # from upstream and aren't mirrored at all (#463).
+    instance._hosted_repo_ids = list(instance.osrepo_set.filter(managed=True).values_list('id', flat=True))
+
+@receiver(post_delete, sender=JobServer)
+def RehostRepos(sender, instance, **kwargs):
     RepoJobType = None
     # get the jobtype, do nothing if it's not defined.
     try:
         RepoJobType = JobModule.objects.get(slug='repo-update')
     except JobModule.DoesNotExist:
         RepoJobType = None
-    
+
     if RepoJobType is not None:
-        # queue a repo-update job for every repo.
-        repos = OSRepo.objects.all()
+        # post_delete runs after every job server in the same delete is gone,
+        # so a repo whose hosts were all deleted together is queued too.
+        repos = OSRepo.objects.filter(id__in=getattr(instance, '_hosted_repo_ids', []), hosted_by=None)
         for repo in repos:
           queue_job(RepoJobType, { 'repo_id': repo.id})
     
