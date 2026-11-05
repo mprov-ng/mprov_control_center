@@ -4,7 +4,7 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core import management
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from utils.backup_apps import BACKUP_LABELS, MANIFEST_NAME
 
@@ -18,8 +18,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             "--output-dir",
-            default=os.path.join(settings.BASE_DIR, "backups"),
-            help="Directory to create the timestamped backup subdirectory in (default: backups/).",
+            default=settings.MPROV_BACKUP_DIR,
+            help=f"Directory to create the timestamped backup subdirectory in (default: {settings.MPROV_BACKUP_DIR}).",
         )
         parser.add_argument(
             "--indent",
@@ -30,8 +30,24 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         indent = options["indent"]
+        # Apache serves media/ and static/, and a backup holds password
+        # hashes, API keys and BMC passwords (#457).  realpath, because db/
+        # is a link to media/.
+        output_dir = os.path.realpath(options["output_dir"])
+        for served in (settings.MEDIA_ROOT, settings.STATIC_ROOT):
+            served = os.path.realpath(served)
+            if os.path.commonpath([output_dir, served]) == served:
+                raise CommandError(f"Not writing a backup under {served}: the web server serves it. Use another --output-dir.")
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        backup_dir = os.path.join(options["output_dir"], f"mprov-backup-{timestamp}")
+        backup_dir = os.path.join(output_dir, f"mprov-backup-{timestamp}")
+        # readable by the owner only, whatever the umask.
+        umask = os.umask(0o077)
+        try:
+            self.write_backup(backup_dir, timestamp, indent)
+        finally:
+            os.umask(umask)
+
+    def write_backup(self, backup_dir, timestamp, indent):
         os.makedirs(backup_dir)
 
         manifest = {"created": timestamp, "labels": BACKUP_LABELS, "files": []}

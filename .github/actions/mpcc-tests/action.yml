@@ -67,9 +67,15 @@ runs:
           docker exec mpcc-ci-http curl -sf -o /dev/null http://localhost/ && break
           sleep 5
         done
+        # mprov_backup writes to its own volume and refuses media/ (#457);
+        # copy a backup into media/ anyway, as an older version may have
+        # left one there, readable so it's Apache's rule that refuses it.
         docker exec mpcc-ci-http bash -c '
           cd /var/www/mprov_control_center && . bin/activate &&
-          python manage.py mprov_backup --output-dir media >/dev/null'
+          python manage.py mprov_backup >/dev/null &&
+          ! python manage.py mprov_backup --output-dir media >/dev/null 2>&1 &&
+          cp -a /var/lib/mprov/backups/mprov-backup-* media/ &&
+          chmod -R a+rX media/mprov-backup-*'
         status() { docker exec mpcc-ci-http curl -s --path-as-is -o /dev/null -w '%{http_code}' "http://localhost$1"; }
         script=$(docker exec mpcc-ci-http bash -c 'cd /var/www/mprov_control_center/media && ls -d */* | grep -v mprov-backup- | head -1')
         backup=$(docker exec mpcc-ci-http bash -c 'cd /var/www/mprov_control_center/media && ls -d mprov-backup-*/manifest.json')
