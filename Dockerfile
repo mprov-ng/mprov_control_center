@@ -62,6 +62,19 @@ RUN cd mprov_control_center && \
     pip3 install -r requirements.txt && \
     pip3 install "mysqlclient>=2.2.7,<3"
 
+# The default scripts a fresh install loads, from the mprov_scripts commit
+# install_scripts/mprov_scripts.ref pins (or --build-arg MPROV_SCRIPTS_REF),
+# so every install of an image gets the same ones, and first start needs no
+# network (#460).
+ARG MPROV_SCRIPTS_REF
+RUN ref="${MPROV_SCRIPTS_REF:-$(cat mprov_control_center/install_scripts/mprov_scripts.ref)}" && \
+    git init -q mprov_control_center/default_scripts && \
+    cd mprov_control_center/default_scripts && \
+    git fetch -q --depth 1 https://github.com/mprov-ng/mprov_scripts "$ref" && \
+    git checkout -q FETCH_HEAD && \
+    git rev-parse HEAD > .ref && \
+    rm -rf .git
+
 # grab a copy of memtest.
 WORKDIR /var/www/mprov_control_center/static
 RUN wget https://memtest.org/download/v7.20/mt86plus_7.20.binaries.zip && \

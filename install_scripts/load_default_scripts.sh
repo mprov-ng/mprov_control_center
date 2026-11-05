@@ -1,18 +1,14 @@
 #!/bin/bash
 
-# make a temp dir
-# go into the temp dir
-tempdir=`mktemp -d`
-cd $tempdir
-
-# checkout the scripts repo
-git clone https://github.com/mprov-ng/mprov_scripts
-if [ "$?" != "0" ]
+# The default scripts are built into the image, from the mprov_scripts
+# commit install_scripts/mprov_scripts.ref pins (#460).
+scriptsdir=/var/www/mprov_control_center/default_scripts
+if [ ! -f "$scriptsdir/mpcc_scripts.yaml" ]
 then
-    echo "Unable to checkout git."
+    echo "No default scripts in $scriptsdir."
     exit 1
 fi
-cd mprov_scripts/
+cd "$scriptsdir"
 
 # grab a list of files to copy and copy them to /var/www/mprov_control_center/media
 scripts=`cat mpcc_scripts.yaml | grep "filename:" | awk '{print $2}'`
@@ -31,8 +27,5 @@ cd /var/www/mprov_control_center
 
 # import the yaml as a fixture
 python manage.py loaddata scripts/fixtures/*
-python manage.py loaddata ${tempdir}/mprov_scripts/mpcc_scripts.yaml
-
-cd /tmp
-rm -rf "$tempdir"
+python manage.py loaddata "$scriptsdir/mpcc_scripts.yaml"
 

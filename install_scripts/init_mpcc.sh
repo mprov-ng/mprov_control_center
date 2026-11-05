@@ -162,8 +162,8 @@ print("Superuser created successfully.")
        python manage.py loaddata "${fixtures[@]}"
        /var/www/mprov_control_center/install_scripts/load_default_scripts.sh
        # before the self System below, as the fixture rows have fixed pks.
-       # Leave out any script that isn't loaded (e.g. the mprov_scripts clone
-       # failed on an offline install), or the whole load fails.
+       # Leave out any script that isn't loaded (e.g. an image built without
+       # its default scripts), or the whole load fails.
        cat <<'EOF' | python manage.py shell
 import glob, os, shutil, tempfile, yaml
 from django.core.management import call_command
