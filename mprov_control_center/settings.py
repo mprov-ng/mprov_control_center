@@ -2,7 +2,34 @@ import os
 import ldap
 from django_auth_ldap.config import LDAPSearch, PosixGroupType
 import socket
+import sys
 import datetime
+try:
+    import zoneinfo
+except ImportError:  # Python 3.8: Django 4.2 depends on the backport
+    from backports import zoneinfo
+
+
+def env_time_zone(environ):
+    """
+    The time zone from TIME_ZONE, or else from TZ, as mprov-compose sets
+    only TZ (#456), or else UTC.  Either may hold a POSIX value such as
+    ":America/New_York" or "EST5EDT,M3.2.0,M11.1.0", which Django can't use
+    (mprov-compose may set TIME_ZONE=${TZ}): strip a leading ":", and if it
+    still isn't a zone name, warn and use UTC rather than refuse to start.
+    """
+    for name in ('TIME_ZONE', 'TZ'):
+        value = environ.get(name, '')
+        if not value:
+            continue
+        tz = value.lstrip(':')
+        try:
+            zoneinfo.ZoneInfo(tz)
+        except (ValueError, zoneinfo.ZoneInfoNotFoundError):
+            print(f"Warning: {name}={value} isn't a time zone name the mPCC can use; using UTC. Set TIME_ZONE to a name such as America/New_York.", file=sys.stderr)
+            return 'UTC'
+        return tz
+    return 'UTC'
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -288,7 +315,7 @@ REST_FRAMEWORK = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = os.environ.get('TIME_ZONE', 'UTC')
+TIME_ZONE = env_time_zone(os.environ)
 
 USE_I18N = True
 

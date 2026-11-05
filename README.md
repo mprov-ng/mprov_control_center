@@ -30,7 +30,7 @@ docker compose --env-file .env up -d
 
 The first start migrates and loads a new database before the web server comes up, which takes a few minutes. Then log in at `http://<host>/admin/` (see [The admin password](#the-admin-password)).
 
-mprov-compose's `.env` sets `TZ`, but the mPCC itself only reads `TIME_ZONE` ([#456](https://github.com/mprov-ng/mprov_control_center/issues/456)). Add `TIME_ZONE=America/New_York` (or your zone) to `.env` as well, or the admin UI shows times in UTC.
+The mPCC takes its time zone from `TIME_ZONE`, or if that isn't set, from mprov-compose's `TZ` ([#456](https://github.com/mprov-ng/mprov_control_center/issues/456)). Before 0.6.3 it read only `TIME_ZONE`, so on an older version add `TIME_ZONE=America/New_York` (or your zone) to `.env` as well, or the admin UI shows times in UTC.
 
 ## Running the image without compose
 The image runs on its own with SQLite, which is enough to try the mPCC out locally. SQLite is only for a local trial: for a real site, or anything reachable by other hosts, point it at MariaDB with the `DB_*` variables (see [Configuration](#configuration)). On SQLite, a System Group of more than 999 systems can't be saved either: the admin checks the selected systems in one query, and the image's SQLite allows only 999 values in a query.
@@ -68,7 +68,7 @@ The mPCC is configured through environment variables: mprov-compose passes in it
 | `MPROV_MPCC_HOSTNAME`, `MPROV_MPCC_IPs`, `MPROV_DOMAINNAME` | The mPCC's hostname, the comma-separated IPs used to reach it, and its domain. All of them go into `ALLOWED_HOSTS`, and they make up the mPCC's own System entry on first start. |
 | `ALLOWED_HOSTS` | Any other comma-separated hostnames or IPs the mPCC is reached by. `localhost` and `127.0.0.1` are always allowed. |
 | `DB_ENGINE`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | The database. Unset, it's SQLite, which is for a local trial only. For MariaDB, use `DB_ENGINE=django.db.backends.mysql`. |
-| `TIME_ZONE` | The mPCC's time zone. Default: `UTC`. |
+| `TIME_ZONE` | The mPCC's time zone, as a name such as `America/New_York`. Default: `TZ`, else `UTC`. A value that isn't a zone name (such as a POSIX rule) is logged and `UTC` is used. |
 | `SECRET_KEY` | Django's secret key. Optional: if it's unset, one is generated on first start and kept in `/etc/mprov/secret_key`. |
 | `MPROV_SUPERUSER_PASSWORD` | The `admin` password to set on first start, instead of a random one. Only read while there's no superuser yet. |
 | `JOBSERVER_FAIL_JOBS_AFTER_MINUTES` | Fail a job server's running jobs after it hasn't been heard from for this many minutes. `0` turns this off. Default: `10`. |
