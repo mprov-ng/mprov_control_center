@@ -13,23 +13,23 @@ except ImportError:  # Python 3.8: Django 4.2 depends on the backport
 def env_time_zone(environ):
     """
     The time zone from TIME_ZONE, or else from TZ, as mprov-compose sets
-    only TZ (#456), or else UTC.  TZ may be a POSIX value such as
-    ":America/New_York" or "EST5EDT,M3.2.0,M11.1.0", which Django can't use:
-    strip a leading ":", and if it still isn't a zone name, warn and use UTC
-    rather than refuse to start.  An invalid TIME_ZONE is left for Django to
-    reject, as it always has.
+    only TZ (#456), or else UTC.  Either may hold a POSIX value such as
+    ":America/New_York" or "EST5EDT,M3.2.0,M11.1.0", which Django can't use
+    (mprov-compose may set TIME_ZONE=${TZ}): strip a leading ":", and if it
+    still isn't a zone name, warn and use UTC rather than refuse to start.
     """
-    if environ.get('TIME_ZONE'):
-        return environ['TIME_ZONE']
-    tz = environ.get('TZ', '').lstrip(':')
-    if not tz:
-        return 'UTC'
-    try:
-        zoneinfo.ZoneInfo(tz)
-    except (ValueError, zoneinfo.ZoneInfoNotFoundError):
-        print(f"Warning: TZ={environ['TZ']} isn't a time zone name the mPCC can use; using UTC. Set TIME_ZONE to a name such as America/New_York.", file=sys.stderr)
-        return 'UTC'
-    return tz
+    for name in ('TIME_ZONE', 'TZ'):
+        value = environ.get(name, '')
+        if not value:
+            continue
+        tz = value.lstrip(':')
+        try:
+            zoneinfo.ZoneInfo(tz)
+        except (ValueError, zoneinfo.ZoneInfoNotFoundError):
+            print(f"Warning: {name}={value} isn't a time zone name the mPCC can use; using UTC. Set TIME_ZONE to a name such as America/New_York.", file=sys.stderr)
+            return 'UTC'
+        return tz
+    return 'UTC'
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)

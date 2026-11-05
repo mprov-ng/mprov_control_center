@@ -8,8 +8,9 @@ from mprov_control_center.settings import env_time_zone
 
 class EnvTimeZoneTests(SimpleTestCase):
   """ The mPCC's time zone comes from TIME_ZONE, or else TZ, which is all
-  mprov-compose sets, or else UTC.  It used to ignore TZ, so under compose
-  Django ran, and reset the process clock, in UTC (#456). """
+  mprov-compose sets, or else UTC; a value that isn't a zone name gives UTC
+  and a warning.  It used to ignore TZ, so under compose Django ran, and
+  reset the process clock, in UTC (#456). """
 
   def zone(self, **environ):
     err = io.StringIO()
@@ -36,5 +37,12 @@ class EnvTimeZoneTests(SimpleTestCase):
       self.assertEqual(zone, "UTC", tz)
       self.assertIn("Warning", err, tz)
 
-  def test_invalid_time_zone_is_left_for_django_to_reject(self):
-    self.assertEqual(self.zone(TIME_ZONE="Not/AZone"), ("Not/AZone", ""))
+  def test_time_zone_leading_colon_is_stripped(self):
+    self.assertEqual(self.zone(TIME_ZONE=":Europe/London"), ("Europe/London", ""))
+
+  def test_time_zone_that_isnt_a_zone_name_falls_back_to_utc(self):
+    # mprov-compose may set TIME_ZONE=${TZ}, so it can carry a POSIX TZ too.
+    for tz in ("EST5EDT,M3.2.0,M11.1.0", "Not/AZone"):
+      zone, err = self.zone(TIME_ZONE=tz, TZ="America/New_York")
+      self.assertEqual(zone, "UTC", tz)
+      self.assertIn("TIME_ZONE", err, tz)

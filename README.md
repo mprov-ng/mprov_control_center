@@ -68,7 +68,7 @@ The mPCC is configured through environment variables: mprov-compose passes in it
 | `MPROV_MPCC_HOSTNAME`, `MPROV_MPCC_IPs`, `MPROV_DOMAINNAME` | The mPCC's hostname, the comma-separated IPs used to reach it, and its domain. All of them go into `ALLOWED_HOSTS`, and they make up the mPCC's own System entry on first start. |
 | `ALLOWED_HOSTS` | Any other comma-separated hostnames or IPs the mPCC is reached by. `localhost` and `127.0.0.1` are always allowed. |
 | `DB_ENGINE`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | The database. Unset, it's SQLite, which is for a local trial only. For MariaDB, use `DB_ENGINE=django.db.backends.mysql`. |
-| `TIME_ZONE` | The mPCC's time zone, as a name such as `America/New_York`. Default: `TZ` if that's a zone name, else `UTC`. |
+| `TIME_ZONE` | The mPCC's time zone, as a name such as `America/New_York`. Default: `TZ`, else `UTC`. A value that isn't a zone name (such as a POSIX rule) is logged and `UTC` is used. |
 | `SECRET_KEY` | Django's secret key. Optional: if it's unset, one is generated on first start and kept in `/etc/mprov/secret_key`. |
 | `MPROV_SUPERUSER_PASSWORD` | The `admin` password to set on first start, instead of a random one. Only read while there's no superuser yet. |
 | `JOBSERVER_FAIL_JOBS_AFTER_MINUTES` | Fail a job server's running jobs after it hasn't been heard from for this many minutes. `0` turns this off. Default: `10`. |
