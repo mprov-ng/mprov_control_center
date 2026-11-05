@@ -43,12 +43,14 @@ docker run -d --name mpcc \
   -e TIME_ZONE=America/New_York \
   -v mpcc-media:/var/www/mprov_control_center/media \
   -v mprov-conf:/etc/mprov \
+  -v mpcc-backups:/var/lib/mprov/backups \
   ghcr.io/mprov-ng/mprov-control-center:latest
 ```
 
-Keep both volumes:
+Keep these volumes:
 - `/var/www/mprov_control_center/media` holds the SQLite database (if you use it), images and uploaded files.
 - `/etc/mprov` holds the generated Django secret key, the admin password and the job server API key.
+- `/var/lib/mprov/backups` holds the backups `mprov_backup` writes (see [Upgrading](#upgrading)). Only root can read it.
 
 Port 443 is served with a self-signed certificate made when the image is built.
 
@@ -71,6 +73,7 @@ The mPCC is configured through environment variables: mprov-compose passes in it
 | `MPROV_SUPERUSER_PASSWORD` | The `admin` password to set on first start, instead of a random one. Only read while there's no superuser yet. |
 | `JOBSERVER_FAIL_JOBS_AFTER_MINUTES` | Fail a job server's running jobs after it hasn't been heard from for this many minutes. `0` turns this off. Default: `10`. |
 | `JOBSERVER_DELETE_AFTER_DAYS` | Delete a job server after this many days without a heartbeat. Default: `0`, never. |
+| `MPROV_BACKUP_DIR` | Where `mprov_backup` writes by default. Default: `/var/lib/mprov/backups`, a volume in the image. |
 | `SESSION_EXPIRE_SECONDS` | Log admin users out after this many idle seconds. Default: `1800`. |
 | `DATA_UPLOAD_MAX_NUMBER_FIELDS` | The most fields an admin form may post. A System Group posts one per member system, so raise this if saving a very large group fails with `TooManyFieldsSent`. Default: `10000`. |
 | `TRUSTED_PROXIES` | Reverse proxies whose `X-Forwarded-For` header is trusted for node requests. Unset: none are trusted. |
@@ -115,10 +118,10 @@ Before you start:
    - On 0.6.0 or newer, use `mprov_backup`:
      ```
      docker compose exec mpcc bash -c 'cd /var/www/mprov_control_center && . bin/activate && \
-       python manage.py mprov_backup --output-dir /root/mprov-backups'
-     docker compose cp mpcc:/root/mprov-backups ./mprov-backups
+       python manage.py mprov_backup --output-dir /var/lib/mprov/backups'
+     docker compose cp mpcc:/var/lib/mprov/backups ./mprov-backups
      ```
-     The default output directory is inside the container and is lost on upgrade, so always copy the backup out. Don't write backups under `media/`, which the web server serves ([#457](https://github.com/mprov-ng/mprov_control_center/issues/457)). `mprov_restore` loads a backup back in.
+     From 0.6.3, `/var/lib/mprov/backups` is the default and its own volume (`mpcc-backups`), so backups survive the upgrade. Before 0.6.3 it's inside the container and is lost on upgrade, so always copy the backup out. `mprov_backup` refuses to write under `media/` or `static/`, which the web server serves ([#457](https://github.com/mprov-ng/mprov_control_center/issues/457)). `mprov_restore` loads a backup back in.
    - Before 0.6.0 there's no `mprov_backup`. Dump the database from the `db` container instead:
      ```
      docker compose exec -T db sh -c 'mariadb-dump -u root -p"$MYSQL_ROOT_PASSWORD" \

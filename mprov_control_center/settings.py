@@ -310,6 +310,10 @@ STATICFILES_DIRS = [
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_URL = "media/"
 
+# Where mprov_backup writes by default: its own volume in the image, outside
+# anything Apache serves (#457).
+MPROV_BACKUP_DIR = os.environ.get('MPROV_BACKUP_DIR', '/var/lib/mprov/backups')
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",

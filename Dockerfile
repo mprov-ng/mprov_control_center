@@ -90,6 +90,11 @@ RUN wget -q -O static/busybox https://busybox.net/downloads/binaries/1.35.0-x86_
     chown apache media/ -R && \
     chmod u+sw media/ -R
 
+# mprov_backup's default output directory: root-only, and a volume so
+# backups survive the container being recreated, as an upgrade does (#457).
+RUN install -d -m 700 /var/lib/mprov/backups
+VOLUME /var/lib/mprov/backups
+
 # copy in the mprov_control_center apache config    
 COPY static/configs/mprov_control_center.conf /etc/httpd/conf.d/mprov_control_center.conf
 
