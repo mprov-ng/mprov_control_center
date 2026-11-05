@@ -88,7 +88,7 @@ On its first start against an empty database, the container's entrypoint (`insta
 - creates the `admin` superuser;
 - creates the mPCC's own System entry from `MPROV_MPCC_HOSTNAME` and `MPROV_MPCC_IPs`;
 - creates an API key for the job server and writes it to `/etc/mprov/apikey`. mprov-compose's job server shares the `/etc/mprov` volume and uses this key, so it registers with no further setup;
-- loads the default scripts from [mprov_scripts](https://github.com/mprov-ng/mprov_scripts) and the default data.
+- loads the default scripts and the default data. The default scripts come from [mprov_scripts](https://github.com/mprov-ng/mprov_scripts) and are built into the image, from the commit that [`install_scripts/mprov_scripts.ref`](install_scripts/mprov_scripts.ref) pins, so every install of a release gets the same scripts and first start needs no network ([#460](https://github.com/mprov-ng/mprov_control_center/issues/460)). To ship newer default scripts, change that commit in a PR. Sites that are already installed keep their own scripts.
 
 ## The admin password
 Unless `MPROV_SUPERUSER_PASSWORD` was set, the `admin` password is random. It's printed once to the container log and kept, readable only by root, in `/etc/mprov/superuser_password`:
