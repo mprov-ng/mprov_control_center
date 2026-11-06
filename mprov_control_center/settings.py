@@ -316,8 +316,6 @@ TIME_ZONE = env_time_zone(os.environ)
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 
