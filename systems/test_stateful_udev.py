@@ -32,12 +32,14 @@ class StatefulUdevScriptTests(SimpleTestCase):
     os.chmod(path, 0o755)
     return path
 
-  def run_script(self, udevd=0, installer=0, has_udevd=True):
+  def run_script(self, udevd=0, installer=0, has_udevd=True, bundle=False):
     udevd_path = self.fake("systemd-udevd", udevd) if has_udevd else os.path.join(self.bin, "no-such-udevd")
+    bundle_path = self.fake("bundle-python3", installer) if bundle else os.path.join(self.bin, "no-such-bundle-python")
     text = SCRIPT.read_text() \
       .replace("/usr/lib/systemd/systemd-udevd", udevd_path) \
       .replace("/run/udev/rules.d", self.rules) \
-      .replace("/usr/bin/python3 /tmp/mprov_stateful.py", self.fake("python3", installer))
+      .replace("/usr/libexec/mprov/bin/python3", bundle_path) \
+      .replace("/usr/bin/python3", self.fake("python3", installer))
     result = subprocess.run(["bash", "-c", text], capture_output=True, text=True,
                             env=dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}"))
     calls = Path(self.log).read_text().splitlines() if os.path.exists(self.log) else []
@@ -50,7 +52,7 @@ class StatefulUdevScriptTests(SimpleTestCase):
       "systemd-udevd --daemon",
       "udevadm trigger --action=add --subsystem-match=block",
       "udevadm settle --timeout=30",
-      "python3 ",
+      "python3 /tmp/mprov_stateful.py",
       "udevadm control --exit",
     ])
 
@@ -62,7 +64,7 @@ class StatefulUdevScriptTests(SimpleTestCase):
   def test_udev_is_stopped_when_the_installer_fails(self):
     result, calls = self.run_script(installer=1)
     self.assertEqual(result.returncode, 1)
-    self.assertEqual(calls[-2:], ["python3 ", "udevadm control --exit"])
+    self.assertEqual(calls[-2:], ["python3 /tmp/mprov_stateful.py", "udevadm control --exit"])
 
   def test_udevd_is_killed_if_it_wont_exit(self):
     self.fake("udevadm", 1)
@@ -80,8 +82,27 @@ class StatefulUdevScriptTests(SimpleTestCase):
         self.assertIn("disk layouts must use kernel disk names", result.stdout)
         self.assertNotIn("udevadm trigger --action=add --subsystem-match=block", calls)
         self.assertNotIn("udevadm control --exit", calls)
-        self.assertIn("python3 ", calls)
+        self.assertIn("python3 /tmp/mprov_stateful.py", calls)
 
+
+  # #476: images built by mprov_jobserver 0.7.0 run the installer on the
+  # job server's bundled python; older images on the system python3.
+  def test_the_installer_runs_on_the_bundled_python_when_the_image_has_it(self):
+    result, calls = self.run_script(bundle=True)
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertIn("bundle-python3 /tmp/mprov_stateful.py", calls)
+    self.assertNotIn("python3 /tmp/mprov_stateful.py", calls)
+
+  def test_the_installer_falls_back_to_the_system_python(self):
+    result, calls = self.run_script(bundle=False)
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertIn("python3 /tmp/mprov_stateful.py", calls)
+    self.assertFalse([c for c in calls if c.startswith("bundle-python3")])
+
+  def test_a_failing_bundled_installer_fails_the_install(self):
+    result, calls = self.run_script(bundle=True, installer=1)
+    self.assertEqual(result.returncode, 1)
+    self.assertEqual(calls[-2:], ["bundle-python3 /tmp/mprov_stateful.py", "udevadm control --exit"])
 
 class StatefulUdevInstallerTests(StatefulInstallerTestCase):
   """ Issue #410: static/mprov_stateful.py with a /dev/disk/ link as the boot disk. """
