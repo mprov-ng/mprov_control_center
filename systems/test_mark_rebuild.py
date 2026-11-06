@@ -5,7 +5,7 @@ from systems.models import SystemImage
 
 
 class MarkRebuildActionTests(TestCase):
-  """ The "Mark images as needing rebuild" admin action handles every selected image and saves the new version. """
+  """ The "Rebuild selected images now" admin action handles every selected image and saves the new version. """
 
   def test_every_image_gets_a_job_and_a_new_version(self):
     from jobqueue.models import Job, JobModule, JobServer, JobStatus, filter_params

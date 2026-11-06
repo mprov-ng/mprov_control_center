@@ -520,7 +520,9 @@ class SystemLocationAdmin(admin.ModelAdmin):
    def get_list_display(self, request):
         return [field.name for field in self.model._meta.concrete_fields]
 
-@admin.action(description="Mark images as needing rebuild")
+# Queues the rebuild straight away, as the "Rebuild now" button on an image
+# does (#176).
+@admin.action(description="Rebuild selected images now")
 def mark_rebuild(modeladmin, request, queryset):
   queryset.update(needs_rebuild=True)
   try:
@@ -576,6 +578,28 @@ class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   )
   def get_queryset(self, request):
     return super().get_queryset(request).select_related('osdistro')
+
+  # "Rebuild now" on an image's change page (#176; the button is in
+  # templates/admin/systems/systemimage/submit_line.html).  It saves the form
+  # with needs_rebuild set, so UpdateSystemImages (systems/models.py) queues
+  # the image-update job, bumps the version and clears the job servers, the
+  # same as ticking "Rebuild Image?" and saving: one job, however it's asked.
+  def save_model(self, request, obj, form, change):
+    if change and "_rebuild_now" in request.POST:
+      obj.needs_rebuild = True
+    super().save_model(request, obj, form, change)
+
+  def response_change(self, request, obj):
+    if "_rebuild_now" in request.POST:
+      # the signal clears needs_rebuild once it has queued the job; it stays
+      # set if there's no image-update job module to queue one with.
+      if obj.needs_rebuild:
+        self.message_user(request, f"{obj.name} is marked for rebuild, but no rebuild was queued: there's no image-update job module.", messages.WARNING)
+      else:
+        self.message_user(request, f"Queued a rebuild of {obj.name} (version {obj.version}).", messages.SUCCESS)
+      opts = self.model._meta
+      return HttpResponseRedirect(reverse(f"admin:{opts.app_label}_{opts.model_name}_change", args=[obj.pk]))
+    return super().response_change(request, obj)
 
   def registered_jobservers(self, obj):
     return ", ".join([jm.name for jm in obj.jobservers.all()])
