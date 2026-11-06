@@ -12,12 +12,25 @@ from .serializers import (
     SystemImageSerializer,
 )
 from rest_framework.response import Response
+import logging
+from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import ValidationError
 
 from common.views import MProvView
 from systems.views_noauth import get_client_ip
 from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, NADSSystem
+
+# a node's provisioning milestones, for a time-to-provision metric (#433), in
+# the shape the job server logs "requested image" in (mprov_jobserver#285).
+provisioning_log = logging.getLogger('mprov.provisioning')
+
+
+def as_bool(value):
+    """ value as a bool if it's one or "true"/"false" (any case), else None. """
+    if isinstance(value, str) and value.lower() in ("true", "false"):
+        return value.lower() == "true"
+    return value if isinstance(value, bool) else None
 from networks.models import SwitchPort, Network, Switch
 from rest_framework import generics
 from jobqueue.models import Job, JobModule, JobStatus, requeue_job
@@ -224,9 +237,11 @@ class SystemAPIView(MProvView):
 - ?detail: GET (no primary key) returns systems with nested details.
 - ?self: GET returns the system that owns the NIC with the requesting IP address, with
     nested details, or 404 if unknown.  POST with ?self and a body of {"netboot": false}
-    clears the requesting system's provision flag, so it boots locally; {"netboot": true}
-    sets it and makes the requesting NIC the system's bootable NIC.  Any other key returns
-    403 and a non-boolean value 400, without changing anything.
+    clears the requesting system's provision flag, so it boots locally, and logs that the
+    system installed its image; {"netboot": true} sets it and makes the requesting NIC the
+    system's bootable NIC.  {"booted": true} reports that the system has booted: it's
+    logged and saved as the system's last_booted time.  The two keys can be sent together.
+    Any other key returns 403, a missing or invalid value 400, without changing anything.
 - ?powerstate: GET with a primary key redirects to a power_on, power_off, or power_unknown
     status image.
 
@@ -301,20 +316,36 @@ Format returned:
             nic = nicQueryset[0]
             system = nic.system
             for arg in request.data:
-                if arg != "netboot":
+                if arg not in ("netboot", "booted"):
                     # Unsupported, return 403 forbidden
                     return Response(None, status=403)
-            netboot = request.data.get("netboot")
-            if isinstance(netboot, str) and netboot.lower() in ("true", "false"):
-                netboot = netboot.lower() == "true"
-            if not isinstance(netboot, bool):
+            # check everything before changing anything
+            netboot = booted = None
+            if "netboot" in request.data:
+                netboot = as_bool(request.data["netboot"])
+                if netboot is None:
+                    return Response({"netboot": "Must be true or false."}, status=400)
+            if "booted" in request.data:
+                booted = as_bool(request.data["booted"])
+                if booted is not True:
+                    return Response({"booted": "Must be true."}, status=400)
+            if netboot is None and booted is None:
                 return Response({"netboot": "Must be true or false."}, status=400)
-            if netboot:
-                # boot from the NIC that asked; saving it clears bootable on the others.
-                nic.bootable = True
-                nic.save()
-            system.provision = netboot
-            system.save()
+            image = system.systemimage.slug if system.systemimage else "(no image)"
+            if netboot is not None:
+                if netboot:
+                    # boot from the NIC that asked; saving it clears bootable on the others.
+                    nic.bootable = True
+                    nic.save()
+                system.provision = netboot
+                system.save()
+                if not netboot:
+                    provisioning_log.info(f"provisioning: {system.hostname} ({ip}) installed image {image}")
+            if booted:
+                # update(), not save(): a boot report shouldn't fire the save
+                # signals, which queue a genders job.
+                System.objects.filter(pk=system.pk).update(last_booted=timezone.now())
+                provisioning_log.info(f"provisioning: {system.hostname} ({ip}) booted image {image}")
             return Response({"provision": system.provision, "bootable_nic": nic.name}, status=200)
 
         self.serializer_class = SystemSerializer

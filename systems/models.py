@@ -106,6 +106,7 @@ class System(models.Model):
   stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system install its image to disk?")
   location = models.ForeignKey('SystemLocation', blank=True, null=True, on_delete=models.SET_NULL,  )
   provision = models.BooleanField(default=True, verbose_name="Provision?", help_text="Should this system be provisioned (installed or netbooted) on its next PXE boot? The stateful installer clears this once it has installed.")
+  last_booted = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Last Booted", help_text="When the system last reported that it had booted (#433).")
   class Meta:
     ordering = ['hostname']
     verbose_name = 'System'
