@@ -41,11 +41,4 @@ Models (`scripts/models.py`): `Script` (slug PK, `version` BigIntegerField, `scr
 - Changes to `/jobs/` filtering semantics affect every jobserver in the field; keep view docstrings (the rendered API docs) in sync.
 - Touching `Script.save()`/`delete()`: verify file-on-disk round-trip (admin edit repopulation and post_delete cleanup) — this logic is easy to break silently because the DB column is intentionally empty after save.
 - Key sources: `jobqueue/{models,views,signals,admin,urls}.py`, `scripts/{models,admin,views}.py`, `scripts/test_version_widget.py`.
-ws couldn't step; `scripts/test_version_widget.py` asserts `min == 1` on every admin form.
 
-## Change guidance
-
-- New job types: create a `JobModule` and enqueue via `queue_job()` from signals/views — don't invent side channels; jobservers only understand this queue.
-- Changes to `/jobs/` filtering semantics affect every jobserver in the field; keep view docstrings (the rendered API docs) in sync.
-- Touching `Script.save()`/`delete()`: verify file-on-disk round-trip (admin edit repopulation and post_delete cleanup) — this logic is easy to break silently because the DB column is intentionally empty after save.
-- Key sources: `jobqueue/{models,views,signals,admin,urls}.py`, `scripts/{models,admin,views}.py`, `scripts/test_version_widget.py`.

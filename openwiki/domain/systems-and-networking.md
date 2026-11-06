@@ -59,4 +59,4 @@ Key models (`networks/models.py`): `NetworkType`; `Network` (slug, VLAN, subnet/
 - Admin form changes on the NIC inline: keep `systems/test_nic_inline.py` green (widget attributes are asserted exactly).
 - Detail-serializer or security changes around BMC passwords: `systems/test_detail_serializer.py` asserts the flat list never exposes the BMC password.
 - Key sources: `systems/{models,admin,views,views_noauth,serializers}.py`, `networks/{models,admin,api_views,utils}.py`.
-api_views,utils}.py`.
+
