@@ -71,6 +71,20 @@ load_initial_mods() {
   done
 }
 
+# The python to run mPCC's node scripts with in the image rooted at $1, as a
+# path inside the image: the job server's bundled python, which has the
+# scripts' modules, in images built by mprov_jobserver 0.7.0 and later
+# (mprov_jobserver#309), or else the image's own /usr/bin/python3 (#476).
+# A symlink counts even though -x can't follow an absolute one from out here.
+image_python() {
+  if [ -x "$1/usr/libexec/mprov/bin/python3" ] || [ -L "$1/usr/libexec/mprov/bin/python3" ]
+  then
+    echo /usr/libexec/mprov/bin/python3
+  else
+    echo /usr/bin/python3
+  fi
+}
+
 
 # grab some of our variables from the kernel cmdline.
 MPROV_TMPFS_SIZE=$(get_kcmdline_opt mprov_tmpfs_size)
@@ -273,7 +287,7 @@ then
   mprovURL=$(dirname "$mprovURL")
   wget -q -O /image/tmp/mprov_genNetworkInterfaces.py "${mprovURL}/static/genNetworkInterfaces.py"
   /bin/chmod 755 /image/tmp/mprov_genNetworkInterfaces.py
-  chroot /image/ /usr/bin/python3 /tmp/mprov_genNetworkInterfaces.py
+  chroot /image/ "$(image_python /image)" /tmp/mprov_genNetworkInterfaces.py
 fi
 
 

@@ -43,7 +43,13 @@ else
   echo "Warning: the image has no $UDEVD; disk layouts must use kernel disk names (e.g. /dev/sda)."
 fi
 
-if ! /usr/bin/python3 /tmp/mprov_stateful.py
+# The job server's bundled python has the installer's modules (yaml,
+# parted, requests, sh) in images built by mprov_jobserver 0.7.0 and later
+# (mprov_jobserver#309); images built by 0.6.x have them in the system
+# python3 instead (#476).  This runs in the image's chroot.
+python=/usr/libexec/mprov/bin/python3
+[ -x "$python" ] || python=/usr/bin/python3
+if ! "$python" /tmp/mprov_stateful.py
 then
   exit 1
 fi
