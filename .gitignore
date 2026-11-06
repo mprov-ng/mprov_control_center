@@ -169,3 +169,6 @@ static/*.cpio
 static/*linux*
 static/*.iso
 db
+
+# Local per-PR git worktrees
+.worktree/
