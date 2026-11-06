@@ -318,6 +318,29 @@ USE_I18N = True
 
 USE_TZ = True
 
+# The mPCC's own log lines (loggers under "mprov"), to stderr, which mod_wsgi
+# sends to Apache's error log and so to the container log, next to the access
+# log.  Without this only warnings would show: Python's default.  INFO is for
+# the provisioning lines (#433), "[I] provisioning: c01 (10.0.0.21) booted
+# image compute", in the same shape as the job server's "requested image".
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'mprov': {'format': '[%(levelname).1s] %(message)s'},
+    },
+    'handlers': {
+        'mprov_stderr': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stderr',
+            'formatter': 'mprov',
+        },
+    },
+    'loggers': {
+        'mprov': {'handlers': ['mprov_stderr'], 'level': 'INFO', 'propagate': False},
+    },
+}
+
 
 # Static files (CSS, JavaScript, Images)
 STATIC_ROOT = os.path.join(BASE_DIR,"static")

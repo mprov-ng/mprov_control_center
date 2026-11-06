@@ -146,7 +146,7 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
 
   inlines = [ NetworkInterfaceInline, BMCInline]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
-  readonly_fields = ['timestamp', 'updated', 'created_by']
+  readonly_fields = ['timestamp', 'updated', 'created_by', 'last_booted']
   list_display_links = ['id', 'hostname']
   list_per_page = 25
   search_fields = ['hostname']
@@ -158,7 +158,7 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
         'created_by',
         'timestamp',
         'updated',
-        
+        'last_booted',
       )
     }),
     ('System Parameters', {
