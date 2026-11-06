@@ -14,7 +14,7 @@ then
               cd /var/www/mprov_control_center
               # git clone https://github.com/mprov-ng/mprov_control_center.git
               # chmod 755 install_scripts/init_mpcc.sh
-              python3 -m venv .
+              python3.12 -m venv .
               . bin/activate
               pip install --upgrade pip
               pip install -r requirements.txt
@@ -247,12 +247,14 @@ chmod u+w db/ -R
 # start apache in a new process group, filters out signals to the
 # container, e.g. SIGWINCH.  The -d flag is still accepted
 # (mprov-compose passes it) but is ignored; this is the only mode.
-setsid --wait /usr/sbin/apachectl -D FOREGROUND &
+# httpd itself, not apachectl: on EL9 apachectl only wraps systemctl and
+# refuses arguments (#197).
+setsid --wait /usr/sbin/httpd -D FOREGROUND &
 child_pid=$!
 # docker stop sends SIGTERM, which bash as PID 1 ignores without a trap, so
-# the container was killed after the stop timeout (#290).  apachectl runs
-# httpd as its child, so signal the whole process group setsid made, not
-# just apachectl.  SIGTERM stops httpd now; a graceful stop (SIGWINCH) would
+# the container was killed after the stop timeout (#290).  Signal the
+# whole process group setsid made, so httpd and every worker it forked get
+# it.  SIGTERM stops httpd now; a graceful stop (SIGWINCH) would
 # wait on open connections past docker's timeout.
 trap 'kill -TERM -- -$child_pid 2>/dev/null' TERM INT
 wait $child_pid

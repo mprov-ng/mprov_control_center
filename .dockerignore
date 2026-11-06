@@ -35,3 +35,6 @@ db
 .dev.init
 backups/*
 !backups/README.md
+
+# Local per-PR git worktrees (see .gitignore): other checkouts of this repo.
+.worktree/

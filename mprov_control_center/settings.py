@@ -4,10 +4,7 @@ from django_auth_ldap.config import LDAPSearch, PosixGroupType
 import socket
 import sys
 import datetime
-try:
-    import zoneinfo
-except ImportError:  # Python 3.8: Django 4.2 depends on the backport
-    from backports import zoneinfo
+import zoneinfo
 
 
 def env_time_zone(environ):
