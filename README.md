@@ -13,7 +13,7 @@ The mPCC performs a wide range of jobs, permissions, and maintenance:
 - An endpoint for serving files to nodes that require PXE booting 
 - Running scripts on nodes after boot
 
-The mPCC is a Django 4.2 application. It runs under Apache with `mod_wsgi` in a Rocky Linux 8 container image, `ghcr.io/mprov-ng/mprov-control-center`, and the container image is the only supported way to install it.
+The mPCC is a Django 5.2 application on Python 3.12. It runs under Apache with `mod_wsgi` in a Rocky Linux 9 container image, `ghcr.io/mprov-ng/mprov-control-center`, and the container image is the only supported way to install it.
 
 # Installation
 

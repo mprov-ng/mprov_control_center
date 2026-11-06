@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect
 from django.urls import path, reverse
 from django.http import QueryDict
 from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
 from systems.models import NetworkInterface, SystemBMC
 from .models import Network, NetworkType, Switch, SwitchPort
 from .utils import get_associated_objects, calculate_new_ips
@@ -44,7 +45,7 @@ class NetworkAdmin(admin.ModelAdmin):
       # each row's link opens its system on the tab for that NIC or BMC.
       rows = [(nic.system, 0, nic.name, nic.mac, nic.ipaddress, nic.switch_port, 'Yes' if nic.bootable else 'No',
                '#network-interfaces-tab') for nic in nics]
-      rows += [(bmc.system, 1, format_html('<span class="badge bg-info">BMC</span>'), bmc.mac, bmc.ipaddress,
+      rows += [(bmc.system, 1, mark_safe('<span class="badge bg-info">BMC</span>'), bmc.mac, bmc.ipaddress,
                 bmc.switch_port, 'N/A', '#system-bmcs-tab') for bmc in bmcs]
       if not rows:
           return 'No systems on this network.'
@@ -62,7 +63,7 @@ class NetworkAdmin(admin.ModelAdmin):
            for system, _, iface, mac, ip, port, bootable, tab in rows))
       header = lambda key, label, active: format_html(
           '<a href="?summary_sort={}#network-summary-tab">{}</a>{}', key, label,
-          format_html(' <i class="fas fa-sort-down"></i>') if active else '')
+          mark_safe(' <i class="fas fa-sort-down"></i>') if active else '')
       return format_html('<table class="table table-sm table-striped"><thead><tr><th>{}</th><th>Interface</th>'
                          '<th>MAC Address</th><th>{}</th><th>Switch / Port</th><th>Bootable</th></tr></thead>'
                          '<tbody>{}</tbody></table>',

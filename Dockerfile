@@ -1,17 +1,24 @@
-# Start with Rocky Linux 8.8 as the base image
+# Rocky Linux 9 with Python 3.12 from AppStream (#197).  Not pinned to a
+# 9.x minor release: dnf update brings it to the latest 9.x anyway.
 # Use the full URL to avoid confusion with podman builds.
-FROM docker.io/rockylinux/rockylinux:8.8 
+FROM docker.io/rockylinux/rockylinux:9
 
 # Update the system and install the dependencies in one layer, so the repo
 # metadata is downloaded once and a slow mirror can only hit one step.
 # fastestmirror picks a mirror by latency instead of taking the first one.
 # The repos are enabled in the same order as before (base packages, then
-# EPEL and Development Tools, then PowerTools for parted-devel), so the same
-# packages come from the same repos.
+# EPEL and Development Tools, then CRB, EL9's name for PowerTools, for
+# parted-devel), so the same packages come from the same repos.
+# The system python3 stays 3.9 (dnf needs it); the venv and mod_wsgi both
+# use python3.12, so they must stay the same version.
+# No curl package: the base image's curl-minimal conflicts with it, and
+# already provides /usr/bin/curl for http and https.
+# glibc-langpack-en: the en_US.UTF-8 locale mod_wsgi's daemon uses
+# (static/configs/mprov_control_center.conf); EL9 packages it separately.
 RUN echo "fastestmirror=True" >> /etc/dnf/dnf.conf && \
     dnf update -y && \
     dnf install -y \
-        curl \
+        glibc-langpack-en \
         wget \
         vim \
         git \
@@ -19,8 +26,11 @@ RUN echo "fastestmirror=True" >> /etc/dnf/dnf.conf && \
         unzip \
         gcc \
         make \
-        python38 \
-        python38-pip \
+        pkgconf-pkg-config \
+        python3.12 \
+        python3.12-pip \
+        python3.12-devel \
+        python3.12-mod_wsgi \
         openssh-server \
         openssl \
         ipmitool \
@@ -30,19 +40,14 @@ RUN echo "fastestmirror=True" >> /etc/dnf/dnf.conf && \
         dos2unix \
         httpd \
         mod_ssl \
-        python38-devel \
         mariadb \
         mariadb-common \
-        mariadb-devel \
-        python38-mod_wsgi.x86_64 && \
+        mariadb-connector-c-devel && \
     dnf install -y epel-release && \
     dnf groupinstall -y "Development Tools" && \
-    dnf config-manager --enable powertools && \
+    dnf config-manager --enable crb && \
     dnf install -y parted-devel && \
     dnf clean all
-
-# Configure Python 3.8 if necessary
-RUN alternatives --set python3 /usr/bin/python3.8 || true
 
 # gen ssl
 RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/localhost.key -x509 -days 365 -out /etc/pki/tls/certs/localhost.crt -nodes -subj "/C=US/ST=Maryland/L=Baltimore/O=Johns Hopkins/OU=ARCH/CN=localhost"
@@ -56,7 +61,7 @@ COPY ./ /var/www/mprov_control_center
 
 RUN cd mprov_control_center && \
     chmod 755 install_scripts/init_mpcc.sh && \
-    python3 -m venv . && \
+    python3.12 -m venv . && \
     . bin/activate && \
 	pip install --upgrade pip && \
     pip3 install -r requirements.txt && \

@@ -58,9 +58,11 @@ class DiskLayoutAdmin(WarnBootDisksMixin, AdminWizardModel):
     form = super().get_form(request, obj, change, **kwargs)
     if self.wizard_step(request) == 0 and obj is None:
       # we are displaying the type form
-      # Software RAID is done in a separate list.
-      if ('mdrd', 'Software RAID') in form.base_fields['dtype'].choices:
-        form.base_fields['dtype'].choices.remove(('mdrd', 'Software RAID'))
+      # Software RAID is done in a separate list.  Assign new choices rather
+      # than editing the list in place: since Django 5.0 the widget keeps
+      # its own copy, so an in-place remove no longer reaches the page.
+      field = form.base_fields['dtype']
+      field.choices = [c for c in field.choices if c[0] != DiskLayout.DiskTypes.MDRD]
     return form
 
 
