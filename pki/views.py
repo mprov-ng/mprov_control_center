@@ -36,6 +36,7 @@ log = logging.getLogger("mprov.enroll")
 LIFETIMES = {
     AgentCredential.JOBSERVER: datetime.timedelta(days=90),
     AgentCredential.SYSTEM: datetime.timedelta(days=30),
+    AgentCredential.BUILD: datetime.timedelta(hours=2),
 }
 # how long before expiry an agent may renew
 RENEW_WINDOW = {
@@ -163,8 +164,8 @@ class RenewView(EnrollBase):
         if self.refusal:
             return self.refusal
         credential = request.auth if isinstance(request.auth, AgentCredential) else None
-        if credential is None:
-            return Response({"detail": "Renewal needs the agent's current certificate."},
+        if credential is None or credential.kind not in RENEW_WINDOW:
+            return Response({"detail": "Renewal needs a job server's or system's current certificate."},
                             status=status.HTTP_403_FORBIDDEN)
         data = request.data if isinstance(request.data, dict) else {}
         if not isinstance(data.get("csr"), str):
@@ -186,3 +187,29 @@ def ca_certificate(request):
     if pem is None:
         return HttpResponse("No CA yet.\n", status=404, content_type="text/plain")
     return HttpResponse(pem, content_type="application/x-pem-file")
+
+
+class BuildCredentialView(EnrollBase):
+    """ POST /enroll/build/ {csr, image}: a job server, with its own
+    certificate, gets a 2-hour credential for the script runner inside an
+    image it's building.  It reads only that image (pki.rules), and the job
+    server deletes it before packing the image. """
+
+    def post(self, request):
+        if self.refusal:
+            return self.refusal
+        from systems.models import SystemImage
+        credential = request.auth if isinstance(request.auth, AgentCredential) else None
+        if credential is None or credential.kind != AgentCredential.JOBSERVER:
+            return Response({"detail": "Needs a job server's certificate."}, status=status.HTTP_403_FORBIDDEN)
+        data = request.data if isinstance(request.data, dict) else {}
+        image = SystemImage.objects.filter(slug=data.get("image")).first() if isinstance(data.get("image"), str) else None
+        if image is None:
+            return Response({"image": "No such image."}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(data.get("csr"), str):
+            return Response({"csr": "Must be a PEM certificate signing request."}, status=status.HTTP_400_BAD_REQUEST)
+        new, pem, error = self.sign(data["csr"], LIFETIMES[AgentCredential.BUILD], image=image)
+        if error:
+            return error
+        log.info(f"{credential.user.username} got a build credential for image {image.slug}")
+        return self.issued(new, pem)

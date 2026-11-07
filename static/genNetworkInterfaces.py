@@ -9,6 +9,13 @@ import time
 import requests
 from ipaddress import IPv4Network
 
+# this boot's own credential (#381); mprov_boot_init.sh downloads it next to
+# this script.  Without it (an older boot init), the shared API key is used.
+try:
+  import mprov_enroll
+except ImportError:
+  mprov_enroll = None
+
 
 class mProvNetworkScriptGenerator():
   config_data = {}
@@ -80,6 +87,9 @@ class mProvNetworkScriptGenerator():
       'Authorization': 'Api-Key ' + self.apikey,
       'Content-Type': 'application/json'
       })
+    # enroll this boot and use its own certificate, over HTTPS (#381).
+    if mprov_enroll is not None and mprov_enroll.enroll(self.session, self.mprovURL):
+      self.mprovURL = mprov_enroll.use(self.session, self.mprovURL)
 
     # connect to the mPCC
     try:

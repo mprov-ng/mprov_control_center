@@ -207,7 +207,26 @@ JOBSERVER_RULES = [
     # the rhel image/repo modules register their OS type
     Rule(("POST",), r"/ostypes/", query=set(), fields={"slug", "name"}),
     Rule(("POST",), r"/enroll/renew/", query=set(), fields={"csr"}),
+    # a short-lived credential for the script runner in an image it builds
+    Rule(("POST",), r"/enroll/build/", query=set(), fields={"csr", "image"}),
 ]
+
+
+# ---- image builds --------------------------------------------------------
+
+def its_image(image, request, match):
+    return match.group("pk") == image.slug
+
+
+BUILD_RULES = [
+    Rule(("GET",), r"/", query=set()),
+    # the script runner inside the image (script_runner.py -i <slug>)
+    Rule(("GET",), rf"/systemimages/{PK}/", query={"detail"}, check=its_image),
+]
+
+
+def build_allows(image, request):
+    return any(rule.allows(image, request) for rule in BUILD_RULES)
 
 
 def system_allows(system, request):

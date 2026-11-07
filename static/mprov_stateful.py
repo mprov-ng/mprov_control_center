@@ -8,6 +8,13 @@ import requests
 import sh
 import subprocess
 
+# the node's own credential (#381), which genNetworkInterfaces.py enrolled
+# for this boot; without it (an older boot init), the shared API key is used.
+try:
+  import mprov_enroll
+except ImportError:
+  mprov_enroll = None
+
 # This script will:
 # - grab the disklayout from the mPCC,
 # - build the partition table(s)
@@ -100,6 +107,11 @@ class mProvStatefulInstaller():
       'Authorization': 'Api-Key ' + self.apikey,
       'Content-Type': 'application/json'
       })
+    # genNetworkInterfaces.py enrolled this boot: use its certificate, over
+    # HTTPS.  copyRoot() copies /etc/mprov/tls to the disk with the rest (#381).
+    if mprov_enroll is not None and mprov_enroll.have():
+      self.mprovURL = mprov_enroll.use(self.session, self.mprovURL)
+      print("Using this node's own credential.")
 
     # connect to the mPCC
     try:

@@ -60,6 +60,8 @@ class MProvPermission(BasePermission):
         if credential is not None:
             if credential.kind == AgentCredential.SYSTEM:
                 allowed = rules.system_allows(credential.system, request)
+            elif credential.kind == AgentCredential.BUILD:
+                allowed = rules.build_allows(credential.image, request)
             else:
                 allowed = rules.jobserver_allows(credential.jobserver, request)
             if not allowed:
