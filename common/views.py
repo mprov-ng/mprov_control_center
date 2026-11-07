@@ -1,6 +1,6 @@
 from django.http import HttpResponse, HttpResponseNotAllowed
 from rest_framework.response import Response
-from common.permissions import HasAPIKeyOrIsAuthenticated
+from common.permissions import MProvPermission
 from rest_framework import mixins, generics
 from django.db.models import (
     AutoField, BigAutoField, BigIntegerField, BooleanField, CharField,
@@ -73,7 +73,7 @@ key instead of being ignored, so a typo can't return every row (#390).
     #filter_backends = [DjangoFilterBackend]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
-    permission_classes = [HasAPIKeyOrIsAuthenticated]
+    permission_classes = [MProvPermission]
 
     model_to_json_type_map = {
         AutoField: 'number',
@@ -230,8 +230,8 @@ key instead of being ignored, so a typo can't return every row (#390).
         return HttpResponseNotAllowed(["GET","POST","PATCH","DELETE"])
 
     def patch(self, request, *args, **kwargs):
-        if(type(request.user) is AnonymousUser ):
-            request.user = User.objects.get(username='admin')
+        # no swap to admin for an anonymous caller (#331): saves are
+        # attributed by common.request.acting_user.
         return self.partial_update(request, *args, **kwargs)
 
     def getJSONDataStructure(self, model):

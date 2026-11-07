@@ -4,7 +4,7 @@ from common.views import MProvView
 from jobqueue.models import JobModule, JobServer, JobServerAddress, Job, filter_params, sweep_stale_jobservers, PENDING, RUNNING
 from jobqueue.signals import record_status_change
 from systems.views_noauth import get_client_ip
-from common.permissions import HasAPIKeyOrIsAuthenticated
+from common.permissions import MProvPermission
 from jobqueue.serializers import JobAPISerializer, JobDetailSerializer, JobModuleAPISerializer, JobServerAPISerializer
 from rest_framework import status, generics
 from rest_framework.response import Response
@@ -211,7 +211,7 @@ Pending jobs never have a job server: setting a job back to pending clears it.
 Job servers use this when the POST /jobservers/ reply lists the "job-claim"
 feature.
     '''
-    permission_classes = [HasAPIKeyOrIsAuthenticated]
+    permission_classes = [MProvPermission]
     serializer_class = JobAPISerializer
     queryset = Job.objects.all()
 
@@ -623,7 +623,7 @@ Body:
 Job servers use this when the POST /jobservers/ reply lists the
 "jobserver-address-heartbeat" feature.
     '''
-    permission_classes = [HasAPIKeyOrIsAuthenticated]
+    permission_classes = [MProvPermission]
     queryset = JobServerAddress.objects.all()
 
     def post(self, request, pk, format=None):

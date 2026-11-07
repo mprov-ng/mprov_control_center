@@ -296,11 +296,13 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 REST_FRAMEWORK = {
-    # a login OR the API key, as on MProvView (#272).
+    # agents' certificates, a login, or the shared API key per
+    # MPROV_SHARED_KEY_MODE (#272, #381).
     'DEFAULT_PERMISSION_CLASSES': (
-        'common.permissions.HasAPIKeyOrIsAuthenticated',
+        'common.permissions.MProvPermission',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'pki.authentication.ClientCertAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
@@ -364,6 +366,11 @@ MPROV_BACKUP_DIR = os.environ.get('MPROV_BACKUP_DIR', '/var/lib/mprov/backups')
 # `manage.py mprov_tls`.  A volume of its own, so they survive the container
 # being recreated, and not /etc/mprov, which the job server container shares.
 MPROV_TLS_DIR = os.environ.get('MPROV_TLS_DIR', '/var/lib/mprov/tls')
+
+# Where the shared API key is still accepted (#381, common/permissions.py):
+# "all" (as before 0.7), "nodes" (only for what a node does to itself, for
+# images not yet rebuilt) or "off".
+MPROV_SHARED_KEY_MODE = os.environ.get('MPROV_SHARED_KEY_MODE', 'all').strip().lower()
 
 CACHES = {
     "default": {

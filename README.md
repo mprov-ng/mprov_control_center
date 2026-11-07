@@ -60,13 +60,15 @@ At first start the mPCC makes its own CA and an HTTPS certificate signed by it, 
 - To trust it, give clients `ca.crt` from that directory: `docker cp mpcc:/var/lib/mprov/tls/ca.crt .`
 - To serve your own certificate instead, mount it and set `MPROV_TLS_CERT` and `MPROV_TLS_KEY` to the certificate and key files. The CA is still made, as later releases use it to issue the job servers' and nodes' own credentials.
 - Port 443 also asks for an optional client certificate from that CA. Browsers, mash and plain HTTP aren't affected.
+- Job servers and booted systems will each authenticate with their own client certificate from that CA ([#381](https://github.com/mprov-ng/mprov_control_center/issues/381)). A system's certificate reaches only what a node does to itself (its own row, network interfaces and BMC entries), and a job server's reads the inventory and writes only its own state.
+- `MPROV_SHARED_KEY_MODE` sets where the old shared API key is still accepted: `all` (everywhere, as before 0.7; the default for now, with a warning at start), `nodes` (only for what a node does to itself, for node images not yet rebuilt) or `off`.
 - If `/var/lib/mprov/tls` can't be set up (for example only one of `MPROV_TLS_CERT` and `MPROV_TLS_KEY` is set), the container stops with the reason in its log.
 
 ## Image tags
 - `:vX.Y.Z` is a release, and `:latest` is the newest release.
 - `:dev` is built from `main` after every merge, once the tests pass.
 
-The mPCC, its job servers and mash must all run the same major.minor version (for example, all `0.6`). A client with the API key that sends another version, or none, gets `426 Upgrade Required` ([#452](https://github.com/mprov-ng/mprov_control_center/issues/452)), so upgrade them together.
+The mPCC, its job servers and mash must all run the same major.minor version (for example, all `0.6`). A client that authenticates as an agent (a client certificate, the API key, Basic or a token) and sends another version, or none, gets `426 Upgrade Required` ([#452](https://github.com/mprov-ng/mprov_control_center/issues/452)), so upgrade them together.
 
 # Configuration
 The mPCC is configured through environment variables: mprov-compose passes in its `.env`, or use `-e` with `docker run`. [`env.example`](env.example) has every variable, with comments. The ones you're most likely to need:

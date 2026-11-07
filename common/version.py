@@ -1,9 +1,10 @@
 """
 The API version lock (#452).  Every reply carries the mPCC's API version
 (the major.minor of mprov_control_center.version) in the mProv-Version
-header.  A request made with the API key, which is how job servers, mash
-and node scripts authenticate, must send the same major.minor in that
-header, or it gets 426 Upgrade Required.
+header.  A request an agent authenticates (#381): with a client certificate,
+the shared API key, Basic or a token, which is how job servers, mash and node
+scripts authenticate, must send the same major.minor in that header, or it
+gets 426 Upgrade Required.
 
 Browser sessions (the admin, the API's docs pages) and unauthenticated
 requests (image, repo and iPXE serves, node registration, the health check)
@@ -69,10 +70,10 @@ class APIVersionMiddleware:
         return response
 
     def check(self, request):
-        """ The 426 reply for an API-key request with the wrong version, or None. """
+        """ The 426 reply for an agent's request with the wrong version, or None. """
         if settings.MPROV_SKIP_VERSION_CHECK:
             return None
-        if not request.META.get("HTTP_AUTHORIZATION", "").startswith("Api-Key "):
+        if not self.from_an_agent(request):
             return None
         sent = request.headers.get(HEADER)
         if major_minor(sent) == API_VERSION:
@@ -85,6 +86,18 @@ class APIVersionMiddleware:
         return JsonResponse({"detail": f"mProv version mismatch: this mPCC speaks {API_VERSION}, the client sent {got}. "
                                        f"Upgrade the client, or the mPCC, so both are {API_VERSION}.",
                              "expected": API_VERSION, "got": sent}, status=426)
+
+    @staticmethod
+    def from_an_agent(request):
+        """ Whether the request authenticates as an agent rather than a browser
+        session: a client certificate, the API key, Basic or a token. """
+        from pki.authentication import PROXY_HEADER, from_trusted_proxy
+        if request.META.get("SSL_CLIENT_CERT"):
+            return True
+        if request.META.get(PROXY_HEADER) and from_trusted_proxy(request):
+            return True
+        scheme = request.META.get("HTTP_AUTHORIZATION", "").split(" ", 1)[0].lower()
+        return scheme in ("api-key", "basic", "token", "bearer")
 
     @staticmethod
     def client_ip(request):

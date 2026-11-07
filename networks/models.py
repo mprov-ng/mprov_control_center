@@ -104,13 +104,10 @@ class SwitchPort(models.Model):
 @receiver(pre_save, sender=Switch)
 def UpdateSwitch(sender, instance, **kwargs):
   if sender == Switch:
-    from common.request import get_current_request
+    from common.request import acting_user, get_current_request
     request = get_current_request()
     if request is not None:
-      if type(request.user) is AnonymousUser:
-          instance.created_by = User.objects.get(pk=1)
-      else:
-        instance.created_by = request.user
+      instance.created_by = acting_user(request)
 @receiver(pre_save, sender=Network)
 def UpdateNetwork(sender, instance, **kwargs):
 
