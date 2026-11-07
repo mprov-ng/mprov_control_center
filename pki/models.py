@@ -23,7 +23,10 @@ class AgentCredential(models.Model):
     Revoking it here takes effect on the agent's next request. """
     JOBSERVER = "jobserver"
     SYSTEM = "system"
-    KINDS = [(JOBSERVER, "Job server"), (SYSTEM, "System")]
+    # a job server's short-lived credential for the script runner inside an
+    # image it's building: reads only that image.
+    BUILD = "build"
+    KINDS = [(JOBSERVER, "Job server"), (SYSTEM, "System"), (BUILD, "Image build")]
 
     kind = models.CharField(max_length=16, choices=KINDS)
     # deleting the job server or system deletes its credentials, which
@@ -32,6 +35,8 @@ class AgentCredential(models.Model):
                                   related_name='credentials', verbose_name="Job Server")
     system = models.ForeignKey('systems.System', null=True, blank=True, on_delete=models.CASCADE,
                                related_name='credentials')
+    image = models.ForeignKey('systems.SystemImage', null=True, blank=True, on_delete=models.CASCADE,
+                              related_name='+', verbose_name="Image (build credential)")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='agent_credentials',
                              verbose_name="Service User")
     serial = models.CharField(max_length=40, unique=True, help_text="The certificate's serial number, in hex.")
@@ -52,8 +57,9 @@ class AgentCredential(models.Model):
             models.CheckConstraint(
                 name="pki_agentcredential_one_agent",
                 condition=(
-                    models.Q(kind="jobserver", jobserver__isnull=False, system__isnull=True)
-                    | models.Q(kind="system", system__isnull=False, jobserver__isnull=True)
+                    models.Q(kind="jobserver", jobserver__isnull=False, system__isnull=True, image__isnull=True)
+                    | models.Q(kind="system", system__isnull=False, jobserver__isnull=True, image__isnull=True)
+                    | models.Q(kind="build", image__isnull=False, jobserver__isnull=True, system__isnull=True)
                 ),
             ),
         ]
@@ -63,7 +69,7 @@ class AgentCredential(models.Model):
 
     @property
     def agent(self):
-        return self.jobserver if self.kind == self.JOBSERVER else self.system
+        return {self.JOBSERVER: self.jobserver, self.SYSTEM: self.system, self.BUILD: self.image}[self.kind]
 
     def is_active(self, now=None):
         now = now or timezone.now()
@@ -77,23 +83,27 @@ class AgentCredential(models.Model):
             self.save(update_fields=["revoked_at"])
 
 
-def service_username(jobserver=None, system=None):
-    """ The service user's name for a job server (by its host ID) or a system (by its pk). """
-    if (jobserver is None) == (system is None):
-        raise ValueError("give exactly one of jobserver and system")
+def service_username(jobserver=None, system=None, image=None):
+    """ The service user's name for a job server (by its host ID), a system
+    (by its pk) or an image build (by the image's slug). """
+    if sum(x is not None for x in (jobserver, system, image)) != 1:
+        raise ValueError("give exactly one of jobserver, system and image")
     if jobserver is not None:
         return f"mprov.js.{jobserver.host_id or f'pk{jobserver.pk}'}"
+    if image is not None:
+        return f"mprov.build.{image.slug}"
     return f"mprov.sys.{system.pk}"
 
 
 @transaction.atomic
-def service_user(jobserver=None, system=None):
-    """ The service user a job server's or system's credentials act as,
-    made the first time: no usable password, never staff. """
+def service_user(jobserver=None, system=None, image=None):
+    """ The service user an agent's credentials act as, made the first time:
+    no usable password, never staff. """
     User = get_user_model()
-    name = service_username(jobserver, system)
+    name = service_username(jobserver, system, image)
+    agent = next(x for x in (jobserver, system, image) if x is not None)
     user, created = User.objects.get_or_create(username=name, defaults={
-        "first_name": str(jobserver if jobserver is not None else system)[:150],
+        "first_name": str(agent)[:150],
         "is_staff": False,
         "is_superuser": False,
     })
@@ -108,7 +118,7 @@ def _hash(secret):
 
 
 class EnrollmentToken(models.Model):
-    """ A one-time token a job server enrolls with (#381): single-use,
+    """ A one-time token a job server enrolls with: single-use,
     short-lived, stored hashed and shown once when it's made. """
     token_hash = models.CharField(max_length=64, unique=True, editable=False)
     prefix = models.CharField(max_length=8, editable=False, help_text="The token's first characters, to tell tokens apart.")
@@ -155,7 +165,7 @@ class EnrollmentToken(models.Model):
 
 
 class BootNonce(models.Model):
-    """ A one-time enrollment nonce for one boot of one system (#381), put on
+    """ A one-time enrollment nonce for one boot of one system, put on
     the kernel command line by /ipxe/ (mprov_enroll=...).  Single-use, bound
     to the address that booted, valid NONCE_LIFETIME, stored hashed. """
     NONCE_LIFETIME = datetime.timedelta(minutes=15)

@@ -286,6 +286,8 @@ then
   mprovURL=$(dirname "$MPROV_IMAGE_URL")
   mprovURL=$(dirname "$mprovURL")
   wget -q -O /image/tmp/mprov_genNetworkInterfaces.py "${mprovURL}/static/genNetworkInterfaces.py"
+  # the node's own credential (#381); imported by both scripts from /tmp.
+  wget -q -O /image/tmp/mprov_enroll.py "${mprovURL}/static/mprov_enroll.py"
   /bin/chmod 755 /image/tmp/mprov_genNetworkInterfaces.py
   chroot /image/ "$(image_python /image)" /tmp/mprov_genNetworkInterfaces.py
 fi

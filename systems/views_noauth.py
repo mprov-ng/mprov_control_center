@@ -351,7 +351,10 @@ class IPXEAPIView(MProvView):
         
 
         if not nic.system.systemimage.customIPXE == "" and nic.system.systemimage.customIPXE is not None:
-           # let's just serve up the custom IPXE script.
+           # let's just serve up the custom IPXE script.  It builds its own
+           # kernel command line, so it adds {{ boot.enroll }} to it for the
+           # node to enroll (#381); the nonce is only issued if it does.
+           boot['enroll'] = lambda: self.enroll_params(nic.system, ip).strip()
            template = Template(nic.system.systemimage.customIPXE)
            context = Context(dict(nic=nic, boot=boot))
            rendered: str = template.render(context)

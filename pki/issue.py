@@ -12,7 +12,7 @@ def default_signer():
 
 
 @transaction.atomic
-def issue_credential(signer, csr_pem, lifetime, jobserver=None, system=None):
+def issue_credential(signer, csr_pem, lifetime, jobserver=None, system=None, image=None):
     """ Check the CSR, have it signed for a job server or a system, and
     record the credential.  signer is a callable (kind, name, lifetime, csr)
     -> PEM, normally the root signing helper's client; a CA signs in this
@@ -24,12 +24,13 @@ def issue_credential(signer, csr_pem, lifetime, jobserver=None, system=None):
     if isinstance(csr_pem, bytes):
         csr_pem = csr_pem.decode(errors="replace")
     check_csr(csr_pem)
-    user = service_user(jobserver, system)
-    kind = AgentCredential.JOBSERVER if jobserver is not None else AgentCredential.SYSTEM
+    user = service_user(jobserver, system, image)
+    kind = (AgentCredential.JOBSERVER if jobserver is not None
+            else AgentCredential.BUILD if image is not None else AgentCredential.SYSTEM)
     pem = signer(kind, user.username, lifetime, csr_pem)
     cert = x509.load_pem_x509_certificate(pem.encode())
     credential = AgentCredential.objects.create(
-        kind=kind, jobserver=jobserver, system=system, user=user,
+        kind=kind, jobserver=jobserver, system=system, image=image, user=user,
         serial=format(cert.serial_number, "x"), fingerprint=fingerprint(cert), certificate=pem,
         not_before=cert.not_valid_before_utc, not_after=cert.not_valid_after_utc,
     )

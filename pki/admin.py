@@ -19,10 +19,10 @@ def ca_fingerprint():
 class AgentCredentialAdmin(admin.ModelAdmin):
     """ The client certificates issued to job servers and systems (#381).
     They're issued by enrollment, never here; revoke one to cut that agent off. """
-    list_display = ('user', 'kind', 'jobserver', 'system', 'not_after', 'last_seen', 'revoked_at', 'is_active')
+    list_display = ('user', 'kind', 'jobserver', 'system', 'image', 'not_after', 'last_seen', 'revoked_at', 'is_active')
     list_filter = ('kind', ('revoked_at', admin.EmptyFieldListFilter))
     search_fields = ('user__username', 'fingerprint', 'serial', 'jobserver__name', 'system__hostname')
-    fields = ('kind', 'jobserver', 'system', 'user', 'serial', 'fingerprint', 'not_before', 'not_after',
+    fields = ('kind', 'jobserver', 'system', 'image', 'user', 'serial', 'fingerprint', 'not_before', 'not_after',
               'created', 'last_seen', 'revoked_at', 'certificate')
     readonly_fields = fields
     actions = ['revoke']
