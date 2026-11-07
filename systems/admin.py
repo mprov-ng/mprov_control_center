@@ -197,6 +197,50 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   def set_bmc_credentials(self, request, queryset):
     return bmc_credentials_action(self, request, queryset, list(queryset))
 
+  def get_urls(self):
+    from django.urls import path
+    return [
+      path('add-range/', self.admin_site.admin_view(self.add_range_view), name='systems_system_add_range'),
+    ] + super().get_urls()
+
+  def add_range_view(self, request):
+    """ The "Add systems from a range" wizard (#38): fill in the form,
+    preview what it would create, then create it all, or nothing. """
+    from django.core.exceptions import PermissionDenied
+    from systems.range_wizard import RangeWizardForm, create_range, plan_range
+    if not self.has_add_permission(request):
+      raise PermissionDenied
+    session_key = 'range_wizard_bmc_password'
+    form = RangeWizardForm(request.POST or None)
+    plan = None
+    if request.method == 'POST' and form.is_valid():
+      plan = plan_range(form.cleaned_data)
+      # the BMC password isn't sent back to the browser in the preview; it's
+      # kept server-side until the systems are created.
+      if form.cleaned_data.get('bmc_password'):
+        request.session[session_key] = form.cleaned_data['bmc_password']
+      if 'create' in request.POST and plan.ok:
+        password = form.cleaned_data.get('bmc_password') or request.session.get(session_key)
+        created = create_range(form.cleaned_data, plan, request.user, password)
+        request.session.pop(session_key, None)
+        for system in created:
+          self.log_addition(request, system, f"Added by the range wizard: {form.cleaned_data['hostnames']}.")
+        self.message_user(request, f"Added {len(created)} systems: {created[0].hostname} to {created[-1].hostname}.")
+        prefix = form.cleaned_data['hostnames'].split('[')[0]
+        from urllib.parse import urlencode
+        return HttpResponseRedirect(reverse('admin:systems_system_changelist') + (f"?{urlencode({'q': prefix})}" if prefix else ""))
+    elif request.method == 'GET':
+      request.session.pop(session_key, None)
+    return render(request, 'admin/system_range_wizard.html', context={
+      **self.admin_site.each_context(request),
+      'title': "Add systems from a range",
+      'form': form,
+      'plan': plan,
+      'bmc_password_kept': bool(request.session.get(session_key)),
+      'opts': self.model._meta,
+      'media': self.media + form.media,
+    })
+
   inlines = [ NetworkInterfaceInline, BMCInline, SerialHistoryInline]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
   readonly_fields = ['timestamp', 'updated', 'created_by', 'last_booted']
