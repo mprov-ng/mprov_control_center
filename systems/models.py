@@ -360,13 +360,10 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
   
   # SystemImage isn't a sender here; UpdateSystemImages sets its created_by.
   if sender == System:
-    from common.request import get_current_request
+    from common.request import acting_user, get_current_request
     request = get_current_request()
     if request is not None:
-      if type(request.user) is AnonymousUser:
-          instance.created_by = User.objects.get(pk=1)
-      else:
-        instance.created_by = request.user
+      instance.created_by = acting_user(request)
 
       
   for slug in ['pxe-update', 'dns-update', 'dhcp-update']:
@@ -415,13 +412,10 @@ def DeleteSystemImage(sender, instance, **kwargs):
 # emits an image-update job every time an image is saved with needs_rebuild set.
 @receiver(pre_save, sender=SystemImage)
 def UpdateSystemImages(sender, instance, **kwargs):
-  from common.request import get_current_request
+  from common.request import acting_user, get_current_request
   request = get_current_request()
   if request is not None:
-      if type(request.user) is AnonymousUser:
-          instance.created_by = User.objects.get(pk=1)
-      else:
-        instance.created_by = request.user
+      instance.created_by = acting_user(request)
   instance.slug = slugify(instance.name)
   if not instance.needs_rebuild:
     return

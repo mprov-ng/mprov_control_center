@@ -103,7 +103,7 @@ class CreatedByRequestTests(TestCase):
         # Patch via same staff user; signal should overwrite created_by to staff (already staff).
         # Now create a second actor and patch.
         other = User.objects.create_user("other", "other@example.com", "password")
-        # Need staff perms? MProvView permission is HasAPIKeyOrIsAuthenticated, any authenticated user can write.
+        # Need staff perms? MProvView permission is MProvPermission, any authenticated user can write.
         self.client.force_login(other)
         resp = self._patch_json(f"/systems/{sys.id}/", {"hostname": "change-me-2"})
         self.assertEqual(resp.status_code, 200, resp.content)
