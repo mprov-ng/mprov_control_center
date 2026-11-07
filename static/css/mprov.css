@@ -176,6 +176,12 @@ td.delete input {
 #jazzy-logo {
   background-color: #20c997 !important;
 }
+/* jazzmin 3.0.2's main.css hid a hidden field's labelled row with .hidden;
+   3.0.5 dropped the rule, so e.g. the disk layout wizard showed an empty
+   "Wizard step" row (#474). */
+.form-group.hidden {
+  display: none !important;
+}
 /* the whole brand box is teal, in light and dark mode, not just the link. */
 #jazzy-sidebar .sidebar-brand {
   border-bottom: 0 !important;
