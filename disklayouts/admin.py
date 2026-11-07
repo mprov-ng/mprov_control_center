@@ -4,6 +4,7 @@ from common.admin import AdminWizardModel
 from django import forms
 from django.db.models import Q
 from systems.admin import warn_boot_disk_problems
+from systems.member_widget import SystemMembersMixin
 from systems.models import System
 
 class PartForm(forms.ModelForm):
@@ -43,7 +44,7 @@ class WarnBootDisksMixin:
     warn_boot_disk_problems(self, request, System.objects.filter(pk__in=ids, stateful=True))
 
 
-class DiskLayoutAdmin(WarnBootDisksMixin, AdminWizardModel):
+class DiskLayoutAdmin(SystemMembersMixin, WarnBootDisksMixin, AdminWizardModel):
   inlines = [DiskPartitionInline]
   step_fields = [['dtype'],None]
   readonly_fields = ['dtype', 'slug']

@@ -21,6 +21,7 @@ import pyipmi.interfaces
 from systems.bootdev import bootdev_failed, set_pxe_bootdev
 from func_timeout import func_timeout, FunctionTimedOut
 
+from .member_widget import SystemMembersMixin
 from .bmc_credentials import BMCCredentialsForm, set_bmc_credentials, split_by_bmc, summarize
 from .models import (
   System,
@@ -202,7 +203,24 @@ class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
     from django.urls import path
     return [
       path('add-range/', self.admin_site.admin_view(self.add_range_view), name='systems_system_add_range'),
+      path('lookup/', self.admin_site.admin_view(self.lookup_view), name='systems_system_lookup'),
     ] + super().get_urls()
+
+  def lookup_view(self, request):
+    """ POST ids=1,2,3 or text=<pasted hostnames, IDs or ranges>: the
+    matching systems' IDs and hostnames, as JSON, for the member chips on
+    System Groups and Physical Disk Layouts (#497).  An admin page, not part
+    of the REST API. """
+    from django.core.exceptions import PermissionDenied
+    from django.http import HttpResponseNotAllowed, JsonResponse
+    from systems.member_widget import lookup_systems
+    if request.method != 'POST':
+      return HttpResponseNotAllowed(['POST'])
+    if not self.has_view_permission(request):
+      raise PermissionDenied
+    if 'ids' in request.POST:
+      return JsonResponse(lookup_systems(ids=request.POST['ids']))
+    return JsonResponse(lookup_systems(text=request.POST.get('text', '')))
 
   def add_range_view(self, request):
     """ The "Add systems from a range" wizard (#38): fill in the form,
@@ -612,7 +630,7 @@ class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
     # pass
 
 
-class SystemGroupAdmin(admin.ModelAdmin):
+class SystemGroupAdmin(SystemMembersMixin, admin.ModelAdmin):
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
   raw_id_fields = ['systems']
