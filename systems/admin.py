@@ -2,7 +2,8 @@ import sys
 import traceback
 from django.contrib import admin, messages
 from django.forms import BaseInlineFormSet
-from django.utils.html import mark_safe
+from django.utils import timezone
+from django.utils.html import format_html, mark_safe
 from jobqueue.models import JobModule, JobStatus, Job
 from django import forms
 from django.urls import reverse
@@ -19,6 +20,7 @@ import pyipmi.interfaces
 from systems.bootdev import bootdev_failed, set_pxe_bootdev
 from func_timeout import func_timeout, FunctionTimedOut
 
+from .bmc_credentials import BMCCredentialsForm, set_bmc_credentials, split_by_bmc, summarize
 from .models import (
   System,
   SystemBMC,
@@ -104,7 +106,7 @@ class BMCInline(admin.StackedInline):
   max_num=1 
   list_display = ['id', 'ipaddress']
   list_display_links = ['id', 'ipaddress']
-  readonly_fields = ['ipv6ll']
+  readonly_fields = ['ipv6ll', 'credentials_changed']
   verbose_name="System BMC"
   verbose_name_plural="System BMCs"
   form = SystemBMCForm
@@ -159,8 +161,41 @@ class SerialHistoryInline(admin.TabularInline):
     return False
 
 
+def bmc_credentials_action(modeladmin, request, queryset, systems):
+  """ The "Set BMC credentials" page for these systems (#374), and setting
+  them once it's submitted.  queryset is what was selected, systems or
+  system groups; systems are the systems to change. """
+  if not request.user.has_perm('systems.change_systembmc'):
+    modeladmin.message_user(request, "You don't have permission to change BMC credentials.", level=messages.ERROR)
+    return None
+  form = BMCCredentialsForm(request.POST if 'apply' in request.POST else None)
+  if form.is_valid():
+    updated, skipped = set_bmc_credentials(systems, form.cleaned_data['username'], form.cleaned_data['password'], request.user)
+    for system in updated:
+      modeladmin.log_change(request, system, "Changed BMC credentials.")
+    modeladmin.message_user(request, f"Set BMC credentials on {len(updated)} systems.")
+    if skipped:
+      modeladmin.message_user(request, f"Skipped {len(skipped)} systems with no BMC: {summarize([s.hostname for s in skipped], 20)}.",
+                              level=messages.WARNING)
+    return None
+  updated, skipped = split_by_bmc(systems)
+  return render(request, 'admin/bmc_credentials_form.html', context={
+    **modeladmin.admin_site.each_context(request),
+    'title': "Set BMC credentials",
+    'form': form,
+    'selected': queryset,
+    'updated': updated,
+    'skipped': skipped,
+    'opts': modeladmin.model._meta,
+  })
+
+
 class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
-  actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
+  actions = [ 'bulk_update', 'set_bmc_credentials', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
+
+  @admin.action(description="Set BMC credentials")
+  def set_bmc_credentials(self, request, queryset):
+    return bmc_credentials_action(self, request, queryset, list(queryset))
 
   inlines = [ NetworkInterfaceInline, BMCInline, SerialHistoryInline]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
@@ -243,7 +278,9 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
     if bmcq is not None:
       if type(bmcq) is QuerySet and len(bmcq) != 0:
         bmcq = bmcq[0]
-        return mark_safe(f"<a href=\"http://{bmcq.ipaddress}\" target=\"_blank\">http://{bmcq.ipaddress}</a>")
+        changed = timezone.localtime(bmcq.credentials_changed).strftime("%Y-%m-%d %H:%M") if bmcq.credentials_changed else "never"
+        return format_html('<a href="http://{0}" target="_blank" title="Credentials changed: {1}">http://{0}</a>',
+                           bmcq.ipaddress, changed)
     return mark_safe("N/A")
   def getPower(self, obj):
      return mark_safe(f"<img src=\"/systems/{obj.id}/?powerstate\" width=\"32\" height=\"32\" />")
@@ -528,6 +565,12 @@ class SystemGroupAdmin(admin.ModelAdmin):
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
   raw_id_fields = ['systems']
+  actions = ['set_bmc_credentials']
+
+  @admin.action(description="Set BMC credentials for these groups' systems")
+  def set_bmc_credentials(self, request, queryset):
+    systems = list(System.objects.filter(systemgroups__in=queryset).distinct())
+    return bmc_credentials_action(self, request, queryset, systems)
 
 class SystemModelAdmin(admin.ModelAdmin):
   list_display = ['slug', 'vendor', 'name']
