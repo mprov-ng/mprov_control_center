@@ -163,3 +163,17 @@ class AdminWizardModel(admin.ModelAdmin):
 
       return form
       
+
+
+class LiveSearchMixin:
+  """ Admin list pages that search and filter as you type (#496).
+
+  static/common/admin/js/live_search.js re-fetches the list page with the
+  search box's and filters' values and swaps in the results, paginator and
+  result count, so the list's own search, filters, permissions, pagination
+  and actions do the work: there's no separate endpoint.  Without JS the
+  search box still works with Enter. """
+
+  @property
+  def media(self):
+    return super().media + Media(js=['common/admin/js/live_search.js'])

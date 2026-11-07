@@ -14,6 +14,7 @@ from django.shortcuts import render
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
 from scripts.models import Script
+from common.admin import LiveSearchMixin
 from common.rendered_config import RenderedConfigAdminMixin
 import pyipmi
 import pyipmi.interfaces
@@ -190,7 +191,7 @@ def bmc_credentials_action(modeladmin, request, queryset, systems):
   })
 
 
-class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
+class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
   actions = [ 'bulk_update', 'set_bmc_credentials', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
 
   @admin.action(description="Set BMC credentials")
@@ -246,7 +247,11 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   readonly_fields = ['timestamp', 'updated', 'created_by', 'last_booted']
   list_display_links = ['id', 'hostname']
   list_per_page = 25
-  search_fields = ['hostname', 'serial']
+  # NIC and BMC addresses too, so a system can be found by any of them (#496).
+  search_fields = ['hostname', 'serial', 'networkinterface__ipaddress', 'networkinterface__mac',
+                   'systembmc__ipaddress', 'systembmc__mac']
+  search_help_text = "Hostname, serial, or a NIC's or BMC's IP or MAC"
+  list_filter = ['systemimage', 'systemgroups', 'systemmodel', 'provision']
   change_form_template ='admin/system_change_form.html'
   fieldsets = (
     (None, {
@@ -327,7 +332,9 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
                            bmcq.ipaddress, changed)
     return mark_safe("N/A")
   def getPower(self, obj):
-     return mark_safe(f"<img src=\"/systems/{obj.id}/?powerstate\" width=\"32\" height=\"32\" />")
+     # data-live-keep: a live search keeps the icon of a system that's still
+     # listed instead of asking its BMC again (#496).
+     return mark_safe(f"<img src=\"/systems/{obj.id}/?powerstate\" width=\"32\" height=\"32\" data-live-keep />")
   def getMacs(self, obj):
 
     query = NetworkInterface.objects.filter(system=obj).select_related('switch_port')
