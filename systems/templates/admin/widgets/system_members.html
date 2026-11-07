@@ -1,0 +1,66 @@
+{% comment %}
+The member systems of a System Group or Physical Disk Layout, as hostname
+chips (systems.member_widget.SystemMembersWidget, #497).  The hidden input is
+what's posted: every member's ID, comma-separated.  system_members.js draws
+the chips from the JSON list and keeps the input in step; without JS the
+first chips below still show who's in it.
+{% endcomment %}
+<div class="system-members" data-input="{{ widget.attrs.id }}" data-members="{{ members_json_id }}"
+     data-lookup-url="{{ lookup_systems_url }}" data-chips-shown="{{ chips_shown }}">
+  <input type="{{ widget.type }}" name="{{ widget.name }}" value="{{ widget.value|default_if_none:'' }}"{% include "django/forms/widgets/attrs.html" %}>
+  {{ members|json_script:members_json_id }}
+  <div class="system-members-chips">
+    {% for member in members_shown %}
+      <span class="system-member badge" data-id="{{ member.id }}">{{ member.hostname|default_if_none:member.id }}</span>
+    {% empty %}
+      <span class="system-members-none text-muted">No systems.</span>
+    {% endfor %}
+    {% if members_hidden %}<span class="system-members-more text-muted">&hellip; and {{ members_hidden }} more</span>{% endif %}
+  </div>
+  <div class="system-members-tools">
+    {% if related_url %}
+      <a href="{{ related_url }}" class="related-lookup btn btn-sm btn-outline-secondary" id="lookup_{{ widget.attrs.id }}" title="{{ link_title }}">Add one&hellip;</a>
+    {% endif %}
+    <button type="button" class="btn btn-sm btn-outline-secondary system-members-add-many">Add many&hellip;</button>
+  </div>
+
+  <div class="modal fade system-members-all-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">All systems (<span class="system-members-count"></span>)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="search" class="form-control mb-2 system-members-filter" placeholder="Filter by hostname" aria-label="Filter by hostname">
+          <ul class="list-group system-members-list"></ul>
+        </div>
+        <div class="modal-footer">
+          <span class="me-auto small text-muted">Changes apply when you save the form.</span>
+          <button type="button" class="btn btn-outline-danger system-members-remove-all">Remove all</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade system-members-many-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add many systems</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label small" for="{{ widget.attrs.id }}_paste">Paste hostnames or IDs, separated by commas, spaces or new lines.  Ranges like c[001-100] work too.</label>
+          <textarea class="form-control system-members-paste" id="{{ widget.attrs.id }}_paste" rows="6"></textarea>
+          <div class="system-members-result small mt-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-primary system-members-find">Find</button>
+          <button type="button" class="btn btn-primary system-members-add" disabled>Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

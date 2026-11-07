@@ -1,0 +1,8 @@
+/* The member-system chips on System Groups and Physical Disk Layouts (#497). */
+.system-members-chips { display: flex; flex-wrap: wrap; gap: .25rem; margin-bottom: .5rem; }
+.system-member.badge { background: #20c997; color: #fff; font-weight: 500; font-size: .85rem; padding: .35em .6em; }
+.system-member .system-member-remove { background: none; border: 0; color: inherit; padding: 0 0 0 .4em; line-height: 1; cursor: pointer; }
+.system-members-more { align-self: center; }
+.system-members-tools { display: flex; gap: .5rem; }
+.system-members-list .list-group-item { display: flex; justify-content: space-between; align-items: center; padding: .25rem .75rem; }
+.system-members-result .not-found { color: var(--bs-danger, #dc3545); }
