@@ -5,6 +5,8 @@ from jobqueue.models import JobServer
 from rest_framework import serializers
 
 class OSDistroAPISerializer(serializers.ModelSerializer):
+    """ An OS distribution.  The root password is write-only, and a base image URL needs
+    a checksum, checked on a partial update too (#429). """
     baserepo = serializers.PrimaryKeyRelatedField(queryset=OSRepo.objects.all(), required=False, allow_null=True)
     osrepos = serializers.PrimaryKeyRelatedField(queryset=OSRepo.objects.all(), many=True, required=False)
     scripts = serializers.PrimaryKeyRelatedField(queryset=Script.objects.all(), many=True, required=False)
@@ -30,12 +32,14 @@ class OSDistroAPISerializer(serializers.ModelSerializer):
         return attrs
 
 class OSRepoAPISerializer(serializers.ModelSerializer):
+    """ An OS repository. """
     hosted_by=serializers.PrimaryKeyRelatedField(queryset=JobServer.objects.all(), many=True, required=False)
     ostype=serializers.PrimaryKeyRelatedField(queryset=OSType.objects.all(), required=False, allow_null=True)
     class Meta:
         model = OSRepo
         fields = '__all__'
 class OSTypeAPISerializer(serializers.ModelSerializer):
+    """ An OS type. """
     class Meta:
         model = OSType
         fields = '__all__'        

@@ -25,6 +25,9 @@ HARMLESS_QUERY = {"format"}
 
 @dataclass
 class Rule:
+    """ One thing an agent may do: methods on a path (a regex over the whole path),
+    with the query keys allowed and needed, the body keys a write may send, and
+    an optional ownership check(agent, request, match). """
     methods: tuple
     path: str
     # the query keys allowed (besides HARMLESS_QUERY), or None for any
@@ -40,6 +43,7 @@ class Rule:
         self.pattern = re.compile("^" + self.path + "$")
 
     def allows(self, agent, request):
+        """ True if this request matches the rule in every respect. """
         if request.method not in self.methods:
             return False
         match = self.pattern.match(request.path)
@@ -58,6 +62,7 @@ class Rule:
 
 
 def _int(value):
+    """ value as an int, or None. """
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -65,6 +70,7 @@ def _int(value):
 
 
 def _body(request, key):
+    """ key from the request body, or None if the body isn't an object. """
     return request.data.get(key) if isinstance(request.data, dict) else None
 
 
@@ -92,19 +98,24 @@ def own_hostname(system, request, match):
 
 
 def own_nic(system, request, match):
+    """ The network interface in the path is one of its own. """
     return system.networkinterface_set.filter(pk=_int(match.group("pk"))).exists()
 
 
 def own_nic_network(system, request, match):
+    """ The network in the path is one of its own interfaces' networks. """
     return system.networkinterface_set.filter(network_id=_int(match.group("pk"))).exists()
 
 
 def own_bmc(system, request, match):
+    """ The BMC entry in the path is its own. """
     from systems.models import SystemBMC
     return SystemBMC.objects.filter(pk=_int(match.group("pk")), system=system).exists()
 
 
 def nic_list(system, request, match):
+    """ The interface list is filtered to its own interfaces, by ?system= or
+    ?hostname=. """
     keys = set(request.query_params.keys())
     # one of the two filters, so the list is only its own interfaces
     if not keys & {"system", "hostname"}:
@@ -113,6 +124,7 @@ def nic_list(system, request, match):
 
 
 def bmc_list(system, request, match):
+    """ The BMC list is filtered to its own entries, by ?self or ?system=. """
     keys = set(request.query_params.keys())
     if "self" in keys:
         return "system" not in keys and self_is_itself(system, request, match)
@@ -154,10 +166,12 @@ def registers_itself(jobserver, request, match):
 
 
 def its_own_row(jobserver, request, match):
+    """ The job server in the path is itself. """
     return _int(match.group("pk")) == jobserver.pk
 
 
 def claims_for_itself(jobserver, request, match):
+    """ A job claim names itself as the job server. """
     return _int(_body(request, "jobserver")) == jobserver.pk
 
 
@@ -182,6 +196,7 @@ def adds_itself(key):
 
 
 def only_itself(key):
+    """ A PATCH whose host list (the body's key) is exactly this job server. """
     def check(jobserver, request, match):
         hosts = _body(request, key)
         return isinstance(hosts, list) and [_int(h) for h in hosts] == [jobserver.pk]
@@ -215,6 +230,7 @@ JOBSERVER_RULES = [
 # ---- image builds --------------------------------------------------------
 
 def its_image(image, request, match):
+    """ The image in the path is the one being built. """
     return match.group("pk") == image.slug
 
 
@@ -226,12 +242,16 @@ BUILD_RULES = [
 
 
 def build_allows(image, request):
+    """ True if an image-build credential for image may make this request. """
     return any(rule.allows(image, request) for rule in BUILD_RULES)
 
 
 def system_allows(system, request):
+    """ True if a system's credential (or the shared key in nodes mode) may make
+    this request. """
     return any(rule.allows(system, request) for rule in SYSTEM_RULES)
 
 
 def jobserver_allows(jobserver, request):
+    """ True if a job server's credential may make this request. """
     return any(rule.allows(jobserver, request) for rule in JOBSERVER_RULES)

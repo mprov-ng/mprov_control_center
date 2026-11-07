@@ -12,6 +12,7 @@ from django.utils import timezone
 
 
 class AgentCredentialQuerySet(models.QuerySet):
+    """ Queries over agent credentials. """
     def active(self, now=None):
         """ The credentials that aren't revoked and are in date. """
         now = now or timezone.now()
@@ -69,15 +70,18 @@ class AgentCredential(models.Model):
 
     @property
     def agent(self):
+        """ The job server, system or image this credential belongs to. """
         return {self.JOBSERVER: self.jobserver, self.SYSTEM: self.system, self.BUILD: self.image}[self.kind]
 
     def is_active(self, now=None):
+        """ True if it isn't revoked and now is within its validity dates. """
         now = now or timezone.now()
         return self.revoked_at is None and self.not_before <= now < self.not_after
     is_active.boolean = True
     is_active.short_description = "Active"
 
     def revoke(self, now=None):
+        """ Revoke it now, unless it already is. """
         if self.revoked_at is None:
             self.revoked_at = now or timezone.now()
             self.save(update_fields=["revoked_at"])
@@ -114,6 +118,7 @@ def service_user(jobserver=None, system=None, image=None):
 
 
 def _hash(secret):
+    """ The SHA-256 hex digest of a token or nonce; only that is stored. """
     return hashlib.sha256(secret.encode()).hexdigest()
 
 
@@ -147,6 +152,7 @@ class EnrollmentToken(models.Model):
         return row, secret
 
     def usable(self, now=None):
+        """ True if it hasn't been used and hasn't expired. """
         return self.used_at is None and (now or timezone.now()) < self.expires
     usable.boolean = True
 

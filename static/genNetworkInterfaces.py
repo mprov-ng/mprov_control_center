@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+""" Writes a booting node's network interface files.
+
+mprov_boot_init.sh runs this on every boot of a diskless or stateful node.
+It enrolls the boot with the mPCC when mprov_enroll is next to it (falling
+back to the shared API key), reads the node's own system record and network
+interfaces, and writes an ifcfg-<name> file for each interface plus
+/etc/hostname. """
 
 
 import socket
@@ -18,6 +25,9 @@ except ImportError:
 
 
 class mProvNetworkScriptGenerator():
+  """ Reads this node's interfaces from the mPCC and writes their ifcfg files.
+  Settings (mprovURL, apikey, ...) come from the global section of
+  /etc/mprov/script-runner.yaml. """
   config_data = {}
   mprovURL = "http://127.0.0.1:8080/"
   apikey = ""
@@ -30,6 +40,8 @@ class mProvNetworkScriptGenerator():
   #netscriptDir = "/tmp"
 
   def __init__(self, **kwargs):
+    """ Load the config and start an mPCC session, then fetch this system's
+    record; exits if the mPCC can't be reached. """
     print("mProv Network Script Generator Starting.")
 
     # use the script-runner config
@@ -47,10 +59,13 @@ class mProvNetworkScriptGenerator():
     self._getSelf()
 
   def yaml_include(self, loader, node):
+    """ Ignore !include in the config: this script needs only the global section. """
     # disable includes, no need.
     return {}
     
   def load_config(self):
+    """ Read /etc/mprov/script-runner.yaml and copy its global settings that this
+    class knows onto it; exits if the file can't be read. """
     # load the config yaml
     # print(self.configfile)
     yaml.add_constructor("!include", self.yaml_include)
@@ -83,6 +98,8 @@ class mProvNetworkScriptGenerator():
 
   def startSession(self):
     
+    """ Set up the HTTP session: this boot's own certificate if it enrolls, else
+    the shared API key.  True if the mPCC answers 200. """
     self.session.headers.update({
       'Authorization': 'Api-Key ' + self.apikey,
       'Content-Type': 'application/json'
@@ -113,6 +130,8 @@ class mProvNetworkScriptGenerator():
 
 
   def _getSelf(self):
+    """ Fetch this system (systems/?self) and its network interfaces into
+    self.details; exits on any error. """
     # connect to the mPCC and get our information
     query = "systems/?self"
     response = self.session.get(self.mprovURL + query)
@@ -139,6 +158,10 @@ class mProvNetworkScriptGenerator():
       sys.exit(1)
 
   def generateNetworkInterfaceFiles(self):
+    """ Write an ifcfg file for each of this system's interfaces, with its
+    network's netmask and gateway (a gateway only on the interface marked as
+    the gateway), and the hostname to /etc/hostname.  An interface with no
+    network, or whose network can't be read, gets a /8 netmask and no gateway. """
     for intf in self.details['networkinterfaces']:
       if intf['network'] is None or intf['network'] == '':
         intf['gateway']=""
@@ -199,6 +222,7 @@ class mProvNetworkScriptGenerator():
       print(f"Name: {intf['name']}; MAC: {intf['mac']}; Gateway: {intf['gateway']}; IP: {intf['ipaddress']}; Netmask: {intf['netmask']}")
 
 def main():
+  """ Write this node's network interface files. """
   netGen = mProvNetworkScriptGenerator()
   netGen.generateNetworkInterfaceFiles()
 if __name__ == "__main__":

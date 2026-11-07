@@ -91,7 +91,7 @@ NADS Packet:
             "port": "some-port-name", must match what mPCC knows.
             "mac": MAC of the machine being registered
             "serial": optional, the serial number from dmidecode.  Saved on the
-                      N.A.D.S. system, and on the system it registers to (#60);
+                      N.A.D.S. system, and on the system it registers to;
                       placeholders like "To Be Filled By O.E.M." are ignored.
         }
 
@@ -260,7 +260,7 @@ class SystemAPIView(MProvView):
 - scripts: array of script IDs
 - ansibleplaybooks, ansibleroles, ansiblecollections: arrays of Ansible IDs
 - install_kernel_cmdline, tmpfs_root_size, initial_mods, prov_interface: boot options for this system
-- serial: The system's serial number (#60).  Each change is kept in its serial history, shown in the admin.
+- serial: The system's serial number.  Each change is kept in its serial history, shown in the admin.
 - config: The merged configuration from the OS Distro, System Groups, and this system
 
 ### Query Parameters
@@ -275,7 +275,7 @@ class SystemAPIView(MProvView):
     system's bootable NIC.  {"booted": true} reports that the system has booted: it's
     logged and saved as the system's last_booted time.  {"serial": "TEXT"} (at most 255
     characters) reports the system's serial number: a change is saved and kept in its serial
-    history, and a placeholder like "To Be Filled By O.E.M." is ignored (#60).  The keys can
+    history, and a placeholder like "To Be Filled By O.E.M." is ignored.  The keys can
     be sent together, but an mPCC older than 0.7.0 refuses any key but netboot with 403.
     Any other key returns 403, a missing or invalid value 400, without changing anything.
 - ?powerstate: GET with a primary key redirects to a power_on, power_off, or power_unknown
@@ -860,7 +860,7 @@ class SystemBMCAPIView(MProvView):
 - mac: The MAC address of the entry
 - username: The username for authentication with this entry
 - password: The password for authentication with this entry. It is write-only,
-    except to the system itself (#316): GET returns it only for a single entry
+    except to the system itself: GET returns it only for a single entry
     (/systembmcs/1/), a per-system detail query (?system=ID&detail) or ?self,
     and only when the request comes from one of that system's network
     interface addresses.  Anyone else gets the entry without it.  An empty
@@ -983,6 +983,34 @@ Format returned:
         return super().patch(request, *args, **kwargs)   
 
 class SystemPowerAPIView(MProvView):
+    '''
+# /power/<action>/
+
+Runs a BMC power action over IPMI (ipmitool, lanplus) and returns, for each
+BMC acted on, {"details", "status", "chassis_status"}.  Only GET is used.
+
+## Actions
+- on, off, cycle, reset (a hard reset, falling back to a power cycle if that fails)
+- status: chassis_status is whether the system is powered on
+- pxe, pxeefi: set the next boot to (EFI) PXE, power on, then reset.  These
+  provision the system, so provision is set first.  A system that can't be
+  provisioned (no bootable NIC, or a stateful system's disk layouts the
+  installer would refuse) isn't reset: with ?id= the response is 409; with
+  ?hostname= or a field filter, that BMC's result has "status": 409.  If
+  setting the boot device fails, nothing is reset and provision goes back
+  to what it was.
+
+## Which BMCs
+- ?hostname=NAME: the BMCs of the system with exactly that hostname (404 if none)
+- ?id=ID: the BMCs of the system with that ID (400 if it isn't a number, 404 if unknown)
+- ?FIELD=VALUE: the BMCs matching filters on the BMC's own fields; 400 for a
+  field that doesn't exist, and 400 with no filter at all, so it never acts
+  on every BMC at once.
+- At most 10 BMCs per request; more are truncated with a warning.
+
+A BMC that can't be reached shows in its own result, with "status": "400";
+the response is still 200.
+    '''
     model = SystemBMC
     serializer_class = SystemBMCSerializer
     queryset = None

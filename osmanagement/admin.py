@@ -29,6 +29,7 @@ def resync_repos(modeladmin, request, queryset):
     OSRepo.objects.filter(pk=instance.pk).update(version=F('version') + 1)
 
 class OSRepoAdmin(admin.ModelAdmin):
+  """ OS repositories that job servers mirror. """
   model=OSRepo
   list_display=['id', 'name', 'repo_package_url', 'managed', 'newest_only', 'version']
   list_display_links=['id','name']
@@ -36,6 +37,8 @@ class OSRepoAdmin(admin.ModelAdmin):
   actions = [resync_repos]
 
 class OSDistroAdmin(admin.ModelAdmin):
+  """ OS distributions: the base for images, with their repositories and default boot
+  options. """
   model = OSDistro
   form = OSDistro_form
   #inlines = [RepoInline]

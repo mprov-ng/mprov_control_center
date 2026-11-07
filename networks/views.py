@@ -47,7 +47,7 @@ Returns a JSON list of all networks in the mPCC.  The list can be filtered
 with the optional ?isdhcp= and ?managedns= query parameters (true/false in any
 case, or 1/0), and by any other field with ?FIELD=VALUE (exact match).  An
 invalid filter returns 400; no matches returns an empty list.  With ?detail,
-each network's relations are nested 3 levels deep (#298).
+each network's relations are nested 3 levels deep.
 
 Format returned:
 

@@ -44,8 +44,8 @@ interface.  It will give you documentation on how to use that section of the API
 Every reply carries this mPCC's API version, the major.minor of its release,
 in an `mProv-Version` header.  A request made with the API key must send the
 same major.minor in an `mProv-Version` header, or it gets
-426 Upgrade Required with `{"detail": ..., "expected": ..., "got": ...}`
-(#452).  mPCC, job servers and mash are upgraded together.
+426 Upgrade Required with `{"detail": ..., "expected": ..., "got": ...}`.
+mPCC, job servers and mash are upgraded together.
 
 Logged-in (browser) requests and unauthenticated requests (images,
 repositories, iPXE, node registration) aren't checked.  The endpoints node

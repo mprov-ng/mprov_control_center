@@ -8,6 +8,8 @@ from systems.member_widget import SystemMembersMixin
 from systems.models import System
 
 class PartForm(forms.ModelForm):
+    """ The partition inline's form: narrow number and text inputs, so a partition fits
+    on one row. """
     class Meta:
         widgets = {
             'partnum': forms.NumberInput(attrs={
@@ -25,6 +27,7 @@ class PartForm(forms.ModelForm):
         }
 
 class DiskPartitionInline(admin.TabularInline):
+  """ A disk or RAID layout's partitions, edited inline in a table. """
   form=PartForm
   model = DiskPartition
   extra = 1
@@ -45,6 +48,9 @@ class WarnBootDisksMixin:
 
 
 class DiskLayoutAdmin(SystemMembersMixin, WarnBootDisksMixin, AdminWizardModel):
+  """ Physical disk layouts, added with the step-by-step wizard; warns when systems
+  using it would fail the stateful installer's boot-disk check.  Its member systems
+  show as hostname chips. """
   inlines = [DiskPartitionInline]
   step_fields = [['dtype'],None]
   readonly_fields = ['dtype', 'slug']
@@ -68,6 +74,8 @@ class DiskLayoutAdmin(SystemMembersMixin, WarnBootDisksMixin, AdminWizardModel):
 
 
 class RaidLayoutAdmin(WarnBootDisksMixin, AdminWizardModel):
+  """ Software RAID layouts, added with the step-by-step wizard; warns when systems
+  using it would fail the stateful installer's boot-disk check. """
   readonly_fields = ['dtype', 'slug']
   exclude=['slug']
 

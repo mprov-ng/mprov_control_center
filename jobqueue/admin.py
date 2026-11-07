@@ -2,6 +2,7 @@ from django.contrib import admin
 from .models import Job, JobModule, JobServer, JobServerAddress
 
 class JobAdmin(admin.ModelAdmin):
+    """ Jobs: what's queued, running or finished, and on which job server. """
     model = Job
     readonly_fields = ('return_code', 'params', 'module','jobserver',)#'status', ) 
     list_display = ['name', 'status','create_time', 'start_time', 'end_time', 'last_update','jobserver']
@@ -18,6 +19,7 @@ class JobAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return ("add" in request.path or "change" in request.path)
 class JobModuleAdmin(admin.ModelAdmin):
+    """ Job modules: the kinds of job, matching the job server plugins that run them. """
     model = JobModule
     readonly_fields = ('active',  )
     list_display=['name', 'slug']
@@ -59,6 +61,8 @@ class ResponsiveFilter(admin.SimpleListFilter):
 
 
 class JobServerAdmin(admin.ModelAdmin):
+    """ Job servers: the registered servers, their modules, and whether they're
+    responding. """
     model = JobServer
     inlines = [JobServerAddressInline]
     readonly_fields = ('host_id', 'address','heartbeat_time','responsive','jobmodules',)
