@@ -19,16 +19,16 @@
               <div class="row">
                 <div class="col-12 col-lg-8">
                   <div class="row">
-                    <div class="col-12 col-sm-2 text-left"><strong>Update?</strong></div>
-                    <div class="col-12 col-sm-4 text-left">&nbsp;</div>
+                    <div class="col-12 col-sm-2 text-start"><strong>Update?</strong></div>
+                    <div class="col-12 col-sm-4 text-start">&nbsp;</div>
                     <div class="col-12 col-sm-6">&nbsp;</div>
                   </div>
                   {% for field in adminform %}
                   <div class="form-group">
                     
                     <div class="row">
-                      <div class="col-12 col-sm-2 text-left"><input type="checkbox" name="update_{{field.html_name }}"/></div>
-                      <label class="col-12 col-sm-4 text-left" for="{{field.id_for_label}}">{{field.label}}</label> 
+                      <div class="col-12 col-sm-2 text-start"><input type="checkbox" name="update_{{field.html_name }}"/></div>
+                      <label class="col-12 col-sm-4 text-start" for="{{field.id_for_label}}">{{field.label}}</label> 
                       <div class="col-12 col-sm-6">{{ field }}
                         <div class="help-block red">{{ field.errors }}</div>
                         <div class="help-block">{{field.help_text}}</div>

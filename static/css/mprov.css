@@ -13,14 +13,14 @@ a.btn-default {
 .card-primary.card-outline {
   border-top: 3px solid #20c997;
 }
-.nav-sidebar .nav-item>.nav-link {
+.sidebar-menu .nav-item>.nav-link {
   color: #20c997 ;
 }
-.nav-sidebar>.nav-item.menu-open>.nav-link {
+.sidebar-menu>.nav-item.menu-open>.nav-link {
   background-color: #073d2d !important;
   color: #FFF !important;
 }
-.nav-sidebar .nav-item>.nav-link.active {
+.sidebar-menu .nav-item>.nav-link.active {
   background-color: #20c997 !important;
 }
 .timeline>div>.timeline-item>.time {
@@ -55,7 +55,7 @@ td.delete input {
 
   width: 100%;
 }
-/* .nav-sidebar>.nav-header{
+/* .sidebar-menu>.nav-header{
  
   display: none !important;
 } */
@@ -94,7 +94,7 @@ td.delete input {
   color: #6c757d;
   font-weight: bold;
 }
-.font-weight-light {
+.fw-light {
  font-weight: 400 !important;
 }
 
@@ -102,7 +102,7 @@ td.delete input {
   li.nav-item.has-treeview {
       color: #fff !important;
   }
-  .nav-sidebar .nav-item>.nav-link:hover {
+  .sidebar-menu .nav-item>.nav-link:hover {
       color: #fff !important;
   }
   aside {
@@ -127,7 +127,7 @@ td.delete input {
   .card{
     border: 1px solid rgba(255, 255, 255, .125);
   }
-  .content-wrapper {
+  .app-main {
       background-color: #303030;
   }
   .time {
@@ -167,3 +167,35 @@ td.delete input {
 .rendered-config .card { margin-bottom: 1rem; }
 .rendered-config .card-title { font-size: 1rem; font-weight: 600; }
 .rendered-config .card-body > p:last-child, .rendered-config .card-body > ul:last-child { margin-bottom: 0; }
+
+/* jazzmin 3.0.5 (#474) hard-codes a plain top bar and brand, and the Minty
+   theme boxes the breadcrumbs: keep mPCC's teal top bar and brand, and plain
+   breadcrumbs beside the title. */
+#jazzy-navbar,
+#jazzy-sidebar .sidebar-brand,
+#jazzy-logo {
+  background-color: #20c997 !important;
+}
+/* jazzmin 3.0.2's main.css hid a hidden field's labelled row with .hidden;
+   3.0.5 dropped the rule, so e.g. the disk layout wizard showed an empty
+   "Wizard step" row (#474). */
+.form-group.hidden {
+  display: none !important;
+}
+/* the whole brand box is teal, in light and dark mode, not just the link. */
+#jazzy-sidebar .sidebar-brand {
+  border-bottom: 0 !important;
+}
+#jazzy-logo,
+#jazzy-logo .brand-text {
+  color: #fff !important;
+}
+.app-content-header .breadcrumb {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+#jazzy-navbar .brand-link,
+#jazzy-navbar .nav-link {
+  color: #fff !important;
+}
