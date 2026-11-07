@@ -13,6 +13,7 @@ def require_script_type(serializer, attrs):
 
 
 class ScriptTypeAPISerializer(serializers.ModelSerializer):
+    """ A script type, e.g. image-gen or post-boot. """
     class Meta:
         model = ScriptType
         fields = '__all__'
@@ -20,6 +21,8 @@ class ScriptTypeAPISerializer(serializers.ModelSerializer):
 
 class ScriptAPISerializer(serializers.ModelSerializer):
     # read as a nested object, written as an ID.
+    """ A script, with its type nested when read and an ID when written; needs a file or
+    content, and a type. """
     scriptType = NestedPrimaryKeyRelatedField(ScriptTypeAPISerializer, queryset=ScriptType.objects.all())
     class Meta:
         model = Script
@@ -37,6 +40,7 @@ class ScriptAPISerializer(serializers.ModelSerializer):
 
 class AnsiblePlaybookAPISerializer(serializers.ModelSerializer):
     # read as a nested object, written as an ID.
+    """ An Ansible playbook, with its type nested when read and an ID when written. """
     scriptType = NestedPrimaryKeyRelatedField(ScriptTypeAPISerializer, queryset=ScriptType.objects.all())
     class Meta:
         model = AnsiblePlaybook
@@ -50,6 +54,7 @@ class AnsiblePlaybookAPISerializer(serializers.ModelSerializer):
 
 class AnsibleRoleAPISerializer(serializers.ModelSerializer):
     # read as a nested object, written as an ID.
+    """ An Ansible role, with its type nested when read and an ID when written. """
     scriptType = NestedPrimaryKeyRelatedField(ScriptTypeAPISerializer, queryset=ScriptType.objects.all())
     class Meta:
         model = AnsibleRole
@@ -59,6 +64,7 @@ class AnsibleRoleAPISerializer(serializers.ModelSerializer):
 
 class AnsibleCollectionAPISerializer(serializers.ModelSerializer):
     # read as a nested object, written as an ID.
+    """ An Ansible collection, with its type nested when read and an ID when written. """
     scriptType = NestedPrimaryKeyRelatedField(ScriptTypeAPISerializer, queryset=ScriptType.objects.all())
     class Meta:
         model = AnsibleCollection
@@ -67,6 +73,7 @@ class AnsibleCollectionAPISerializer(serializers.ModelSerializer):
         extra_kwargs = {'slug': {'required': False}}
 
 class FileAPISerializer(serializers.ModelSerializer):
+    """ An uploaded file. """
     class Meta:
         model = File
         fields = '__all__'

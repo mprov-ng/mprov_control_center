@@ -13,6 +13,7 @@ VERSION_OVERRIDES = {models.BigIntegerField: {'min_value': 1}}
 
 # The Config Management lists sort by name and search and filter as you type (#496).
 class ScriptAdmin(LiveSearchMixin, admin.ModelAdmin):
+  """ Scripts that the script runner runs in images and on nodes. """
   ordering = ['name']
   search_fields = ['name', 'filename']
   list_filter = ['scriptType']
@@ -41,6 +42,7 @@ class ScriptAdmin(LiveSearchMixin, admin.ModelAdmin):
 
 
 class FileAdmin(LiveSearchMixin, admin.ModelAdmin):
+  """ Files uploaded to the mPCC. """
   ordering = ['name']
   search_fields = ['name', 'filename']
   model = File
@@ -50,6 +52,7 @@ class FileAdmin(LiveSearchMixin, admin.ModelAdmin):
   exclude = ('slug',)
 
 class AnsiblePlaybookAdmin(LiveSearchMixin, admin.ModelAdmin):
+  """ Ansible playbooks. """
   ordering = ['name']
   search_fields = ['name', 'filename']
   list_filter = ['scriptType']
@@ -61,6 +64,7 @@ class AnsiblePlaybookAdmin(LiveSearchMixin, admin.ModelAdmin):
 
   
 class AnsibleRoleAdmin(LiveSearchMixin, admin.ModelAdmin):
+  """ Ansible roles. """
   ordering = ['name']
   search_fields = ['name', 'roleurl']
   list_filter = ['scriptType']
@@ -71,6 +75,7 @@ class AnsibleRoleAdmin(LiveSearchMixin, admin.ModelAdmin):
   exclude = ('slug',)
 
 class AnsibleCollectionAdmin(LiveSearchMixin, admin.ModelAdmin):
+  """ Ansible collections. """
   ordering = ['name']
   search_fields = ['name', 'collectionurl']
   list_filter = ['scriptType']

@@ -410,6 +410,12 @@ class SystemLocation(models.Model):
   
 @receiver(post_save, sender=NADSSystem)
 def AssignSystem(sender, instance, **kwargs):
+  ''' When an admin assigns a N.A.D.S.-discovered entry to a system, give that
+  system's bootable NIC the discovered MAC (and the system the discovered
+  serial number, #60), then delete the N.A.D.S. entry.  If the system has no
+  bootable NIC it prints an error and changes nothing else: the entry stays,
+  pointing at the system, and no NIC gets the MAC.
+  '''
   if instance.system is not None:
     # Save the MAC to the interface marked as bootable on the system 
     sysnic = NetworkInterface.objects.all()
@@ -428,6 +434,11 @@ def AssignSystem(sender, instance, **kwargs):
 @receiver(post_save, sender=SystemImage)
 @receiver(post_save, sender=SystemGroup)
 def UpdateGenders (sender, instance, **kwargs):
+  ''' Queue the libgenders job (one pending job at most, see requeue_job) after
+  any save of a system, image or system group, so the job servers'
+  genders file is rebuilt.  Nothing is queued if no libgenders job module
+  exists.
+  '''
   JobType = None
   try:
       JobType = JobModule.objects.get(slug="libgenders")
@@ -447,6 +458,13 @@ def UpdateGenders (sender, instance, **kwargs):
 @receiver(pre_save, sender=NetworkInterface)
 @receiver(pre_save, sender=SystemBMC)
 def UpdateSystemAttributes(sender, instance, **kwargs):
+  ''' Before a system, NIC or BMC is saved, queue the pxe-update, dns-update and
+  dhcp-update jobs (one pending job each at most, see requeue_job) for
+  whichever of those job modules exist, so the job servers' boot, DNS and
+  DHCP config follow the change.  For a system saved during a request, it
+  also sets created_by to the user the request acts as (acting_user), so
+  created_by is whoever saved the system last, not only who created it.
+  '''
   
   # SystemImage isn't a sender here; UpdateSystemImages sets its created_by.
   if sender == System:
@@ -473,6 +491,11 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
 # hosts a deleted image.
 @receiver(pre_delete, sender=SystemImage)
 def DeleteSystemImage(sender, instance, **kwargs):
+  ''' Before an image is deleted, stop every job server serving it (clear
+  jobservers) and queue an image-delete job for each of those job servers,
+  so they remove their copy.  Prints a warning, and queues nothing, if there
+  is no image-delete job module.
+  '''
   # grab a copy of the jobservers.
   jobservers = list(instance.jobservers.all())
   # now clear this so everyone stops serving it.
@@ -502,6 +525,13 @@ def DeleteSystemImage(sender, instance, **kwargs):
 # emits an image-update job every time an image is saved with needs_rebuild set.
 @receiver(pre_save, sender=SystemImage)
 def UpdateSystemImages(sender, instance, **kwargs):
+  ''' Before an image is saved: set created_by to the user the request acts as,
+  and the slug (its primary key) from its name.  If needs_rebuild is set,
+  queue an image-update job for it, clear its job servers (none serve the
+  old build any more), bump its version and clear needs_rebuild, so this
+  save records the rebuild having been requested.  Nothing is queued if
+  there is no image-update job module.
+  '''
   from common.request import acting_user, get_current_request
   request = get_current_request()
   if request is not None:

@@ -4,6 +4,7 @@ from rest_framework import serializers
 from .models import DiskLayout, DiskPartition, RaidLayout
 
 class DiskPartitionAPISerializer(serializers.ModelSerializer):
+  """ A partition, with its layout nested two deep. """
   disklayout = serializers.PrimaryKeyRelatedField(queryset=DiskLayout.objects.all())
   class Meta:
     model = DiskPartition
@@ -14,6 +15,7 @@ class DiskPartitionAPISerializer(serializers.ModelSerializer):
 class RaidLayoutAPISerializer(serializers.ModelSerializer):
   # systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
 
+  """ A software RAID layout, nested one deep. """
   class Meta:
     model = RaidLayout
     fields = '__all__'
@@ -26,6 +28,9 @@ class RaidLayoutAPISerializer(serializers.ModelSerializer):
 
 class DiskLayoutAPISerializer(serializers.ModelSerializer):
   #systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
+  """ A disk layout as the stateful installer reads it: its partitions, plus the RAID
+  members, filesystem, level and mount worked out from its RAID layout (empty for a
+  plain disk). """
   partitions = DiskPartitionAPISerializer(many=True, read_only=True)
   members = serializers.SerializerMethodField("getMembers")
   filesystem = serializers.SerializerMethodField("getRaidFS")

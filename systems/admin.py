@@ -37,6 +37,8 @@ from .models import (
 )
 
 class NetForm(forms.ModelForm):
+    """ The NIC inline's form: narrow name and bootable inputs, so a NIC fits on one
+    row. """
     class Meta:
         widgets = {
             'name': forms.TextInput(attrs={
@@ -51,6 +53,8 @@ class NetForm(forms.ModelForm):
 
 class NetworkInterfaceInlineFormset(BaseInlineFormSet):
   
+  """ A system's NICs: each one's switch-port choices are only the ports no other NIC
+  uses (plus its own), and at most one may be bootable. """
   def __init__(self, *args, **kwargs):
     super(NetworkInterfaceInlineFormset, self).__init__(*args, **kwargs)
     for form in self.forms:
@@ -69,6 +73,7 @@ class NetworkInterfaceInlineFormset(BaseInlineFormSet):
   
 
 class NetworkInterfaceInline(admin.StackedInline):
+  """ A system's NICs, edited inline. """
   model = NetworkInterface
   extra=1
   formset = NetworkInterfaceInlineFormset
@@ -103,6 +108,8 @@ class NetworkInterfaceInline(admin.StackedInline):
   
 
 class BMCInline(admin.StackedInline):
+  """ A system's BMC, edited inline, one at most.  The password field never shows
+  the stored password, and left blank it keeps it (SystemBMCForm). """
   model = SystemBMC
   extra = 1
   max_num=1 
@@ -193,6 +200,9 @@ def bmc_credentials_action(modeladmin, request, queryset, systems):
 
 
 class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
+  """ Systems: their NICs, BMC and serial history inline, power and PXE actions, bulk
+  updates, bulk BMC credentials (#374), adding a range (#38), live search, and the
+  hostname lookup behind the member chips (#497). """
   actions = [ 'bulk_update', 'set_bmc_credentials', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
 
   @admin.action(description="Set BMC credentials")
@@ -631,6 +641,8 @@ class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
 
 
 class SystemGroupAdmin(SystemMembersMixin, admin.ModelAdmin):
+  """ System groups, their members as hostname chips (#497), and setting the BMC
+  credentials of their members (#374). """
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
   raw_id_fields = ['systems']
@@ -642,12 +654,16 @@ class SystemGroupAdmin(SystemMembersMixin, admin.ModelAdmin):
     return bmc_credentials_action(self, request, queryset, systems)
 
 class SystemModelAdmin(admin.ModelAdmin):
+  """ System models: the vendor and model N.A.D.S. matches a booting node's dmidecode
+  against. """
   list_display = ['slug', 'vendor', 'name']
   verbose_name = "System Models"
   verbose_name_plural = "System Models"
   exclude = ['slug']
 
 class NADSAdmin(admin.ModelAdmin):
+  """ Systems N.A.D.S. found but couldn't match: assign one to a system to give its
+  bootable NIC the MAC. """
   verbose_name = "N.A.D.S Discovered"
   verbose_name_plural = "N.A.D.S Discovered"
   list_display = ['mac', 'vendor', 'model', 'switch', 'port', 'serial']
@@ -656,6 +672,7 @@ class NADSAdmin(admin.ModelAdmin):
     return False
 
 class SystemLocationAdmin(admin.ModelAdmin):
+   """ System locations, e.g. a rack or room. """
    def get_list_display(self, request):
         return [field.name for field in self.model._meta.concrete_fields]
 
@@ -686,6 +703,8 @@ def mark_rebuild(modeladmin, request, queryset):
     SystemImage.objects.filter(pk=instance.pk).update(version=F('version') + 1)
 
 class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
+  """ System images: their merged config, version and the job servers serving them;
+  mark them for rebuild, or rebuild one now (#176). """
   list_display = ['slug', 'name', 'osdistro', 'version', 'registered_jobservers']
   readonly_fields = ['timestamp', 'updated', 'created_by',  'jobservers']
   list_display_links = ['slug', 'name']

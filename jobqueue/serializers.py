@@ -4,6 +4,8 @@ from networks.models import Network
 
 
 class JobAPISerializer(serializers.ModelSerializer):
+    """ A job, with its module, status and job server as IDs; status defaults to
+    pending. """
     module = serializers.PrimaryKeyRelatedField(queryset=JobModule.objects.all())
     # status defaults to 1 (PENDING) on the model.
     status = serializers.PrimaryKeyRelatedField(queryset=JobStatus.objects.all(), required=False)
@@ -21,11 +23,14 @@ class JobDetailSerializer(serializers.ModelSerializer):
         depth = 3
 
 class JobModuleAPISerializer(serializers.ModelSerializer):
+    """ A job module. """
     class Meta:
         model = JobModule
         fields = '__all__'
 
 class JobServerAPISerializer(serializers.ModelSerializer):
+    """ A job server, with whether it's responding (read-only) and its host ID (read-
+    only). """
     jobmodules = serializers.PrimaryKeyRelatedField(many=True, queryset=JobModule.objects.all())
     network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all(), required=False, allow_null=True)
     # heartbeated in the last minute (#254).

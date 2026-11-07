@@ -4,6 +4,7 @@ from rest_framework import serializers
 from .models import Network, Switch, NetworkType, SwitchPort
 
 class NetworkAPISerializer(serializers.ModelSerializer):
+  """ A network, with its network type as an ID. """
   net_type = serializers.PrimaryKeyRelatedField(queryset=NetworkType.objects.all())
   class Meta:
     model = Network
@@ -19,12 +20,14 @@ class NetworkDetailSerializer(serializers.ModelSerializer):
     depth = 3
 
 class NetworkTypeAPISerializer(serializers.ModelSerializer):
+  """ A network type. """
   class Meta:
     model = NetworkType
     fields = '__all__'
 
 class SwitchAPISerializer(serializers.ModelSerializer):
   # set from the request user by the UpdateSwitch pre_save signal.
+  """ A switch; created_by is read-only, set from the request. """
   created_by = serializers.PrimaryKeyRelatedField(read_only=True)
   network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all(), required=False, allow_null=True)
   class Meta:
@@ -32,6 +35,7 @@ class SwitchAPISerializer(serializers.ModelSerializer):
     fields = '__all__'
 
 class SwitchPortAPISerializer(serializers.ModelSerializer):
+  """ A switch port. """
   switch = serializers.PrimaryKeyRelatedField(queryset=Switch.objects.all())
   networks = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all(), required=False, allow_null=True)
 

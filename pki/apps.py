@@ -7,6 +7,8 @@ from django.conf import settings
 
 
 class PkiConfig(AppConfig):
+    """ The pki app: the mPCC's own CA, its HTTPS certificate and the agents'
+    credentials (#381). """
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'pki'
     verbose_name = "Agent Identities"

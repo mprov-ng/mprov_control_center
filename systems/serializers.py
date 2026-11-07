@@ -8,6 +8,7 @@ from common.serializers import NestedPrimaryKeyRelatedField
 from scripts.serializers import ScriptAPISerializer, AnsibleCollectionAPISerializer, AnsiblePlaybookAPISerializer, AnsibleRoleAPISerializer
 
 class SystemSerializer(serializers.ModelSerializer): 
+    """ A system, with relations as IDs, plus its merged config (read-only). """
     config = serializers.DictField(read_only=True)
     class Meta:
         model = System
@@ -22,6 +23,7 @@ class SystemSerializer(serializers.ModelSerializer):
         system.record_serial_change(old, system.serial, "api", getattr(request, 'user', None))
         return system
 class SystemBMCSerializer(serializers.ModelSerializer): 
+    """ A BMC; the password is accepted but never returned here. """
     system = serializers.PrimaryKeyRelatedField(queryset=System.objects.all())
     switch_port = serializers.PrimaryKeyRelatedField(queryset=SwitchPort.objects.all(),required=False)
     network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all(), required=False)
@@ -34,6 +36,8 @@ class SystemBMCSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 class SystemGroupSerializer(serializers.ModelSerializer): 
     # read as nested objects, written as IDs.
+    """ A system group; scripts and Ansible are nested objects when read and IDs when
+    written. """
     scripts = NestedPrimaryKeyRelatedField(ScriptAPISerializer, many=True, required=False, queryset=Script.objects.all())
     ansibleplaybooks = NestedPrimaryKeyRelatedField(AnsiblePlaybookAPISerializer, many=True, required=False, queryset=AnsiblePlaybook.objects.all())
     ansibleroles = NestedPrimaryKeyRelatedField(AnsibleRoleAPISerializer, many=True, required=False, queryset=AnsibleRole.objects.all())
@@ -42,6 +46,7 @@ class SystemGroupSerializer(serializers.ModelSerializer):
         model = SystemGroup
         fields = '__all__' 
 class SystemImageSerializer(serializers.ModelSerializer):
+    """ A system image. """
     jobservers=serializers.PrimaryKeyRelatedField(many=True, queryset=JobServer.objects.all())
     # read as nested objects, written as IDs.
     systemgroups=NestedPrimaryKeyRelatedField(SystemGroupSerializer, many=True, required=False, queryset=SystemGroup.objects.all())
@@ -50,11 +55,14 @@ class SystemImageSerializer(serializers.ModelSerializer):
         model = SystemImage
         fields = '__all__'
 class SystemImageDetailsSerializer(SystemImageSerializer):
+    """ A system image with its relations nested three deep, for ?detail. """
     class Meta:
         model = SystemImage
         depth = 3
         fields = '__all__'
 class SystemDetailSerializer(serializers.ModelSerializer): 
+    """ A system with its image, groups, disks and Ansible nested, plus its merged
+    config, for ?detail and ?self. """
     disks = DiskLayoutAPISerializer(many=True, read_only=True)
     systemimage = SystemImageDetailsSerializer(many=False)
     systemmodel =  serializers.PrimaryKeyRelatedField(queryset=SystemModel.objects.all())
@@ -69,6 +77,8 @@ class SystemDetailSerializer(serializers.ModelSerializer):
         depth = 3
 class SystemBMCDetailSerializer(serializers.ModelSerializer): 
     
+    """ A BMC with its system nested, including the password, for the per-system paths
+    setupBMC.py reads. """
     class Meta:
         model = SystemBMC
         fields = '__all__'# ['id','switch_port','system', 'system_detail', 'network', 'ipaddress', 'mac', 'username', 'password']
@@ -83,6 +93,7 @@ class SystemBMCDetailNoPasswordSerializer(SystemBMCDetailSerializer):
 
         
 class NetworkInterfaceSerializer(serializers.ModelSerializer):
+    """ A NIC; hostname is read-only, copied from its system on every save (#382). """
     class Meta:
         model = NetworkInterface
         fields = '__all__'
@@ -91,6 +102,8 @@ class NetworkInterfaceSerializer(serializers.ModelSerializer):
         read_only_fields = ['hostname']
 
 class NetworkInterfaceDetailsSerializer(serializers.ModelSerializer):
+    """ A NIC with its system, network and switch port nested three deep; hostname is
+    read-only. """
     class Meta:
         model = NetworkInterface
         fields = '__all__'

@@ -15,6 +15,9 @@ class AdminWizardModel(admin.ModelAdmin):
   # A ModelAdmin instance is shared by every request, so the wizard's step,
   # inlines and readonly fields are worked out per request, never stored on
   # self: two people adding at once must not see each other's step (#270).
+  """ A ModelAdmin whose add form is a step-by-step wizard: step_fields lists the fields
+  shown at each step.  The step is worked out per request (wizard_step), never
+  stored on the shared instance (#270). """
   step_fields = None
   extra_js = []
   appname = ""

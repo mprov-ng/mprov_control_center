@@ -219,6 +219,27 @@ If no jobserver is left, a 404 is returned.
         return HttpResponseNotAllowed(["GET"])
 
 class IPXEAPIView(MProvView):
+    '''
+# /ipxe/
+
+The iPXE script a PXE-booting machine fetches, chosen by the address it
+asks from (get_client_ip).  Unauthenticated: a booting machine has no
+credentials yet.
+
+- A known NIC that is bootable, on a system set to provision: the kernel and
+  initrd of the system's image, with the kernel command line from its
+  merged config (distro, groups, image, system; rendered as a template),
+  plus mprov_rescue (1 with ?rescue) and the enrollment parameters (#381,
+  enroll_params).
+- A system not set to provision, or with no bootable NIC for that address: the
+  local-boot script.
+- An unknown address: the __nads__ image, for N.A.D.S. auto-detection, booted
+  over its distro's prov_interface (404 if there's no __nads__ image).
+- A system with no image: 404.
+- An image with a custom iPXE script: that script, rendered with nic and
+  boot in its context, instead of the standard one.  It doesn't get
+  mprov_rescue or the enrollment parameters added.
+    '''
     model = NetworkInterface
     serializer_class = NetworkInterfaceDetailsSerializer
     authentication_classes = [] #disables authentication

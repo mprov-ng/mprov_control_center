@@ -12,6 +12,7 @@ from .utils import get_associated_objects, calculate_new_ips
 
 
 class NetworkAdmin(admin.ModelAdmin):
+  """ Networks, with a summary tab of what's on each one. """
   model = Network
   # Removing vlan for now.
   #list_display = ['slug', 'name', 'net_type', 'vlan', 'subnet', 'netmask']
@@ -231,11 +232,13 @@ class NetworkAdmin(admin.ModelAdmin):
       return render(request, 'admin/networks/confirm_update.html', context)
 
 class NetworkTypeAdmin(admin.ModelAdmin):
+  """ Network types, e.g. Ethernet or InfiniBand. """
   model = NetworkType
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
 
 class SwitchPortInline(admin.TabularInline):
+  """ A switch's ports, edited inline in a table. """
   model = SwitchPort
   extra = 1
   list_display = ['name']
@@ -244,6 +247,8 @@ class SwitchPortInline(admin.TabularInline):
     
 
 class SwitchAdmin(admin.ModelAdmin):
+  """ Switches, and their ports inline, for N.A.D.S. to match a booting node's switch
+  and port against. """
   model = Switch
   inlines = [SwitchPortInline]
   readonly_fields = ['created_by']

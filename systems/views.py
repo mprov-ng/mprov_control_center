@@ -983,6 +983,34 @@ Format returned:
         return super().patch(request, *args, **kwargs)   
 
 class SystemPowerAPIView(MProvView):
+    '''
+# /power/<action>/
+
+Runs a BMC power action over IPMI (ipmitool, lanplus) and returns, for each
+BMC acted on, {"details", "status", "chassis_status"}.  Only GET is used.
+
+## Actions
+- on, off, cycle, reset (a hard reset, falling back to a power cycle if that fails)
+- status: chassis_status is whether the system is powered on
+- pxe, pxeefi: set the next boot to (EFI) PXE, power on, then reset.  These
+  provision the system, so provision is set first.  A system that can't be
+  provisioned (no bootable NIC, or a stateful system's disk layouts the
+  installer would refuse) isn't reset: with ?id= the response is 409; with
+  ?hostname= or a field filter, that BMC's result has "status": 409.  If
+  setting the boot device fails, nothing is reset and provision goes back
+  to what it was (#311).
+
+## Which BMCs
+- ?hostname=NAME: the BMCs of the system with exactly that hostname (404 if none)
+- ?id=ID: the BMCs of the system with that ID (400 if it isn't a number, 404 if unknown)
+- ?FIELD=VALUE: the BMCs matching filters on the BMC's own fields; 400 for a
+  field that doesn't exist, and 400 with no filter at all, so it never acts
+  on every BMC at once.
+- At most 10 BMCs per request; more are truncated with a warning.
+
+A BMC that can't be reached shows in its own result, with "status": "400";
+the response is still 200.
+    '''
     model = SystemBMC
     serializer_class = SystemBMCSerializer
     queryset = None
