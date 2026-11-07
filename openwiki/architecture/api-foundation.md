@@ -11,7 +11,7 @@ Nearly every JSON endpoint in mPCC subclasses `MProvView` (`common/views.py`), w
 
 ## MProvView behavior
 
-- **Permissions**: `HasAPIKeyOrIsAuthenticated` (`common/permissions.py`) — an `X-API-Key` header or any authenticated session/Basic/Token identity. The same class is the DRF `DEFAULT_PERMISSION_CLASSES` in settings, so non-`MProvView` API views get identical behavior; a plain tuple of the two permissions would have required both (#272).
+- **Permissions**: `MProvPermission` (`common/permissions.py`, DRF `DEFAULT_PERMISSION_CLASSES`) — replaced `HasAPIKeyOrIsAuthenticated` with the #381 agent-auth work: a client-cert agent gets only its kind's rules from `pki/rules.py`; the shared API key is governed by `MPROV_SHARED_KEY_MODE` (`all` = accepted everywhere as before, `nodes` = only what a system may do, acting as the system whose NIC address the caller has, `off` = refused); a logged-in user (session/Basic) may use the whole API. See [PKI & Agent Auth](../domain/pki-and-agent-auth.md).
 - **Verbs**: `GET` list/retrieve, `POST` create, `PATCH` update, `DELETE` delete. `PUT` is explicitly rejected with `HttpResponseNotAllowed(["GET","POST","PATCH","DELETE"])`. `patch()`/`delete()` unpack `*args, **kwargs` into `partial_update`/`destroy` so the URL pk reaches the DRF mixins (this was a bug fixed recently — earlier versions dropped the kwargs). An API-key (anonymous session) `PATCH` records `created_by` as `admin`.
 - **Query-param filtering**: `filter_by_query_params()` applies any `?FIELD=VALUE` exact match against model fields; invalid fields return a 400 body, and an empty result set returns 404. Unknown keys — including lookups like `?hostname__startswith=` — are errors, not silently ignored, so a typo'd filter can't return every row (#390). `?detail`, `?search` and `?format` are always accepted (`base_query_params`); a view lists its own accepted keys in `extra_query_params` (e.g. `SystemAPIView`: `self`), and views that filter themselves (e.g. `JobAPIView` for `module`/`params`/`jobserver`/`status`) apply the same check.
 - **Self-documenting**: a non-JSON `GET` returns the view class docstring rendered as Markdown into a styled HTML page. Docstrings are therefore user-facing API docs — update them when endpoint behavior changes.
@@ -37,7 +37,8 @@ The mPCC, its jobservers, and mash must run the same major.minor version. `mprov
 
 Configured in `mprov_control_center/settings.py`:
 
-- **API keys** (`rest_framework_api_key`): the machine-auth path used by jobservers and remote automation; the container entrypoint generates the jobserver key on first start.
+- **Client certificates** (`pki.authentication.ClientCertAuthentication`, first in `DEFAULT_AUTHENTICATION_CLASSES`): the machine-auth path for enrolled jobservers and nodes over Apache mTLS; `request.user` is the agent's service user and `request.auth` its `AgentCredential`. See [PKI & Agent Auth](../domain/pki-and-agent-auth.md).
+- **API keys** (`rest_framework_api_key`): the shared key jobservers and remote automation used before #381 and still use during the transition (mode-governed, above); the container entrypoint generates the jobserver key on first start.
 - **Sessions / Basic / Token**: DRF defaults plus Django sessions for the admin UI. Session idle timeout via `django_session_timeout` (`SESSION_EXPIRE_SECONDS`, default 1800) redirects to `/admin/login/`.
 - **LDAP**: enabled when `LDAP_ENABLED=1`. `django_auth_ldap` uses direct bind (`AUTH_LDAP_USER_DN_TEMPLATE`), gates access with `AUTH_LDAP_REQUIRE_GROUP`, maps staff/superuser from LDAP groups, and falls back to `ModelBackend`. `LDAP_SELF_SIGNED_CERT=1` bypasses TLS cert verification.
 - CORS is **not** configured (`corsheaders` is installed as a package but absent from apps/middleware).

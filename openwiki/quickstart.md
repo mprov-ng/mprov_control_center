@@ -1,7 +1,7 @@
 ---
 type: Reference
 title: mProv Control Center Quickstart
-description: Entry point for the mProv Control Center (mPCC) documentation — a Django 4.2 + DRF bare-metal provisioning control center with an admin UI and REST API. Covers what it is, how it is installed, and where to go next.
+description: Entry point for the mProv Control Center (mPCC) documentation — a Django 5.2 + DRF bare-metal provisioning control center with an admin UI and REST API, per-install PKI, and certificate-authenticated agents. Covers what it is, how it is installed, and where to go next.
 tags: [mprov, django, drf, provisioning, quickstart]
 ---
 
@@ -13,7 +13,7 @@ mPCC is the brain of the mProv bare-metal provisioning stack. It manages the inv
 - A **REST/CRUD JSON API** under paths like `/systems/`, `/networks/`, `/jobs/`, used remotely by jobservers and automation.
 - **Self-documenting endpoints**: a non-JSON `GET` to most API views returns the endpoint's docstring rendered as HTML, and `GET /datamodel/?model=app.models.Model` returns the JSON field structure of any model.
 
-Stack: Django (pinned `django>=4.2,<5` in `requirements.txt` pending the Rocky 9 move), Django REST Framework, `djangorestframework-api-key`, optional LDAP (`django-auth-ldap`), Apache + `mod_wsgi` in a container. See [Architecture Overview](architecture/overview.md) for the full map.
+Stack: Django 5.2 LTS (`django>=5.2.19,<6` in `requirements.txt`), Django REST Framework, `djangorestframework-api-key`, `cryptography` (the [PKI app](domain/pki-and-agent-auth.md)), optional LDAP (`django-auth-ldap`), Apache + `mod_wsgi` on Rocky Linux 9 / Python 3.12 in a container (#197). See [Architecture Overview](architecture/overview.md) for the full map.
 
 ## Installation and first steps
 
@@ -32,10 +32,11 @@ mPCC is installed as part of the full mProv stack via [mprov-compose](https://gi
 | Systems, NICs, BMCs, provision flag / PXE Boot gating, images, networks, IPMI power | [Systems & Networking](domain/systems-and-networking.md) |
 | Job queue, jobservers, scripts, Ansible content | [Jobs & Scripts](domain/jobs-and-scripts.md) |
 | OS distros/repos, disk layouts and RAID | [OS & Disk Management](domain/os-and-disk-management.md) |
+| Per-install CA, agent client certificates, enrollment | [PKI & Agent Auth](domain/pki-and-agent-auth.md) |
 
 ## How the pieces fit together
 
-Every domain app below models its entities and then exposes them through [MProvView](architecture/api-foundation.md), the shared DRF base class. Write-side signals in [Systems & Networking](domain/systems-and-networking.md) and [OS & Disk Management](domain/os-and-disk-management.md) do not call external systems directly — they queue jobs that external jobservers poll out of the [Job Queue](domain/jobs-and-scripts.md).
+Every domain app below models its entities and then exposes them through [MProvView](architecture/api-foundation.md), the shared DRF base class — whose default auth and permission classes now come from the [PKI & Agent Auth](domain/pki-and-agent-auth.md) layer (client certificates for jobservers/nodes, scoped by `pki/rules.py`). Write-side signals in [Systems & Networking](domain/systems-and-networking.md) and [OS & Disk Management](domain/os-and-disk-management.md) do not call external systems directly — they queue jobs that external jobservers poll out of the [Job Queue](domain/jobs-and-scripts.md).
 
 ## Testing and change guidance
 
