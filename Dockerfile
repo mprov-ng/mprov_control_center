@@ -49,10 +49,6 @@ RUN echo "fastestmirror=True" >> /etc/dnf/dnf.conf && \
     dnf install -y parted-devel && \
     dnf clean all
 
-# gen ssl
-RUN openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/localhost.key -x509 -days 365 -out /etc/pki/tls/certs/localhost.crt -nodes -subj "/C=US/ST=Maryland/L=Baltimore/O=Johns Hopkins/OU=ARCH/CN=localhost"
-RUN chown apache:apache /etc/pki/tls/private/localhost.key /etc/pki/tls/certs/localhost.crt
-
 # Set up application environment
 WORKDIR /var/www/
 
@@ -113,8 +109,20 @@ RUN wget -q -O static/busybox https://busybox.net/downloads/binaries/1.35.0-x86_
 RUN install -d -m 700 /var/lib/mprov/backups
 VOLUME /var/lib/mprov/backups
 
+# The mPCC's own CA and HTTPS certificate (#381): made at first start by
+# init_mpcc.sh (manage.py mprov_tls), never at build time, so each install
+# has its own.  A volume, so they survive the container being recreated.
+RUN install -d -m 755 /var/lib/mprov/tls
+VOLUME /var/lib/mprov/tls
+
 # copy in the mprov_control_center apache config    
 COPY static/configs/mprov_control_center.conf /etc/httpd/conf.d/mprov_control_center.conf
+
+# HTTPS (#381): ssl.conf serves the certificate init_mpcc.sh makes or the
+# site supplies (MPROV_TLS_CERT/MPROV_TLS_KEY, which init_mpcc.sh exports),
+# and asks for an optional client certificate from the mPCC's CA, which
+# agents will authenticate with (static/configs/mprov_ssl_client.conf).
+COPY static/configs/mprov_ssl_client.conf /tmp/mprov_ssl_client.conf
 
 # Send all of Apache's logs to stdout, so docker logs has them, and log each
 # request once, in the combined format, on both ports:
@@ -129,10 +137,17 @@ RUN sed -i -e 's|^ErrorLog .*$|ErrorLog /dev/stdout|' \
     sed -i -e 's|^ErrorLog .*$|ErrorLog /dev/stdout|' \
         -e 's|^TransferLog .*$|CustomLog /dev/stdout combined|' \
         -e '/^CustomLog logs\/ssl_request_log \\$/,+1d' \
+        -e 's|^SSLCertificateFile .*$|SSLCertificateFile ${MPROV_TLS_CERT}|' \
+        -e 's|^SSLCertificateKeyFile .*$|SSLCertificateKeyFile ${MPROV_TLS_KEY}|' \
+        -e '/^SSLCertificateKeyFile /r /tmp/mprov_ssl_client.conf' \
         /etc/httpd/conf.d/ssl.conf && \
+    rm /tmp/mprov_ssl_client.conf && \
     grep -q '^ *CustomLog /dev/stdout combined$' /etc/httpd/conf/httpd.conf && \
     grep -q '^CustomLog /dev/stdout combined$' /etc/httpd/conf.d/ssl.conf && \
-    ! grep -q 'ssl_request_log' /etc/httpd/conf.d/ssl.conf
+    ! grep -q 'ssl_request_log' /etc/httpd/conf.d/ssl.conf && \
+    grep -q '^SSLCertificateFile ${MPROV_TLS_CERT}$' /etc/httpd/conf.d/ssl.conf && \
+    grep -q '^SSLCertificateKeyFile ${MPROV_TLS_KEY}$' /etc/httpd/conf.d/ssl.conf && \
+    grep -q '^SSLVerifyClient optional$' /etc/httpd/conf.d/ssl.conf
 RUN rm -f /etc/httpd/logs /etc/httpd/run /etc/httpd/state
 RUN mkdir -p /etc/httpd/logs /etc/httpd/run /etc/httpd/state
 RUN chown apache:apache /etc/httpd/logs /etc/httpd/run /etc/httpd/state
