@@ -272,6 +272,11 @@ fi
 # in the /etc/mprov volume it shares, until a job server has enrolled.
 python manage.py mprov_enroll_token --bootstrap /etc/mprov/enroll_token
 
+# The CA certificate (public; never its key) next to it, so that job server
+# can check the mPCC's HTTPS certificate before it enrolls.  Copied on every
+# start, so a CA restored from a backup shows up too.
+install -m 0644 "$MPROV_TLS_CA" /etc/mprov/ca.crt.new && mv -f /etc/mprov/ca.crt.new /etc/mprov/ca.crt
+
 # fix the db perms... again...
 chown apache db/ -R
 chmod u+w db/ -R
