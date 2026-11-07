@@ -4,7 +4,7 @@
 {% block extra-actions %}
     <!-- Rebuild now (#176): saves the form and queues a rebuild of this image. -->
     {% if original.pk %}
-        <input type="submit" value="{% translate 'Rebuild now' %}" name="_rebuild_now" class="btn btn-warning btn-sm btn-block mt-2"
+        <input type="submit" value="{% translate 'Rebuild now' %}" name="_rebuild_now" class="btn btn-sm btn-warning"
                title="{% translate 'Save, then queue a rebuild of this image on the job servers' %}">
     {% endif %}
 {% endblock %}

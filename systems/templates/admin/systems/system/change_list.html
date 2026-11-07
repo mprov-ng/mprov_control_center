@@ -3,11 +3,13 @@
 {% load i18n jazzmin %}
 
 {% block object-tools-items %}
-    {{ block.super }}
-    {% if has_add_permission %}
-        {% get_jazzmin_ui_tweaks as jazzmin_ui %}
-        <a href="{% url 'admin:systems_system_add_range' %}" class="btn {{ jazzmin_ui.button_classes.success }} float-right mr-2">
-            <i class="fa fa-layer-group"></i> &nbsp; Add range
-        </a>
-    {% endif %}
+    <div class="d-flex flex-row-reverse gap-2">
+        {{ block.super }}
+        {% if has_add_permission %}
+            {% get_jazzmin_ui_tweaks as jazzmin_ui %}
+            <a href="{% url 'admin:systems_system_add_range' %}" class="btn {{ jazzmin_ui.button_classes.success }}">
+                <i class="fa fa-layer-group"></i> &nbsp; Add range
+            </a>
+        {% endif %}
+    </div>
 {% endblock %}

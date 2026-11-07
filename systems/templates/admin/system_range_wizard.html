@@ -19,7 +19,7 @@
             {% for field in form %}
             <div class="form-group">
               <div class="row">
-                <label class="col-12 col-sm-3 text-left" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                <label class="col-12 col-sm-3 text-start" for="{{ field.id_for_label }}">{{ field.label }}</label>
                 <div class="col-12 col-sm-9">{{ field }}
                   <div class="help-block red">{{ field.errors }}</div>
                   <div class="help-block">{{ field.help_text }}

@@ -6,7 +6,6 @@ import re
 from dataclasses import dataclass, field
 
 from django import forms
-from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.db import transaction
 
 from disklayouts.models import DiskLayout
@@ -88,10 +87,10 @@ class RangeWizardForm(forms.Form):
   systemimage = forms.ModelChoiceField(SystemImage.objects.all(), required=False, label="System Image")
   systemmodel = forms.ModelChoiceField(SystemModel.objects.all(), required=False, label="System Model")
   location = forms.ModelChoiceField(SystemLocation.objects.all(), required=False, label="Location")
-  systemgroups = forms.ModelMultipleChoiceField(SystemGroup.objects.all(), required=False, label="System Groups",
-    widget=FilteredSelectMultiple("System Groups", False))
-  disks = forms.ModelMultipleChoiceField(DiskLayout.objects.all(), required=False, label="Disk Layouts",
-    widget=FilteredSelectMultiple("Disk Layouts", False))
+  # plain multi-selects, which jazzmin's change form turns into select2 boxes, like
+  # the rest of the admin: jazzmin 3.0.5 doesn't style Django's FilteredSelectMultiple (#474).
+  systemgroups = forms.ModelMultipleChoiceField(SystemGroup.objects.all(), required=False, label="System Groups")
+  disks = forms.ModelMultipleChoiceField(DiskLayout.objects.all(), required=False, label="Disk Layouts")
   stateful = forms.TypedChoiceField(required=False, label="Stateful System?", empty_value=None,
     choices=[("", "Copied, or no"), ("yes", "Yes"), ("no", "No")], coerce=lambda v: v == "yes")
   provision = forms.TypedChoiceField(required=False, label="Provision?", empty_value=None,

@@ -115,7 +115,9 @@ CODEMIRROR_JS_ASSET_TAG = '<script type="text/javascript" src="{url}"></script>'
 CODEMIRROR_ADDITIONAL_CSS = []
 CODEMIRROR_ADDITIONAL_JS = []
 JAZZMIN_SETTINGS={
-    'show_ui_builder': True,
+    # The theme builder: a tool for designing a theme, which jazzmin 3.0.5 breaks the
+    # change forms' layout with (#474).
+    'show_ui_builder': False,
     'site_logo': 'mProvLogo.png',
     'icons': {
         "auth": "fas fa-users-cog",
@@ -178,7 +180,8 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
     "theme": "minty",
-    "dark_mode_theme": "darkly",
+    # jazzmin 3.0.3+: follow the browser's light/dark preference (#474); dark_mode_theme is ignored.
+    "default_theme_mode": "auto",
     "button_classes": {
         "primary": "btn-primary",
         "secondary": "btn-secondary",
