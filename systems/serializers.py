@@ -12,6 +12,15 @@ class SystemSerializer(serializers.ModelSerializer):
     class Meta:
         model = System
         fields = '__all__'
+
+    def save(self, **kwargs):
+        # keep a serial number set through the API in the system's serial
+        # history (#60).
+        old = self.instance.serial if self.instance is not None else None
+        system = super().save(**kwargs)
+        request = self.context.get('request')
+        system.record_serial_change(old, system.serial, "api", getattr(request, 'user', None))
+        return system
 class SystemBMCSerializer(serializers.ModelSerializer): 
     system = serializers.PrimaryKeyRelatedField(queryset=System.objects.all())
     switch_port = serializers.PrimaryKeyRelatedField(queryset=SwitchPort.objects.all(),required=False)

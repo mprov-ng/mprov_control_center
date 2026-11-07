@@ -19,7 +19,7 @@ from django.core.exceptions import ValidationError
 
 from common.views import MProvView
 from systems.views_noauth import get_client_ip
-from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, NADSSystem
+from systems.models import NetworkInterface, System, SystemGroup, SystemImage, SystemBMC, NADSSystem, clean_serial
 
 # a node's provisioning milestones, for a time-to-provision metric (#433), in
 # the shape the job server logs "requested image" in (mprov_jobserver#285).
@@ -90,7 +90,9 @@ NADS Packet:
             "switch": "some-switch-host-name", must match what mPCC knows.
             "port": "some-port-name", must match what mPCC knows.
             "mac": MAC of the machine being registered
-            "serial": the serial number from dmidecode (currently ignored)
+            "serial": optional, the serial number from dmidecode.  Saved on the
+                      N.A.D.S. system, and on the system it registers to (#60);
+                      placeholders like "To Be Filled By O.E.M." are ignored.
         }
 
     '''
@@ -176,6 +178,7 @@ NADS Packet:
                                 nicObj.ipaddress = nicObj.ipv6gua
                         
                         nicObj.save()
+                        system.set_serial(request.data.get('serial'), "nads")
                         # send in a pxe update job
                         JobType = None
                         try:
@@ -205,6 +208,7 @@ NADS Packet:
         else: 
             # mac is unique, so it's the only lookup field; a known MAC seen on
             # a new switch or port updates the existing entry.
+            serial = clean_serial(request.data.get('serial'))
             _, created = NADSSystem.objects.update_or_create(
                 mac=request.data['mac'],
                 defaults={
@@ -212,13 +216,14 @@ NADS Packet:
                     'port': request.data['port'],
                     'vendor': request.data['vendor'],
                     'model': request.data['model'],
-                    # XXX Future: 'serial': request.data['serial']
+                    'serial': serial[:1024] if serial else None,
                 })
             nads_log.info(
               f"nads: {_log_value(request.data['mac'])} ({_log_value(get_client_ip(request))}) "
               f"{'found' if created else 'seen again'} "
               f"on {_log_value(request.data['switch'])} port {_log_value(request.data['port'])}, "
               f"{_log_value(request.data['vendor'])} {_log_value(request.data['model'])}, "
+              f"{'serial ' + _log_value(serial) + ', ' if serial else ''}"
               "ready to be assigned")
    
         # TODO insert MAC ban code here if needed.
@@ -255,6 +260,7 @@ class SystemAPIView(MProvView):
 - scripts: array of script IDs
 - ansibleplaybooks, ansibleroles, ansiblecollections: arrays of Ansible IDs
 - install_kernel_cmdline, tmpfs_root_size, initial_mods, prov_interface: boot options for this system
+- serial: The system's serial number (#60).  Each change is kept in its serial history, shown in the admin.
 - config: The merged configuration from the OS Distro, System Groups, and this system
 
 ### Query Parameters
@@ -267,7 +273,10 @@ class SystemAPIView(MProvView):
     clears the requesting system's provision flag, so it boots locally, and logs that the
     system installed its image; {"netboot": true} sets it and makes the requesting NIC the
     system's bootable NIC.  {"booted": true} reports that the system has booted: it's
-    logged and saved as the system's last_booted time.  The two keys can be sent together.
+    logged and saved as the system's last_booted time.  {"serial": "TEXT"} (at most 255
+    characters) reports the system's serial number: a change is saved and kept in its serial
+    history, and a placeholder like "To Be Filled By O.E.M." is ignored (#60).  The keys can
+    be sent together, but an mPCC older than 0.7.0 refuses any key but netboot with 403.
     Any other key returns 403, a missing or invalid value 400, without changing anything.
 - ?powerstate: GET with a primary key redirects to a power_on, power_off, or power_unknown
     status image.
@@ -343,11 +352,11 @@ Format returned:
             nic = nicQueryset[0]
             system = nic.system
             for arg in request.data:
-                if arg not in ("netboot", "booted"):
+                if arg not in ("netboot", "booted", "serial"):
                     # Unsupported, return 403 forbidden
                     return Response(None, status=403)
             # check everything before changing anything
-            netboot = booted = None
+            netboot = booted = serial = None
             if "netboot" in request.data:
                 netboot = as_bool(request.data["netboot"])
                 if netboot is None:
@@ -356,7 +365,11 @@ Format returned:
                 booted = as_bool(request.data["booted"])
                 if booted is not True:
                     return Response({"booted": "Must be true."}, status=400)
-            if netboot is None and booted is None:
+            if "serial" in request.data:
+                serial = request.data["serial"]
+                if not isinstance(serial, str) or len(serial) > 255:
+                    return Response({"serial": "Must be a string of at most 255 characters."}, status=400)
+            if netboot is None and booted is None and serial is None:
                 return Response({"netboot": "Must be true or false."}, status=400)
             image = system.systemimage.slug if system.systemimage else "(no image)"
             if netboot is not None:
@@ -373,6 +386,9 @@ Format returned:
                 # signals, which queue a genders job.
                 System.objects.filter(pk=system.pk).update(last_booted=timezone.now())
                 provisioning_log.info(f"provisioning: {system.hostname} ({ip}) booted image {image}")
+            if serial is not None:
+                # a placeholder ("To Be Filled By O.E.M.") is ignored (#60).
+                system.set_serial(serial, "node")
             return Response({"provision": system.provision, "bootable_nic": nic.name}, status=200)
 
         self.serializer_class = SystemSerializer

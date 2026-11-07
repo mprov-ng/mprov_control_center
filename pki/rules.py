@@ -128,7 +128,8 @@ SYSTEM_RULES = [
     # setupBMC.py
     Rule(("GET",), r"/systems/", needs={"hostname"}, query={"detail"}, check=own_hostname),
     # the stateful installer ({"netboot": false}) and report_booted.py
-    Rule(("POST",), r"/systems/", needs={"self"}, query=set(), fields={"netboot", "booted"},
+    # ({"booted": true}, then {"serial": ...}, #60)
+    Rule(("POST",), r"/systems/", needs={"self"}, query=set(), fields={"netboot", "booted", "serial"},
          check=self_is_itself),
     # genNetworkInterfaces.py (?system=) and register_IPv6_ll.py (?hostname=)
     Rule(("GET",), r"/networkinterfaces/", query={"system", "hostname", "detail"}, check=nic_list),

@@ -29,6 +29,7 @@ from .models import (
   SystemModel,
   NADSSystem,
   SystemLocation,
+  SystemSerialHistory,
 )
 
 class NetForm(forms.ModelForm):
@@ -141,20 +142,38 @@ def warn_duplicate_ip_assignments(modeladmin, request, systems):
         )
 
 
+class SerialHistoryInline(admin.TabularInline):
+  ''' A system's serial number changes (#60), newest first; read-only. '''
+  model = SystemSerialHistory
+  verbose_name_plural = "Serial Number History"
+  fields = ['changed', 'old_serial', 'new_serial', 'source', 'changed_by']
+  readonly_fields = fields
+  extra = 0
+  can_delete = False
+  classes = ['collapse']
+
+  def has_add_permission(self, request, obj=None):
+    return False
+
+  def has_change_permission(self, request, obj=None):
+    return False
+
+
 class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   actions = [ 'bulk_update', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
 
-  inlines = [ NetworkInterfaceInline, BMCInline]
+  inlines = [ NetworkInterfaceInline, BMCInline, SerialHistoryInline]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
   readonly_fields = ['timestamp', 'updated', 'created_by', 'last_booted']
   list_display_links = ['id', 'hostname']
   list_per_page = 25
-  search_fields = ['hostname']
+  search_fields = ['hostname', 'serial']
   change_form_template ='admin/system_change_form.html'
   fieldsets = (
     (None, {
       'fields': (
         'hostname',
+        'serial',
         'created_by',
         'timestamp',
         'updated',
@@ -184,6 +203,12 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
     ),
   )
 
+  def save_model(self, request, obj, form, change):
+    # keep a hand edit of the serial number in its history (#60).
+    old = System.objects.filter(pk=obj.pk).values_list('serial', flat=True).first() if change else None
+    super().save_model(request, obj, form, change)
+    obj.record_serial_change(old, obj.serial, "admin", request.user)
+
   def save_related(self, request, form, formsets, change):
     # disks is a many-to-many, saved here after the system itself.
     super().save_related(request, form, formsets, change)
@@ -195,6 +220,8 @@ class SystemAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
         if "_copy_to_new" in request.POST:
             # 1. Duplicate the object by clearing its primary key
             obj.pk = None
+            # a serial number belongs to one machine, not its copy (#60).
+            obj.serial = None
             
             obj.save()
             
