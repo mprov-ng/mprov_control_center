@@ -252,6 +252,26 @@ then
 fi
 eval "$tls_env"
 
+# The signing helper (#381, pki/signer.py): the only process that reads the
+# CA's key.  It runs as root and signs agents' certificates for Django over
+# a socket only root and apache can use.
+mkdir -p /run/mprov
+chown root:apache /run/mprov
+chmod 750 /run/mprov
+SIGNER_SOCKET=${MPROV_SIGNER_SOCKET:-/run/mprov/signer.sock}
+python -m pki.signer --dir "$(dirname "$MPROV_TLS_CA")" --socket "$SIGNER_SOCKET" --group apache &
+signer_pid=$!
+for i in $(seq 1 50); do [ -S "$SIGNER_SOCKET" ] && break; sleep 0.1; done
+if [ ! -S "$SIGNER_SOCKET" ]
+then
+       echo "Error: the signing helper didn't start, see above." >&2
+       exit 1
+fi
+
+# a one-time enrollment token for the job server in the same compose stack,
+# in the /etc/mprov volume it shares, until a job server has enrolled.
+python manage.py mprov_enroll_token --bootstrap /etc/mprov/enroll_token
+
 # fix the db perms... again...
 chown apache db/ -R
 chmod u+w db/ -R
@@ -268,8 +288,15 @@ child_pid=$!
 # whole process group setsid made, so httpd and every worker it forked get
 # it.  SIGTERM stops httpd now; a graceful stop (SIGWINCH) would
 # wait on open connections past docker's timeout.
-trap 'kill -TERM -- -$child_pid 2>/dev/null' TERM INT
-wait $child_pid
-# wait returns as soon as the trap runs; wait again for httpd to exit, and
-# exit with its status.
+trap 'kill -TERM -- -$child_pid 2>/dev/null; kill -TERM $signer_pid 2>/dev/null' TERM INT
+# returns when httpd or the signing helper exits, or the trap runs.
+wait -n $child_pid $signer_pid
+if ! kill -0 $signer_pid 2>/dev/null && kill -0 $child_pid 2>/dev/null
+then
+       # without the helper nothing can enroll: stop, so the container restarts.
+       echo "Error: the signing helper exited; stopping." >&2
+fi
+kill -TERM -- -$child_pid 2>/dev/null
+kill -TERM $signer_pid 2>/dev/null
+# wait for httpd to exit, and exit with its status.
 wait $child_pid

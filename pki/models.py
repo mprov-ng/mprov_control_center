@@ -1,6 +1,10 @@
 """ Agent credentials (#381): the client certificates the mPCC's CA has
 issued to job servers and booted systems.  Each maps to a service user, so a
 request authenticated with one has a real request.user for attribution. """
+import datetime
+import hashlib
+import secrets
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
@@ -97,3 +101,100 @@ def service_user(jobserver=None, system=None):
         user.set_unusable_password()
         user.save(update_fields=["password"])
     return user
+
+
+def _hash(secret):
+    return hashlib.sha256(secret.encode()).hexdigest()
+
+
+class EnrollmentToken(models.Model):
+    """ A one-time token a job server enrolls with (#381): single-use,
+    short-lived, stored hashed and shown once when it's made. """
+    token_hash = models.CharField(max_length=64, unique=True, editable=False)
+    prefix = models.CharField(max_length=8, editable=False, help_text="The token's first characters, to tell tokens apart.")
+    note = models.CharField(max_length=255, blank=True, help_text="Which job server it's for.")
+    created = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name='+', editable=False)
+    expires = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Used")
+    jobserver = models.ForeignKey('jobqueue.JobServer', null=True, blank=True, on_delete=models.SET_NULL,
+                                  related_name='+', editable=False, verbose_name="Enrolled Job Server")
+
+    class Meta:
+        verbose_name = "Job Server Enrollment Token"
+        ordering = ['-created']
+
+    def __str__(self):
+        return f"{self.prefix}… ({self.note or 'no note'})"
+
+    @classmethod
+    def make(cls, lifetime=datetime.timedelta(hours=24), note="", user=None):
+        """ A new token: (row, the token itself, which is never stored). """
+        secret = secrets.token_urlsafe(32)
+        row = cls.objects.create(token_hash=_hash(secret), prefix=secret[:8], note=note, created_by=user,
+                                 expires=timezone.now() + lifetime)
+        return row, secret
+
+    def usable(self, now=None):
+        return self.used_at is None and (now or timezone.now()) < self.expires
+    usable.boolean = True
+
+    @classmethod
+    def redeem(cls, secret):
+        """ Burn a usable token and return it, or None. """
+        if not isinstance(secret, str) or not secret:
+            return None
+        with transaction.atomic():
+            row = cls.objects.select_for_update().filter(token_hash=_hash(secret)).first()
+            if row is None or not row.usable():
+                return None
+            row.used_at = timezone.now()
+            row.save(update_fields=["used_at"])
+            return row
+
+
+class BootNonce(models.Model):
+    """ A one-time enrollment nonce for one boot of one system (#381), put on
+    the kernel command line by /ipxe/ (mprov_enroll=...).  Single-use, bound
+    to the address that booted, valid NONCE_LIFETIME, stored hashed. """
+    NONCE_LIFETIME = datetime.timedelta(minutes=15)
+
+    nonce_hash = models.CharField(max_length=64, unique=True)
+    system = models.ForeignKey('systems.System', on_delete=models.CASCADE, related_name='+')
+    ipaddress = models.GenericIPAddressField()
+    created = models.DateTimeField(auto_now_add=True)
+    expires = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Boot Enrollment Nonce"
+
+    @classmethod
+    def issue(cls, system, ipaddress):
+        """ A new nonce for this boot; the system's unused ones are dropped. """
+        cls.objects.filter(system=system, used_at__isnull=True).delete()
+        nonce = secrets.token_hex(16)
+        cls.objects.create(nonce_hash=_hash(nonce), system=system, ipaddress=ipaddress,
+                           expires=timezone.now() + cls.NONCE_LIFETIME)
+        return nonce
+
+    @classmethod
+    def redeem(cls, nonce, ipaddress):
+        """ (system, None) for a usable nonce from its address, which burns it,
+        or (None, reason). """
+        if not isinstance(nonce, str) or not nonce:
+            return None, "no nonce"
+        with transaction.atomic():
+            row = cls.objects.select_for_update().select_related("system").filter(nonce_hash=_hash(nonce)).first()
+            if row is None:
+                return None, "unknown nonce"
+            if row.used_at is not None:
+                return None, f"nonce already used for {row.system.hostname}"
+            if timezone.now() >= row.expires:
+                return None, f"nonce for {row.system.hostname} expired"
+            if row.ipaddress != ipaddress:
+                return None, f"nonce for {row.system.hostname} sent from {ipaddress}, not {row.ipaddress}"
+            row.used_at = timezone.now()
+            row.save(update_fields=["used_at"])
+            return row.system, None

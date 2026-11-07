@@ -139,6 +139,8 @@ SYSTEM_RULES = [
     Rule(("GET",), r"/systembmcs/", query={"self", "system", "detail"}, check=bmc_list),
     Rule(("GET",), rf"/systembmcs/{PK}/", query={"detail"}, check=own_bmc),
     Rule(("PATCH",), rf"/systembmcs/{PK}/", query=set(), fields={"id", "mac", "ipv6ll"}, check=own_bmc),
+    # renewing its own certificate (pki.views.RenewView)
+    Rule(("POST",), r"/enroll/renew/", query=set(), fields={"csr"}),
 ]
 
 
@@ -203,6 +205,7 @@ JOBSERVER_RULES = [
     Rule(("PATCH",), rf"/repos/{PK}/", query=set(), fields={"id", "hosted_by"}, check=only_itself("hosted_by")),
     # the rhel image/repo modules register their OS type
     Rule(("POST",), r"/ostypes/", query=set(), fields={"slug", "name"}),
+    Rule(("POST",), r"/enroll/renew/", query=set(), fields={"csr"}),
 ]
 
 

@@ -86,6 +86,7 @@ urlpatterns = [
 
     path('datamodel/', DataTypeView.as_view()),
     path('power/<str:action>/', SystemPowerAPIView.as_view()),
+    path('enroll/', include('pki.urls')),
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
     
 ]
