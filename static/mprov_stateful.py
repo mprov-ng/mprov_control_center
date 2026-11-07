@@ -28,6 +28,9 @@ except ImportError:
 
 
 class mProvStatefulInstaller():
+  """ Installs a stateful node's image to its local disks.
+  Settings (mprovURL, apikey, ...) come from the global section of
+  /etc/mprov/script-runner.yaml; the steps run in the order main() calls them. """
   config_data = {}
   mprovURL = "http://127.0.0.1:8080/"
   apikey = ""
@@ -45,6 +48,8 @@ class mProvStatefulInstaller():
   partDevices = {}
 
   def __init__(self, **kwargs):
+    """ Load the config and start an mPCC session; exits if the mPCC can't be
+    reached. """
     print("mProv Stateful Installer Starting.")
 
     # use the script-runner config
@@ -59,6 +64,7 @@ class mProvStatefulInstaller():
       sys.exit(1)
 
   def yaml_include(self, loader, node):
+    """ Ignore !include in the config: this script needs only the global section. """
     # disable includes, no need.
     return {}
     #   # Get the path out of the yaml file
@@ -72,6 +78,8 @@ class mProvStatefulInstaller():
     # return result
 
   def load_config(self):
+    """ Read /etc/mprov/script-runner.yaml and copy its global settings that this
+    class knows onto it; exits if the file can't be read. """
     # load the config yaml
     # print(self.configfile)
     yaml.add_constructor("!include", self.yaml_include)
@@ -103,6 +111,9 @@ class mProvStatefulInstaller():
 
   def startSession(self):
     
+    """ Set up the HTTP session: the certificate genNetworkInterfaces.py enrolled
+    for this boot if there is one, else the shared API key.  True if the mPCC
+    answers 200. """
     self.session.headers.update({
       'Authorization': 'Api-Key ' + self.apikey,
       'Content-Type': 'application/json'
@@ -133,6 +144,10 @@ class mProvStatefulInstaller():
     return response.status_code == 200
 
   def buildDisks(self):
+    """ Partition every physical disk in this system's disk layout and make the
+    file systems, adding biosboot and EFI partitions to the one disk with a
+    bootable partition, and write each mount to /tmp/fstab.  Exits if no disk,
+    or more than one, has a bootable partition. """
     self._getDiskLayout()
     disks = "" 
 
@@ -251,6 +266,9 @@ class mProvStatefulInstaller():
             print(self.rootpartUUID)
     
   def buildRAIDs(self):
+    """ Create the layout's software RAID devices with mdadm from the member
+    partitions buildDisks() made, make their file systems and add them to
+    /tmp/fstab. """
     print("Building software RAID devices (if any) ... ")
     for pdisk in self.disklayout:
       # don't do raid disks here.
@@ -286,6 +304,7 @@ class mProvStatefulInstaller():
     
 
   def mountDisks(self):
+    """ Mount each file system in /tmp/fstab under /newroot, parents first. """
     # step through /tmp/fstab and mount the filesystems into /newroot/
     # Sort the fstab by path hierarchy.
     os.makedirs("/newroot", exist_ok=True)
@@ -305,6 +324,8 @@ class mProvStatefulInstaller():
             ]
           )
   def updateFstab(self):
+    """ Merge /tmp/fstab into the image's own /newroot/etc/fstab: a new entry
+    replaces one with the same mount point, the rest are appended. """
     currFstabLines = []
     with open("/newroot/etc/fstab") as currFstab:
       currFstabLines = currFstab.readlines()
@@ -341,6 +362,8 @@ class mProvStatefulInstaller():
       currFstab.writelines(currFstabLines)
 
   def copyRoot(self):
+    """ Copy the running image to /newroot, write its fstab, and restore the
+    SELinux contexts. """
     # rsync everything and copy /tmp/fstab to /newroot/etc/fstab
     print("Copying image files...")
     sh.rsync([
@@ -356,6 +379,10 @@ class mProvStatefulInstaller():
     print("Running restorecon to fix up security contexts...")
     sh.chroot(["/newroot", "restorecon", "-rFp", "/" ])
   def installBootLoader(self):
+      """ Configure grub with this boot's kernel command line (without the
+      provisioning-only parameters, see _grubCmdline) and the root UUID,
+      rebuild the initramfs with the drivers it needs, and install the boot
+      loader, all from inside the /newroot chroot. """
       # configure grub, regenerate the initramfs, and install the boot loader
       # from inside the /newroot chroot.
       # first we mount some stuff for the bootloader
@@ -530,6 +557,8 @@ class mProvStatefulInstaller():
       return newcmdline
 
   def realModules(self, mods):
+      """ The modules in mods, without repeats, that are loadable modules of every
+      kernel installed in /newroot. """
       # dracut stops at a built-in or unknown module and leaves out every
       # driver listed after it (#360), so keep only the ones that are a
       # module for every kernel installed in /newroot.
@@ -589,6 +618,8 @@ class mProvStatefulInstaller():
     sys.exit(1)
 
   def cleanupAndSwitchroot(self):
+    """ Clear the system's provision flag, stop DHCP and mark /newroot for an
+    SELinux relabel; mprov_boot_init.sh then reboots into the disk. """
     # XXX: the unmount and switch_root steps below are commented out and need
     # more testing; mprov_boot_init.sh reboots the system instead.
     self.disableNetboot()
@@ -628,15 +659,20 @@ class mProvStatefulInstaller():
 
 
   def to_mebibytes(self, value):
+    """ Bytes to MiB. """
     return value / (2 ** 20)
 
   def to_megabytes(self, value):
+    """ Bytes to MB. """
     return value / (10 ** 6)
 
   def from_mebibytes(self, value, sectorsize):
+    """ MiB to a whole number of sectors of sectorsize bytes. """
     return int((value * (2 ** 20))/sectorsize)
 
   def _getDiskLayout(self):
+    """ Fetch this system's disk layout (systems/?self) into self.disklayout;
+    exits on any error. """
     # connect to the mPCC and get our information
     query = "systems/?self"
     response = self.session.get(self.mprovURL + query)
@@ -653,6 +689,9 @@ class mProvStatefulInstaller():
       sys.exit(1)
 
   def _createPartition(self, device, disk, inpart, sectorsize, start, parttype=parted.PARTITION_NORMAL):
+    """ Add partition inpart to disk at sector start (to the end of the disk if it
+    fills), set its EFI, RAID, swap or bios_grub flag, and commit.  Returns its
+    size in sectors. """
     part=inpart
     if part['fill']:
       geometry = parted.Geometry(
@@ -760,6 +799,9 @@ class mProvStatefulInstaller():
 
   def _makeFS(self, part, pdisk):
     
+    """ Make part's file system on its device and return its UUID.  A partition
+    set not to format that already has a file system keeps it, and its UUID is
+    returned; EFI and biosboot partitions return None. """
     # if we are building an EFI partition filesystem, it's vfat
     if part['filesystem'] == "efi":
       dev = self._partName(pdisk['diskname'], part['partnum'])
@@ -824,6 +866,8 @@ class mProvStatefulInstaller():
     return partuuid
 
 def main():
+  """ Install this node's image to disk: partition, make RAIDs, mount, copy,
+  install the boot loader, and clear the provision flag. """
   sInstaller = mProvStatefulInstaller()
   sInstaller.buildDisks()
   sInstaller.buildRAIDs()

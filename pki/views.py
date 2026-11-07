@@ -46,30 +46,39 @@ RENEW_WINDOW = {
 
 
 def _ca_pem():
+    """ The CA certificate in PEM, or None before it exists. """
     from pki.authentication import ca_cert
     ca = ca_cert()
     return cert_pem(ca) if ca is not None else None
 
 
 class EnrollBase(APIView):
+    """ Shared by the enrollment views: refuses plain HTTP, signs a CSR through
+    the root signing helper, and answers with the new certificate and the CA. """
     # the signer; tests swap in one that signs in-process
     signer = None
 
     def get_signer(self):
+        """ The signer to use: the root signing helper's client, unless a test set one. """
         return self.signer or default_signer()
 
     def initial(self, request, *args, **kwargs):
+        """ Note a refusal for a request that didn't come over HTTPS; each post()
+        returns it first. """
         super().initial(request, *args, **kwargs)
         self.refusal = None
         if not request.is_secure():
             self.refusal = Response({"detail": "Enrollment needs HTTPS."}, status=status.HTTP_403_FORBIDDEN)
 
     def issued(self, credential, pem):
+        """ The reply for a new credential: its certificate, the CA, its kind and
+        expiry. """
         return Response({"certificate": pem, "ca": _ca_pem(), "kind": credential.kind,
                          "not_after": credential.not_after}, status=status.HTTP_200_OK)
 
     @staticmethod
     def revoke_others(keep, **agent):
+        """ Revoke the agent's other active credentials, keeping keep. """
         AgentCredential.objects.filter(revoked_at__isnull=True, **agent).exclude(pk=keep.pk).update(
             revoked_at=timezone.now())
 
@@ -94,7 +103,16 @@ class EnrollView(EnrollBase):
 
 
 class EnrollJobServerView(EnrollView):
+    """ Enroll a job server.
+
+    POST {token, csr, host_id, name}, over HTTPS: a one-time enrollment token
+    registers (or updates) the job server with this host ID and signs its CSR.
+    Returns its certificate and the CA; its older credentials are revoked.
+    403 for an unknown, used or expired token, 409 if the host ID conflicts,
+    400 for a bad request. """
     def post(self, request):
+        """ Redeem the token, register the job server and sign its CSR, all or
+        nothing. """
         if self.refusal:
             return self.refusal
         data = request.data if isinstance(request.data, dict) else {}
@@ -130,7 +148,15 @@ class EnrollJobServerView(EnrollView):
 
 
 class EnrollSystemView(EnrollView):
+    """ Enroll a booting system.
+
+    POST {nonce, csr}, over HTTPS, from the address that booted: the one-time
+    nonce from its kernel command line signs its CSR.  Returns its certificate
+    and the CA; its older credentials are revoked.  403 for an unknown, used or
+    expired nonce, or one from another address. """
     def post(self, request):
+        """ Redeem the nonce for the calling address and sign the system's CSR, all or
+        nothing. """
         if self.refusal:
             return self.refusal
         from systems.views_noauth import get_client_ip
@@ -161,6 +187,8 @@ class RenewView(EnrollBase):
     both kinds POST here), with the project's default classes. """
 
     def post(self, request):
+        """ Sign a new certificate for the calling agent, once its current one is in
+        its renewal window (409 before that). """
         if self.refusal:
             return self.refusal
         credential = request.auth if isinstance(request.auth, AgentCredential) else None
@@ -183,6 +211,7 @@ class RenewView(EnrollBase):
 
 
 def ca_certificate(request):
+    """ GET /enroll/ca.crt: the CA certificate in PEM, or 404 before it exists. """
     pem = _ca_pem()
     if pem is None:
         return HttpResponse("No CA yet.\n", status=404, content_type="text/plain")
@@ -196,6 +225,8 @@ class BuildCredentialView(EnrollBase):
     server deletes it before packing the image. """
 
     def post(self, request):
+        """ Sign a short-lived credential for the named image, for a job server's
+        certificate only. """
         if self.refusal:
             return self.refusal
         from systems.models import SystemImage

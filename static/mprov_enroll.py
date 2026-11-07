@@ -66,10 +66,13 @@ def pem_fingerprint(pem):
 
 
 def have(tls_dir=TLS_DIR):
+  """ True if this node has an enrolled key, certificate and CA in tls_dir. """
   return all(os.path.isfile(os.path.join(tls_dir, f)) for f in (KEY, CERT, CA))
 
 
 def _write(path, data, mode):
+  """ Write data to path, created or truncated, with mode (also applied to an
+  existing file). """
   fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
   with os.fdopen(fd, "w") as f:
     f.write(data)

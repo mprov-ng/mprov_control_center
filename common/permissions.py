@@ -25,6 +25,7 @@ SHARED_KEY_MODES = ("all", "nodes", "off")
 
 
 def shared_key_mode():
+    """ MPROV_SHARED_KEY_MODE, or "off" if it isn't one of the known modes. """
     mode = getattr(settings, "MPROV_SHARED_KEY_MODE", "all")
     return mode if mode in SHARED_KEY_MODES else "off"
 
@@ -45,15 +46,20 @@ _warned = set()
 
 
 def warn_once(key, message):
+    """ Log message as a warning the first time key is seen in this process. """
     if key not in _warned:
         _warned.add(key)
         log.warning(message)
 
 
 class MProvPermission(BasePermission):
+    """ The project's default permission: an agent certificate gets what its kind
+    may do, a logged-in user everything, and the shared API key what
+    MPROV_SHARED_KEY_MODE allows. """
     message = "Not allowed."
 
     def has_permission(self, request, view):
+        """ Check the request's certificate, then its user, then the shared key. """
         from pki import rules
         from pki.models import AgentCredential
         credential = request.auth if isinstance(request.auth, AgentCredential) else None
@@ -75,6 +81,8 @@ class MProvPermission(BasePermission):
         return False
 
     def shared_key(self, request):
+        """ Whether the shared API key may make this request in the current mode;
+        refused with a 403 that says why. """
         mode = shared_key_mode()
         if mode == "all":
             return True

@@ -1,3 +1,4 @@
+""" The admin pages for agent credentials and job server enrollment tokens. """
 import datetime
 
 from django import forms
@@ -9,6 +10,8 @@ from pki.models import AgentCredential, EnrollmentToken
 
 
 def ca_fingerprint():
+    """ The CA certificate's SHA-256 fingerprint, for checking it when enrolling, or
+    "(no CA yet)". """
     from pki.authentication import ca_cert
     from pki.ca import fingerprint
     ca = ca_cert()
@@ -28,15 +31,18 @@ class AgentCredentialAdmin(admin.ModelAdmin):
     actions = ['revoke']
 
     def has_add_permission(self, request):
+        """ Credentials come only from enrollment, never from this page. """
         return False
 
     @admin.action(description="Revoke selected credentials", permissions=["change"])
     def revoke(self, request, queryset):
+        """ Revoke the selected credentials that aren't revoked yet. """
         count = queryset.filter(revoked_at__isnull=True).update(revoked_at=timezone.now())
         self.message_user(request, f"Revoked {count} credential{'' if count == 1 else 's'}.", messages.SUCCESS)
 
 
 class EnrollmentTokenForm(forms.ModelForm):
+    """ Adding a token: a note, and how many hours it can be used for. """
     hours = forms.IntegerField(min_value=1, max_value=24 * 30, initial=24,
                                help_text="How long it can be used for. It's single-use either way.")
 
@@ -54,15 +60,20 @@ class EnrollmentTokenAdmin(admin.ModelAdmin):
     readonly_fields = ('prefix', 'created', 'created_by', 'expires', 'used_at', 'jobserver')
 
     def get_fields(self, request, obj=None):
+        """ A new token asks for a note and its lifetime; an existing one shows its
+        details. """
         return ('note', 'hours') if obj is None else ('prefix', 'note', 'created', 'created_by', 'expires',
                                                       'used_at', 'jobserver')
 
     def get_form(self, request, obj=None, **kwargs):
+        """ An existing token's page edits only its note, not a lifetime. """
         if obj is not None:
             kwargs['form'] = forms.ModelForm
         return super().get_form(request, obj, **kwargs)
 
     def save_model(self, request, obj, form, change):
+        """ Make a new token and show it once, with the CA fingerprint; a change saves
+        only the note. """
         if change:
             return super().save_model(request, obj, form, change)
         row, secret = EnrollmentToken.make(datetime.timedelta(hours=form.cleaned_data['hours']),

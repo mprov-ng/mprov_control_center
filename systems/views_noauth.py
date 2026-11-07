@@ -237,8 +237,12 @@ credentials yet.
   over its distro's prov_interface (404 if there's no __nads__ image).
 - A system with no image: 404.
 - An image with a custom iPXE script: that script, rendered with nic and
-  boot in its context, instead of the standard one.  It doesn't get
-  mprov_rescue or the enrollment parameters added.
+  boot in its context, instead of the standard one.  It builds its own
+  kernel command line, so nothing is added to it: put `{{ boot.enroll }}`
+  on it for the node to enroll ("mprov_enroll=<nonce> mprov_ca=<CA
+  fingerprint>").  The one-time nonce is only issued if the script uses it,
+  and it's empty for a N.A.D.S. boot or before the mPCC has its CA.
+  mprov_rescue isn't added either.
     '''
     model = NetworkInterface
     serializer_class = NetworkInterfaceDetailsSerializer
