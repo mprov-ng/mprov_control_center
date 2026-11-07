@@ -1,5 +1,5 @@
 
-from .models import SystemImage, NetworkInterface
+from .models import System, SystemImage, NetworkInterface
 from jobqueue.models import route_order
 from django.shortcuts import redirect
 from django.conf import settings
@@ -223,6 +223,25 @@ class IPXEAPIView(MProvView):
     serializer_class = NetworkInterfaceDetailsSerializer
     authentication_classes = [] #disables authentication
     permission_classes = [] #disables permission
+
+    @staticmethod
+    def enroll_params(system, ip):
+        '''
+        The kernel parameters a booting system enrolls with (#381): a one-time
+        nonce for this boot from this address, and the fingerprint of the CA
+        certificate to trust (pki.views).  Empty for a N.A.D.S. boot, which
+        has no system, or before the mPCC has its CA.
+        '''
+        from pki.authentication import ca_cert
+        from pki.ca import fingerprint
+        from pki.models import BootNonce
+        if not isinstance(system, System) or system.pk is None:
+            return ""
+        ca = ca_cert()
+        if ca is None:
+            return ""
+        return f" mprov_enroll={BootNonce.issue(system, ip)} mprov_ca={fingerprint(ca)}"
+
     def get(self, request, format=None, **kwargs):
         # result = self.checkContentType(request, format=format, kwargs=kwargs)
         # if result is not None:
@@ -339,7 +358,7 @@ class IPXEAPIView(MProvView):
            return HttpResponse(content=rendered)
         
         rendered: str = template.render(context)
-        boot['install_kernel_cmdline'] = rendered + rescue_param
+        boot['install_kernel_cmdline'] = rendered + rescue_param + self.enroll_params(nic.system, ip)
         print("PXE Request from: " + ip)
         context= {
           'nic': nic,

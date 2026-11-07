@@ -372,6 +372,10 @@ MPROV_TLS_DIR = os.environ.get('MPROV_TLS_DIR', '/var/lib/mprov/tls')
 # images not yet rebuilt) or "off".
 MPROV_SHARED_KEY_MODE = os.environ.get('MPROV_SHARED_KEY_MODE', 'all').strip().lower()
 
+# The root-run signing helper's socket (pki/signer.py, #381): the only
+# process that reads the CA's key.
+MPROV_SIGNER_SOCKET = os.environ.get('MPROV_SIGNER_SOCKET', '/run/mprov/signer.sock')
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",

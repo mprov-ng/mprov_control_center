@@ -61,6 +61,10 @@ At first start the mPCC makes its own CA and an HTTPS certificate signed by it, 
 - To serve your own certificate instead, mount it and set `MPROV_TLS_CERT` and `MPROV_TLS_KEY` to the certificate and key files. The CA is still made, as later releases use it to issue the job servers' and nodes' own credentials.
 - Port 443 also asks for an optional client certificate from that CA. Browsers, mash and plain HTTP aren't affected.
 - Job servers and booted systems will each authenticate with their own client certificate from that CA ([#381](https://github.com/mprov-ng/mprov_control_center/issues/381)). A system's certificate reaches only what a node does to itself (its own row, network interfaces and BMC entries), and a job server's reads the inventory and writes only its own state.
+- Agents get those certificates by enrolling over HTTPS. The CA's key is read only by a small signing helper that runs as root in the container; the web server asks it to sign.
+  - A job server enrolls once with a one-time token (`POST /enroll/jobserver/`). Make one in the admin under Agent Identities → Job Server Enrollment Tokens, or with `manage.py mprov_enroll_token`. It's shown once, is single-use and lasts 24 hours by default. On start, the mPCC writes one to `/etc/mprov/enroll_token` for the job server in the same compose stack, until a job server has enrolled.
+  - A booting system enrolls with a one-time nonce that `/ipxe/` adds to its kernel command line (`mprov_enroll=`), next to the CA's fingerprint (`mprov_ca=`).
+  - Agents renew their own certificates near expiry (`POST /enroll/renew/`). Revoke one under Agent Identities → Agent Credentials; enrolling again, or reinstalling, also revokes the old one.
 - `MPROV_SHARED_KEY_MODE` sets where the old shared API key is still accepted: `all` (everywhere, as before 0.7; the default for now, with a warning at start), `nodes` (only for what a node does to itself, for node images not yet rebuilt) or `off`.
 - If `/var/lib/mprov/tls` can't be set up (for example only one of `MPROV_TLS_CERT` and `MPROV_TLS_KEY` is set), the container stops with the reason in its log.
 
