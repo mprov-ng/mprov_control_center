@@ -4,12 +4,18 @@ from django.db import models
 from .models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection, File
 import os
 
+from common.admin import LiveSearchMixin
+
 # version is a BigIntegerField, so its input gets min=-2**63.  A number input
 # steps from its min, and browsers can't step by 1 from there in floating
 # point, so the spinner arrows did nothing (#172).  Versions start at 1.
 VERSION_OVERRIDES = {models.BigIntegerField: {'min_value': 1}}
 
-class ScriptAdmin(admin.ModelAdmin):
+# The Config Management lists sort by name and search and filter as you type (#496).
+class ScriptAdmin(LiveSearchMixin, admin.ModelAdmin):
+  ordering = ['name']
+  search_fields = ['name', 'filename']
+  list_filter = ['scriptType']
   model = Script
   formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
@@ -34,14 +40,19 @@ class ScriptAdmin(admin.ModelAdmin):
       return form
 
 
-class FileAdmin(admin.ModelAdmin):
+class FileAdmin(LiveSearchMixin, admin.ModelAdmin):
+  ordering = ['name']
+  search_fields = ['name', 'filename']
   model = File
   formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
   list_display = ['name', 'filename']
   exclude = ('slug',)
 
-class AnsiblePlaybookAdmin(admin.ModelAdmin):
+class AnsiblePlaybookAdmin(LiveSearchMixin, admin.ModelAdmin):
+  ordering = ['name']
+  search_fields = ['name', 'filename']
+  list_filter = ['scriptType']
   model = AnsiblePlaybook
   formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
@@ -49,14 +60,20 @@ class AnsiblePlaybookAdmin(admin.ModelAdmin):
   exclude = ('slug',)
 
   
-class AnsibleRoleAdmin(admin.ModelAdmin):
+class AnsibleRoleAdmin(LiveSearchMixin, admin.ModelAdmin):
+  ordering = ['name']
+  search_fields = ['name', 'roleurl']
+  list_filter = ['scriptType']
   model = AnsibleRole
   formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
   list_display = ['name', 'roleurl', 'scriptType']
   exclude = ('slug',)
 
-class AnsibleCollectionAdmin(admin.ModelAdmin):
+class AnsibleCollectionAdmin(LiveSearchMixin, admin.ModelAdmin):
+  ordering = ['name']
+  search_fields = ['name', 'collectionurl']
+  list_filter = ['scriptType']
   model = AnsibleCollection
   formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
