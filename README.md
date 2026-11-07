@@ -44,6 +44,7 @@ docker run -d --name mpcc \
   -v mpcc-media:/var/www/mprov_control_center/media \
   -v mprov-conf:/etc/mprov \
   -v mpcc-backups:/var/lib/mprov/backups \
+  -v mpcc-tls:/var/lib/mprov/tls \
   ghcr.io/mprov-ng/mprov-control-center:latest
 ```
 
@@ -51,8 +52,15 @@ Keep these volumes:
 - `/var/www/mprov_control_center/media` holds the SQLite database (if you use it), images and uploaded files.
 - `/etc/mprov` holds the generated Django secret key, the admin password and the job server API key.
 - `/var/lib/mprov/backups` holds the backups `mprov_backup` writes (see [Upgrading](#upgrading)). Only root can read it.
+- `/var/lib/mprov/tls` holds this install's own certificate authority (CA) and HTTPS certificate (see [HTTPS](#https)). Losing it means a new CA.
 
-Port 443 is served with a self-signed certificate made when the image is built.
+## HTTPS
+At first start the mPCC makes its own CA and an HTTPS certificate signed by it, in `/var/lib/mprov/tls` ([#381](https://github.com/mprov-ng/mprov_control_center/issues/381)). Each install gets its own, made at start, never at image build time.
+- The certificate covers `MPROV_MPCC_HOSTNAME` (and `MPROV_MPCC_HOSTNAME.MPROV_DOMAINNAME`), the `MPROV_MPCC_IPs` addresses, `localhost` and `127.0.0.1`. It lasts a year. It's renewed at start when it has under 30 days left, or when those names or addresses change.
+- To trust it, give clients `ca.crt` from that directory: `docker cp mpcc:/var/lib/mprov/tls/ca.crt .`
+- To serve your own certificate instead, mount it and set `MPROV_TLS_CERT` and `MPROV_TLS_KEY` to the certificate and key files. The CA is still made, as later releases use it to issue the job servers' and nodes' own credentials.
+- Port 443 also asks for an optional client certificate from that CA. Browsers, mash and plain HTTP aren't affected.
+- If `/var/lib/mprov/tls` can't be set up (for example only one of `MPROV_TLS_CERT` and `MPROV_TLS_KEY` is set), the container stops with the reason in its log.
 
 ## Image tags
 - `:vX.Y.Z` is a release, and `:latest` is the newest release.
@@ -137,6 +145,7 @@ Before you start:
    Keep these copies somewhere safe: they contain user accounts, API keys and BMC credentials.
 2. Pull the new images and recreate the containers: `docker compose pull && docker compose --env-file .env up -d`. Migrations run automatically when the mPCC starts. If you also updated mprov-compose itself, the `db` container may be recreated too, which is a short, expected outage.
 3. Upgrade job servers on other hosts, and mash, to the same major.minor version.
+   - Upgrading to 0.7.0 replaces the HTTPS certificate on port 443 with one from the install's own CA (see [HTTPS](#https)), and the container needs the new `/var/lib/mprov/tls` volume (`mpcc-tls` in mprov-compose). Any client that pinned the old certificate (a job server's `caBundle`, mash, scripts) needs `ca.crt` instead.
 4. If you first installed before 0.6, change the `admin` password now. Older versions created `admin` with a fixed, published default password ([#337](https://github.com/mprov-ng/mprov_control_center/pull/337)), and upgrading doesn't change it.
 
 # Bare-metal installs

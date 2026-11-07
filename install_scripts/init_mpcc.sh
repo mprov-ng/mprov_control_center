@@ -240,6 +240,18 @@ with os.fdopen(fd, 'w') as f:
 "
 fi
 
+# The mPCC's own CA and HTTPS certificate (#381), in /var/lib/mprov/tls:
+# made on first start, the certificate renewed when it nears expiry or the
+# hostname/IPs change.  Exports MPROV_TLS_CERT, MPROV_TLS_KEY and
+# MPROV_TLS_CA, which ssl.conf reads.  Without them Apache can't serve
+# HTTPS, so don't start at all.
+if ! tls_env=$(python manage.py mprov_tls --shell)
+then
+       echo "Error: couldn't set up the CA and HTTPS certificate, see above." >&2
+       exit 1
+fi
+eval "$tls_env"
+
 # fix the db perms... again...
 chown apache db/ -R
 chmod u+w db/ -R

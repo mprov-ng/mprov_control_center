@@ -21,6 +21,7 @@ BACKUP_LABELS = [
     "osmanagement",
     "disklayouts",
     "systems",
+    "pki",
 ]
 
 MANIFEST_NAME = "manifest.json"

@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'dbbackup',
     'utils',
     'authcustom',
+    'pki',
     #'mprov_esxiprovisioner',
     'jazzmin',
     'django.contrib.admin',
@@ -358,6 +359,11 @@ MEDIA_URL = "media/"
 # Where mprov_backup writes by default: its own volume in the image, outside
 # anything Apache serves (#457).
 MPROV_BACKUP_DIR = os.environ.get('MPROV_BACKUP_DIR', '/var/lib/mprov/backups')
+
+# The mPCC's own CA and HTTPS certificate (#381), made at first start by
+# `manage.py mprov_tls`.  A volume of its own, so they survive the container
+# being recreated, and not /etc/mprov, which the job server container shares.
+MPROV_TLS_DIR = os.environ.get('MPROV_TLS_DIR', '/var/lib/mprov/tls')
 
 CACHES = {
     "default": {

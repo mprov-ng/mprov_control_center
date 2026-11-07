@@ -23,3 +23,4 @@ django-dbbackup>=4.3.0,<5
 djangocodemirror>=3.0.1,<4 # https://pypi.org/project/djangocodemirror/ - MIT. 3.x: 2.1 imports setuptools at runtime, which Python 3.12 venvs lack (#197)
 netifaces>=0.11.0,<0.12
 django-auth-ldap>=5.2.0,<6
+cryptography>=50.0.2,<51 # https://pypi.org/project/cryptography/ - Apache-2.0 OR BSD-3-Clause. The mPCC's CA (#381)
