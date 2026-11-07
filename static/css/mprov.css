@@ -172,8 +172,13 @@ td.delete input {
    theme boxes the breadcrumbs: keep mPCC's teal top bar and brand, and plain
    breadcrumbs beside the title. */
 #jazzy-navbar,
+#jazzy-sidebar .sidebar-brand,
 #jazzy-logo {
   background-color: #20c997 !important;
+}
+/* the whole brand box is teal, in light and dark mode, not just the link. */
+#jazzy-sidebar .sidebar-brand {
+  border-bottom: 0 !important;
 }
 #jazzy-logo,
 #jazzy-logo .brand-text {
