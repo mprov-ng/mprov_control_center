@@ -24,6 +24,19 @@ from systems.models import NetworkInterface, System, SystemGroup, SystemImage, S
 # a node's provisioning milestones, for a time-to-provision metric (#433), in
 # the shape the job server logs "requested image" in (mprov_jobserver#285).
 provisioning_log = logging.getLogger('mprov.provisioning')
+# N.A.D.S. registrations (#170), e.g. "nads: aa:bb:cc:dd:ee:ff (10.0.0.50) found
+# on sw1 port 1/1, Dell R650, ready to be assigned", for an admin, or an alert
+# on the container log, to notice a new node that needs configuring.
+nads_log = logging.getLogger('mprov.nads')
+
+
+def _log_value(value):
+  ''' A value from the unauthenticated NADS packet, safe to put in a log line:
+  control characters (a newline could forge a second line) are escaped, and a
+  missing value shows as "-". '''
+  if value is None or value == '':
+    return '-'
+  return ''.join(c if c.isprintable() else repr(c)[1:-1] for c in str(value))
 
 
 def as_bool(value):
@@ -63,6 +76,10 @@ and the system is returned as a JSON list.
 is saved as a N.A.D.S. discovered system.  Returns 200 with an empty body.
 - All fields except "serial" are required ("switch" and "port" may be null).
 A missing field returns 400 with an error for each one.
+- Each registration is logged (logger "mprov.nads", in the container log),
+e.g. "nads: aa:bb:cc:dd:ee:ff (10.0.0.50) found on sw1 port 1/1, Dell R650,
+ready to be assigned", or "... registered to c01" when it matched a system.
+A MAC that is already on a NIC isn't logged.
 
 NADS Packet:
 
@@ -171,6 +188,10 @@ NADS Packet:
                             # save a new job, if one doesn't already exist.
 
                             requeue_job(JobType) 
+                        nads_log.info(
+                          f"nads: {_log_value(nicObj.mac)} ({_log_value(get_client_ip(request))}) "
+                          f"on {_log_value(request.data['switch'])} port {_log_value(request.data['port'])} "
+                          f"registered to {system.hostname}")
                         # return the system object.    
                         self.queryset = [system]
                         return  generics.ListAPIView.get(self, request, format=None)
@@ -184,7 +205,7 @@ NADS Packet:
         else: 
             # mac is unique, so it's the only lookup field; a known MAC seen on
             # a new switch or port updates the existing entry.
-            NADSSystem.objects.update_or_create(
+            _, created = NADSSystem.objects.update_or_create(
                 mac=request.data['mac'],
                 defaults={
                     'switch': request.data['switch'],
@@ -193,6 +214,12 @@ NADS Packet:
                     'model': request.data['model'],
                     # XXX Future: 'serial': request.data['serial']
                 })
+            nads_log.info(
+              f"nads: {_log_value(request.data['mac'])} ({_log_value(get_client_ip(request))}) "
+              f"{'found' if created else 'seen again'} "
+              f"on {_log_value(request.data['switch'])} port {_log_value(request.data['port'])}, "
+              f"{_log_value(request.data['vendor'])} {_log_value(request.data['model'])}, "
+              "ready to be assigned")
    
         # TODO insert MAC ban code here if needed.
         return Response(None, status=200)
