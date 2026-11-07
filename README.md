@@ -66,6 +66,7 @@ At first start the mPCC makes its own CA and an HTTPS certificate signed by it, 
   - A booting system enrolls with a one-time nonce that `/ipxe/` adds to its kernel command line (`mprov_enroll=`), next to the CA's fingerprint (`mprov_ca=`).
   - Agents renew their own certificates near expiry (`POST /enroll/renew/`). Revoke one under Agent Identities → Agent Credentials; enrolling again, or reinstalling, also revokes the old one.
 - `MPROV_SHARED_KEY_MODE` sets where the old shared API key is still accepted: `all` (everywhere, as before 0.7; the default for now, with a warning at start), `nodes` (only for what a node does to itself, for node images not yet rebuilt) or `off`.
+- **The shared API key is deprecated in 0.7.0 and removed in 0.8.0.** It works only while `MPROV_SHARED_KEY_MODE` is `all` or `nodes`, and the API Keys admin pages say so. Move job servers and nodes to their own credentials (enroll the job servers, and rebuild node images), then set `MPROV_SHARED_KEY_MODE=off`. Adding a key in the admin still works in 0.7, so a site still on `all` can rotate it.
 - If `/var/lib/mprov/tls` can't be set up (for example only one of `MPROV_TLS_CERT` and `MPROV_TLS_KEY` is set), the container stops with the reason in its log.
 
 ## Image tags
@@ -151,6 +152,7 @@ Before you start:
    Keep these copies somewhere safe: they contain user accounts, API keys and BMC credentials.
 2. Pull the new images and recreate the containers: `docker compose pull && docker compose --env-file .env up -d`. Migrations run automatically when the mPCC starts. If you also updated mprov-compose itself, the `db` container may be recreated too, which is a short, expected outage.
 3. Upgrade job servers on other hosts, and mash, to the same major.minor version.
+   - From 0.7.0 the shared API key is deprecated, and 0.8.0 removes it (see [HTTPS](#https)). Plan to enroll your job servers and rebuild your node images during 0.7, then set `MPROV_SHARED_KEY_MODE=off`.
    - Upgrading to 0.7.0 replaces the HTTPS certificate on port 443 with one from the install's own CA (see [HTTPS](#https)), and the container needs the new `/var/lib/mprov/tls` volume (`mpcc-tls` in mprov-compose). Any client that pinned the old certificate (a job server's `caBundle`, mash, scripts) needs `ca.crt` instead.
 4. If you first installed before 0.6, change the `admin` password now. Older versions created `admin` with a fixed, published default password ([#337](https://github.com/mprov-ng/mprov_control_center/pull/337)), and upgrading doesn't change it.
 
