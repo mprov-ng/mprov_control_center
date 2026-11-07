@@ -437,9 +437,11 @@ if os.environ.get("LDAP_ENABLED", "0") == "1":
         "email": "mail",
     }
 
-    LOGGING = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "handlers": {"console": {"class": "logging.StreamHandler"}},
-        "loggers": {"django_auth_ldap": {"level": "DEBUG", "handlers": ["console"]}},
+    # Add django_auth_ldap's logger to LOGGING above rather than replacing
+    # LOGGING, which dropped the mPCC's own lines (#485).  LDAP_DEBUG=1 logs
+    # each bind and group lookup, for setting LDAP up; otherwise only problems.
+    LOGGING["loggers"]["django_auth_ldap"] = {
+        "handlers": ["mprov_stderr"],
+        "level": "DEBUG" if os.environ.get("LDAP_DEBUG", "0") == "1" else "WARNING",
+        "propagate": False,
     }
