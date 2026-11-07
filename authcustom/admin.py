@@ -6,3 +6,6 @@ class UserAdminCustom(UserAdmin):
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdminCustom)
+
+# the API Keys pages, marked as legacy.
+from . import apikey_admin  # noqa: E402,F401
