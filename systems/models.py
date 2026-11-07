@@ -13,6 +13,29 @@ from django.contrib.auth.models import AnonymousUser, User
 from django.utils import timezone
 from django.utils.functional import cached_property
 from common import render_config, flat_config
+import logging
+
+# serial number changes (#60), e.g. "serial: c01 changed ABC123 -> XYZ789 (node)".
+serial_log = logging.getLogger('mprov.serial')
+
+# What dmidecode / /sys/class/dmi/id/product_serial report on boards and VMs
+# with no real serial number.  Compared case-insensitively; they're ignored,
+# so a placeholder never overwrites a real serial.
+SERIAL_PLACEHOLDERS = {
+  "", "0", "none", "n/a", "na", "null", "not specified", "not applicable", "not available",
+  "to be filled by o.e.m.", "to be filled by oem", "system serial number", "default string",
+  "chassis serial number", "serial number", "0123456789", "123456789", "xxxxxxxxxx",
+}
+
+def clean_serial(value):
+  ''' value with surrounding whitespace removed, or None if it's empty or a
+  placeholder (see SERIAL_PLACEHOLDERS). '''
+  if value is None:
+    return None
+  value = str(value).strip()
+  if value.lower() in SERIAL_PLACEHOLDERS:
+    return None
+  return value
 
 class SystemGroup(models.Model):
   """ System Groups are ways to group systems and system images together to manage configuration better.   You can specify configuration
@@ -107,6 +130,7 @@ class System(models.Model):
   location = models.ForeignKey('SystemLocation', blank=True, null=True, on_delete=models.SET_NULL,  )
   provision = models.BooleanField(default=True, verbose_name="Provision?", help_text="Should this system be provisioned (installed or netbooted) on its next PXE boot? The stateful installer clears this once it has installed.")
   last_booted = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Last Booted", help_text="When the system last reported that it had booted (#433).")
+  serial = models.CharField(max_length=255, null=True, blank=True, verbose_name="Serial Number", help_text="Reported by the node at boot, or by N.A.D.S.; set it here to correct it.  Each change is kept in the serial history.")
   class Meta:
     ordering = ['hostname']
     verbose_name = 'System'
@@ -114,6 +138,36 @@ class System(models.Model):
   
   def __str__(self):
     return self.hostname
+
+  def set_serial(self, value, source):
+    ''' Set this system's serial number as reported by a node or N.A.D.S.
+    (source "node" or "nads"), recording the change in its serial history.
+    A placeholder or empty value is ignored, so it never wipes a real serial.
+    Saved with a queryset update, so a node reporting its serial doesn't
+    queue the dns/dhcp/pxe/genders jobs a System save does.  Returns True if
+    the serial changed. '''
+    new = clean_serial(value)
+    if new is None:
+      return False
+    new = new[:255]
+    old = self.serial or None
+    if new == old:
+      return False
+    with transaction.atomic():
+      System.objects.filter(pk=self.pk).update(serial=new)
+      self.serial = new
+      self.record_serial_change(old, new, source)
+    return True
+
+  def record_serial_change(self, old, new, source, user=None):
+    ''' Record a change of this system's serial number, already saved, in
+    its serial history and the log.  Does nothing if it didn't change. '''
+    old, new = old or None, new or None
+    if old == new:
+      return
+    SystemSerialHistory.objects.create(system=self, old_serial=old, new_serial=new, source=source,
+                                       changed_by=user if getattr(user, "pk", None) else None)
+    serial_log.info(f"serial: {self.hostname} changed {old or '-'} -> {new or '-'} ({source})")
 
   def save(self, *args, **kwargs):
     # Each NIC carries a copy of the hostname (NetworkInterface.save()), which
@@ -168,6 +222,28 @@ class System(models.Model):
       self.provision = True
       self.save()
     return True
+
+class SystemSerialHistory(models.Model):
+  ''' One change of a system's serial number (#60), e.g. after a board swap. '''
+  SOURCES = [
+    ("admin", "Admin"),
+    ("api", "API"),
+    ("nads", "N.A.D.S."),
+    ("node", "Node at boot"),
+  ]
+  system = models.ForeignKey(System, on_delete=models.CASCADE, related_name="serial_history")
+  old_serial = models.CharField(max_length=255, null=True, blank=True, verbose_name="Old Serial Number")
+  new_serial = models.CharField(max_length=255, null=True, blank=True, verbose_name="New Serial Number")
+  changed = models.DateTimeField(default=timezone.now, verbose_name="Changed")
+  source = models.CharField(max_length=16, choices=SOURCES, verbose_name="Changed By")
+  changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, verbose_name="User", related_name="+")
+  class Meta:
+    ordering = ['-changed', '-id']
+    verbose_name = 'Serial Number Change'
+    verbose_name_plural = 'Serial Number History'
+
+  def __str__(self):
+    return f"{self.system}: {self.old_serial or '-'} -> {self.new_serial or '-'}"
 
 class SystemBMC(models.Model):
   endpoint="/systembmcs/"
@@ -332,6 +408,8 @@ def AssignSystem(sender, instance, **kwargs):
     sysnic = sysnic[0]
     sysnic.mac=instance.mac
     sysnic.save()
+    if instance.serial:
+      instance.system.set_serial(instance.serial, "nads")
     instance.delete()
     
 @receiver(post_save, sender=System)

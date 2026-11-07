@@ -156,6 +156,7 @@ class SystemRuleTests(AgentTestCase):
                                                                      "ipv6ll": "fe80::2"})
         self.assertAllowed("POST", "/systems/?self", {"booted": True})
         self.assertAllowed("POST", "/systems/?self", {"netboot": False})
+        self.assertAllowed("POST", "/systems/?self", {"serial": "ABC123"})
 
     def test_its_own_bmc_password_only(self):
         detail = self.assertAllowed("GET", "/systembmcs/?self&detail").json()
