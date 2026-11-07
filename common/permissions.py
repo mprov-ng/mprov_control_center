@@ -83,7 +83,7 @@ class MProvPermission(BasePermission):
             system = system_from_address(request)
             if system is not None and rules.system_allows(system, request):
                 warn_once(("node", system.pk), f"{system.hostname} uses the shared API key; rebuild its image "
-                                               "so it uses its own credential (#381).")
+                                               "so it uses its own credential.")
                 return True
         log.warning(f"refused the shared API key for {request.method} {request.get_full_path()} "
                     f"(MPROV_SHARED_KEY_MODE={mode})")

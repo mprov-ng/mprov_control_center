@@ -118,7 +118,7 @@ def _hash(secret):
 
 
 class EnrollmentToken(models.Model):
-    """ A one-time token a job server enrolls with (#381): single-use,
+    """ A one-time token a job server enrolls with: single-use,
     short-lived, stored hashed and shown once when it's made. """
     token_hash = models.CharField(max_length=64, unique=True, editable=False)
     prefix = models.CharField(max_length=8, editable=False, help_text="The token's first characters, to tell tokens apart.")
@@ -165,7 +165,7 @@ class EnrollmentToken(models.Model):
 
 
 class BootNonce(models.Model):
-    """ A one-time enrollment nonce for one boot of one system (#381), put on
+    """ A one-time enrollment nonce for one boot of one system, put on
     the kernel command line by /ipxe/ (mprov_enroll=...).  Single-use, bound
     to the address that booted, valid NONCE_LIFETIME, stored hashed. """
     NONCE_LIFETIME = datetime.timedelta(minutes=15)

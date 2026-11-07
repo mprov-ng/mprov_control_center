@@ -24,7 +24,7 @@ class PkiConfig(AppConfig):
         elif mode == "all":
             log.warning("MPROV_SHARED_KEY_MODE=all: the shared API key is accepted everywhere, as before 0.7. "
                         "Set it to \"nodes\" or \"off\" once job servers and node images use their own "
-                        "credentials (#381).")
+                        "credentials.")
         elif mode == "nodes":
             log.warning("MPROV_SHARED_KEY_MODE=nodes: the shared API key is accepted only for what a node "
-                        "does to itself, until every image is rebuilt (#381).")
+                        "does to itself, until every image is rebuilt.")
