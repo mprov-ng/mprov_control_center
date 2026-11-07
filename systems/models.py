@@ -256,6 +256,8 @@ class SystemBMC(models.Model):
   network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Network")
   ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address", blank=True, null=True)
   vlan=models.IntegerField(verbose_name='VLAN ID', default=0)
+  credentials_changed=models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Credentials Changed",
+    help_text="When the BMC username or password stored here last changed (#374).")
   class Meta:
     verbose_name = 'Power Management'
     verbose_name_plural = 'Power Management'
@@ -263,6 +265,16 @@ class SystemBMC(models.Model):
   
   def __str__(self):
     return self.system.hostname + "-bmc"
+
+  def save(self, *args, **kwargs):
+    # note when the stored credentials change, from any form or the API (#374).
+    old = SystemBMC.objects.filter(pk=self.pk).values('username', 'password').first() if self.pk else None
+    if (self.username or self.password) if old is None else \
+       (old['username'], old['password']) != (self.username, self.password):
+      self.credentials_changed = timezone.now()
+      if kwargs.get('update_fields') is not None:
+        kwargs['update_fields'] = set(kwargs['update_fields']) | {'credentials_changed'}
+    super().save(*args, **kwargs)
 
 class SystemBMCForm(ModelForm):
   password = CharField(widget=PasswordInput(),required=False)
