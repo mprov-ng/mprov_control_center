@@ -56,7 +56,7 @@ with its own get() only gets this by calling super().get().
 ?FIELD=VALUE filters on a model field (exact match).  ?detail, ?search and ?format
 are always accepted, and a view lists its own keys in extra_query_params.  Any other
 key, including a lookup such as ?hostname__startswith=, returns 400 with an error per
-key instead of being ignored, so a typo can't return every row (#390).
+key instead of being ignored, so a typo can't return every row.
 
     '''
     serializer_class = None

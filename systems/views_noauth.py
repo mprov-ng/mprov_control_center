@@ -69,7 +69,7 @@ returned, or a JSON list of all images if the request content type is applicatio
 
 ### GET (with primary key)
 - Will redirect (302) to the image requested on a responsive jobserver hosting it:
-one with an address on the client's network first, then the least loaded (#254),
+one with an address on the client's network first, then the least loaded,
 regardless of requested content type.  A primary key ending in .initramfs or .vmlinuz
 redirects to that file, otherwise the .img is used.
 - Jobservers registered by host name are skipped if the name doesn't resolve for the
@@ -229,8 +229,8 @@ credentials yet.
 - A known NIC that is bootable, on a system set to provision: the kernel and
   initrd of the system's image, with the kernel command line from its
   merged config (distro, groups, image, system; rendered as a template),
-  plus mprov_rescue (1 with ?rescue) and the enrollment parameters (#381,
-  enroll_params).
+  plus mprov_rescue (1 with ?rescue) and the enrollment parameters
+  (see enroll_params).
 - A system not set to provision, or with no bootable NIC for that address: the
   local-boot script.
 - An unknown address: the __nads__ image, for N.A.D.S. auto-detection, booted

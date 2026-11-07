@@ -129,7 +129,7 @@ class System(models.Model):
   stateful = models.BooleanField(default=False, verbose_name="Stateful System?", help_text="Should this system install its image to disk?")
   location = models.ForeignKey('SystemLocation', blank=True, null=True, on_delete=models.SET_NULL,  )
   provision = models.BooleanField(default=True, verbose_name="Provision?", help_text="Should this system be provisioned (installed or netbooted) on its next PXE boot? The stateful installer clears this once it has installed.")
-  last_booted = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Last Booted", help_text="When the system last reported that it had booted (#433).")
+  last_booted = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Last Booted", help_text="When the system last reported that it had booted.")
   serial = models.CharField(max_length=255, null=True, blank=True, verbose_name="Serial Number", help_text="Reported by the node at boot, or by N.A.D.S.; set it here to correct it.  Each change is kept in the serial history.")
   class Meta:
     ordering = ['hostname']
@@ -257,7 +257,7 @@ class SystemBMC(models.Model):
   ipv6ll=models.GenericIPAddressField(verbose_name="IPv6 LL Address", blank=True, null=True)
   vlan=models.IntegerField(verbose_name='VLAN ID', default=0)
   credentials_changed=models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Credentials Changed",
-    help_text="When the BMC username or password stored here last changed (#374).")
+    help_text="When the BMC username or password stored here last changed.")
   class Meta:
     verbose_name = 'Power Management'
     verbose_name_plural = 'Power Management'

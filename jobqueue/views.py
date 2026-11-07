@@ -74,7 +74,7 @@ filtered with these optional query parameters:
 - status: ID of the job's status
 - search: a job module ID to search for
 - detail: returns the jobs with their module, status and job server nested
-    3 levels deep (#298)
+    3 levels deep
 
 Any other query parameter returns 400.
 
@@ -104,7 +104,7 @@ Format returned:
 
 - GET returns the object specified, with IDs for its relations, or 404.
     Unlike the other endpoints it isn't nested: job servers read status as an
-    ID (#298).  Use ?detail on the list for nested jobs.
+    ID.  Use ?detail on the list for nested jobs.
 
 - POST returns the new object created, or a 400 error if validation fails
 
@@ -192,7 +192,7 @@ class JobClaimAPIView(GenericAPIView):
 
 ## Documentation
 
-Claims a pending job for one job server, atomically (#296).  Two job servers
+Claims a pending job for one job server, atomically.  Two job servers
 claiming the same job can't both get it: exactly one gets 200.
 
 Body:
@@ -252,7 +252,7 @@ class JobModulesAPIView(MProvView):
 - DELETE (with primary key, e.g. /jobmodules/pxe-update/)
 
 Job modules are created when a job server registers one it runs, through
-POST /jobservers/.  POST here is 405 (#256).
+POST /jobservers/.  POST here is 405.
 
 ## Documentation
 
@@ -340,7 +340,7 @@ class JobServersAPIView(MProvView):
     minute.  An unresponsive job server isn't routed to, but is kept: its
     running jobs are failed after JOBSERVER_FAIL_JOBS_AFTER_MINUTES (default
     10), and it's deleted after JOBSERVER_DELETE_AFTER_DAYS (default 0, never),
-    or by hand with DELETE (#254).
+    or by hand with DELETE.
 
     
 ### Query Parameters
@@ -409,7 +409,7 @@ Format returned:
     and _) or host_id isn't a non-blank string of up to 64 characters, or 409
     if host_id is sent and the name belongs to a different job server.  A job
     module the mPCC doesn't have yet is created, named after its ID; this is
-    the only way job modules are created (#256).
+    the only way job modules are created.
 
 - PATCH returns the updated object.
 
@@ -604,7 +604,7 @@ class JobServerAddressHeartbeatAPIView(GenericAPIView):
 - POST (with Primary Key, e.g. /jobservers/1/heartbeat/)
 
 ## Documentation
-Keeps one of a job server's addresses fresh (#435).  Image and repository
+Keeps one of a job server's addresses fresh.  Image and repository
 redirects only send a client to an address that has heartbeated in the last
 minute; a stale one is skipped (not deleted) and the client gets the job
 server's single address.  The address must be registered first, with the

@@ -30,8 +30,8 @@ unmanaged ones link to their package URL.
 
 ### GET method (with primary key)
 Redirects (302) to a responsive job server that hosts the repository: one with
-an address on the client's network first, then the least loaded, ties at random
-(#254).  Any path after the primary key is appended to the redirect.  Returns
+an address on the client's network first, then the least loaded, ties at random.
+Any path after the primary key is appended to the redirect.  Returns
 404 if no responsive job server hosts the repository.
       '''
       model = OSRepo
