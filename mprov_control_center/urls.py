@@ -3,6 +3,7 @@ from django.views.generic import RedirectView
 from django.urls import path, include
 from .views import DataTypeView, IndexAPIView
 from authcustom.views import TokensAPIView
+from bmcrotate.views import RotationResultView, RotationSecretView
 from systems.views import (
     SystemAPIView,
     SystemBMCAPIView,
@@ -88,6 +89,8 @@ urlpatterns = [
     path('datamodel/', DataTypeView.as_view()),
     path('power/<str:action>/', SystemPowerAPIView.as_view()),
     path('tokens/', TokensAPIView.as_view()),
+    path('bmcrotations/<int:pk>/secret/', RotationSecretView.as_view()),
+    path('bmcrotations/<int:pk>/result/', RotationResultView.as_view()),
     path('tokens/<str:prefix>/', TokensAPIView.as_view()),
     path('enroll/', include('pki.urls')),
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),

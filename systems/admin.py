@@ -179,6 +179,8 @@ def bmc_credentials_action(modeladmin, request, queryset, systems):
     modeladmin.message_user(request, "You don't have permission to change BMC credentials.", level=messages.ERROR)
     return None
   form = BMCCredentialsForm(request.POST if 'apply' in request.POST else None)
+  if form.is_valid() and (form.cleaned_data.get('mode') or BMCCredentialsForm.STORE) != BMCCredentialsForm.STORE:
+    return bmc_push_action(modeladmin, request, systems, form.cleaned_data)
   if form.is_valid():
     updated, skipped = set_bmc_credentials(systems, form.cleaned_data['username'], form.cleaned_data['password'], request.user)
     for system in updated:
@@ -198,6 +200,31 @@ def bmc_credentials_action(modeladmin, request, queryset, systems):
     'skipped': skipped,
     'opts': modeladmin.model._meta,
   })
+
+
+def bmc_push_action(modeladmin, request, systems, data):
+  """ Queue a change or check on the BMCs themselves (#486): one bmc-rotate
+  job per BMC, run by a job server on its network.  Nothing is stored until
+  a job server has logged in with the new credentials. """
+  from django.urls import reverse
+  from django.utils.html import format_html
+  from bmcrotate import logic
+  from bmcrotate.models import BMCRotation
+  kind = BMCRotation.CHANGE if data['mode'] == BMCCredentialsForm.CHANGE else BMCRotation.CHECK
+  rotations, skipped, busy = logic.start(systems, kind, request.user, data.get('username') or "",
+                                         data.get('password') or "")
+  report = reverse('admin:bmcrotate_bmcrotation_changelist')
+  what = "a change" if kind == BMCRotation.CHANGE else "a check"
+  modeladmin.message_user(request, format_html(
+    "Queued {} on {} BMCs. Follow it on <a href=\"{}\">BMC Credential Changes</a>; the stored credentials change "
+    "only once a BMC has accepted the new ones.", what, len(rotations), report))
+  if skipped:
+    modeladmin.message_user(request, f"Skipped {len(skipped)} systems with no BMC: {summarize([s.hostname for s in skipped], 20)}.",
+                            level=messages.WARNING)
+  if busy:
+    modeladmin.message_user(request, f"Skipped {len(busy)} BMCs with a change still open: "
+                                     f"{summarize([b.system.hostname for b in busy], 20)}.", level=messages.WARNING)
+  return None
 
 
 def open_reenroll_windows(modeladmin, request, systems):

@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'dbbackup',
     'utils',
     'authcustom',
+    'bmcrotate',
     'pki',
     #'mprov_esxiprovisioner',
     'jazzmin',

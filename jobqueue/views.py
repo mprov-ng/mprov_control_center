@@ -228,6 +228,9 @@ feature.
             return Response({'jobserver': f"No job server has ID {jobserver_id}."}, status=400)
         if not Job.objects.filter(pk=pk).exists():
             return Response({'detail': "No such job."}, status=404)
+        refusal = self.not_on_its_network(pk, jobserver_id)
+        if refusal:
+            return refusal
 
         # One conditional UPDATE: the database decides which claim wins, on
         # SQLite and MariaDB alike.
@@ -240,6 +243,24 @@ feature.
                              'status': job.status_id, 'jobserver': job.jobserver_id}, status=409)
         record_status_change(job, PENDING)
         return Response(JobAPISerializer(job).data)
+
+    @staticmethod
+    def not_on_its_network(pk, jobserver_id):
+        """ A 409 for a bmc-rotate job (#486) claimed by a job server with no
+        fresh address on the BMC's network, else None.  A BMC with no network
+        may be claimed by any job server. """
+        from jobqueue.models import STALE_AFTER, JobServerAddress
+        job = Job.objects.filter(pk=pk).values('module_id', 'params').first()
+        if job['module_id'] != 'bmc-rotate':
+            return None
+        network = (job['params'] or {}).get('network') if isinstance(job['params'], dict) else None
+        if network is None:
+            return None
+        on_it = JobServerAddress.objects.filter(jobserver_id=jobserver_id, network_id=network,
+                                                heartbeat_time__gt=timezone.now() - STALE_AFTER).exists()
+        if on_it:
+            return None
+        return Response({'detail': "This job server is not on this BMC's network.", 'network': network}, status=409)
 
 
 class JobModulesAPIView(MProvView):

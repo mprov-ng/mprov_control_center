@@ -213,6 +213,9 @@ JOBSERVER_RULES = [
          fields={"id", "pk", "status", "start_time", "end_time", "jobserver", "return_code"}, check=its_job),
     # follow-up jobs an image build queues
     Rule(("POST",), r"/jobs/", query=set()),
+    # a bmc-rotate job's result (#486); bmcrotate.views checks it's its own job
+    Rule(("POST",), rf"/bmcrotations/{PK}/result/", query=set(),
+         fields={"status", "method", "verified", "tls_verified", "error"}),
     Rule(("PATCH",), rf"/systemimages/{PK}/", needs={"addjs"}, query=set(),
          fields={"slug", "jobservers", "version"}, check=adds_itself("jobservers")),
     Rule(("PATCH",), rf"/repos/{PK}/", needs={"addjs"}, query=set(),
