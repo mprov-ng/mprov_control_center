@@ -4,7 +4,7 @@ from jobqueue.models import JobServer
 from disklayouts.serializers import DiskLayoutAPISerializer
 from networks.models import SwitchPort, Network
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
-from common.serializers import NestedPrimaryKeyRelatedField
+from common.serializers import NestedPrimaryKeyRelatedField, NoNestedUsersMixin
 from scripts.serializers import ScriptAPISerializer, AnsibleCollectionAPISerializer, AnsiblePlaybookAPISerializer, AnsibleRoleAPISerializer
 
 class SystemSerializer(serializers.ModelSerializer): 
@@ -40,12 +40,12 @@ class SystemImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemImage
         fields = '__all__'
-class SystemImageDetailsSerializer(SystemImageSerializer):
+class SystemImageDetailsSerializer(NoNestedUsersMixin, SystemImageSerializer):
     class Meta:
         model = SystemImage
         depth = 3
         fields = '__all__'
-class SystemDetailSerializer(serializers.ModelSerializer): 
+class SystemDetailSerializer(NoNestedUsersMixin, serializers.ModelSerializer): 
     disks = DiskLayoutAPISerializer(many=True, read_only=True)
     systemimage = SystemImageDetailsSerializer(many=False)
     systemmodel =  serializers.PrimaryKeyRelatedField(queryset=SystemModel.objects.all())
@@ -58,7 +58,7 @@ class SystemDetailSerializer(serializers.ModelSerializer):
         model = System
         fields = '__all__'
         depth = 3
-class SystemBMCDetailSerializer(serializers.ModelSerializer): 
+class SystemBMCDetailSerializer(NoNestedUsersMixin, serializers.ModelSerializer): 
     
     class Meta:
         model = SystemBMC
@@ -81,7 +81,7 @@ class NetworkInterfaceSerializer(serializers.ModelSerializer):
         # a value sent here would be overwritten anyway (#382).
         read_only_fields = ['hostname']
 
-class NetworkInterfaceDetailsSerializer(serializers.ModelSerializer):
+class NetworkInterfaceDetailsSerializer(NoNestedUsersMixin, serializers.ModelSerializer):
     class Meta:
         model = NetworkInterface
         fields = '__all__'

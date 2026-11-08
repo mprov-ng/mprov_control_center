@@ -1,9 +1,10 @@
 
 from rest_framework import serializers
+from common.serializers import NoNestedUsersMixin
 
 from .models import DiskLayout, DiskPartition, RaidLayout
 
-class DiskPartitionAPISerializer(serializers.ModelSerializer):
+class DiskPartitionAPISerializer(NoNestedUsersMixin, serializers.ModelSerializer):
   disklayout = serializers.PrimaryKeyRelatedField(queryset=DiskLayout.objects.all())
   class Meta:
     model = DiskPartition
@@ -11,7 +12,7 @@ class DiskPartitionAPISerializer(serializers.ModelSerializer):
     depth=2
 
 
-class RaidLayoutAPISerializer(serializers.ModelSerializer):
+class RaidLayoutAPISerializer(NoNestedUsersMixin, serializers.ModelSerializer):
   # systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
 
   class Meta:
@@ -24,7 +25,7 @@ class RaidLayoutAPISerializer(serializers.ModelSerializer):
   #     kwargs.pop('membersOnly')
   #   super().__init__(*args, **kwargs)
 
-class DiskLayoutAPISerializer(serializers.ModelSerializer):
+class DiskLayoutAPISerializer(NoNestedUsersMixin, serializers.ModelSerializer):
   #systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
   partitions = DiskPartitionAPISerializer(many=True, read_only=True)
   members = serializers.SerializerMethodField("getMembers")

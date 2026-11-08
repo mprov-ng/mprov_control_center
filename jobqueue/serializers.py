@@ -1,5 +1,6 @@
 from jobqueue.models import Job, JobModule, JobServer, JobStatus
 from rest_framework import serializers
+from common.serializers import NoNestedUsersMixin
 from networks.models import Network
 
 
@@ -12,7 +13,7 @@ class JobAPISerializer(serializers.ModelSerializer):
         model = Job
         fields = '__all__'
 
-class JobDetailSerializer(serializers.ModelSerializer):
+class JobDetailSerializer(NoNestedUsersMixin, serializers.ModelSerializer):
     """ GET /jobs/?detail: relations nested 3 levels deep (#298).  Not used
     for /jobs/<pk>/, which job servers read with status as an ID. """
     class Meta:

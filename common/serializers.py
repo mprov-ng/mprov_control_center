@@ -19,3 +19,29 @@ class NestedPrimaryKeyRelatedField(serializers.PrimaryKeyRelatedField):
 
     def to_representation(self, value):
         return self.serializer_class(value, context=self.context).data
+
+
+class NoNestedUsersMixin:
+    '''
+    For a ModelSerializer with depth: render a relation to the user model as
+    its primary key, as responses without depth already do, never as a nested
+    user record.  Every other nested relation is built with this mixin too,
+    so the rule holds at every depth.
+    '''
+
+    def build_nested_field(self, field_name, relation_info, nested_depth):
+        from django.contrib.auth import get_user_model
+        from rest_framework.utils.field_mapping import get_nested_relation_kwargs
+        if relation_info.related_model is get_user_model():
+            kwargs = {'read_only': True}
+            if relation_info.to_many:
+                kwargs['many'] = True
+            return serializers.PrimaryKeyRelatedField, kwargs
+
+        class NestedSerializer(NoNestedUsersMixin, serializers.ModelSerializer):
+            class Meta:
+                model = relation_info.related_model
+                depth = nested_depth - 1
+                fields = '__all__'
+
+        return NestedSerializer, get_nested_relation_kwargs(relation_info)
