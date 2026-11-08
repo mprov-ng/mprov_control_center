@@ -248,8 +248,9 @@ class SystemAPIView(MProvView):
 - id: The internal ID in the db
 - hostname: The hostname of the server
 - timestamp: The creation time of the entry
-- created_by: The user who created this entry
+- created_by: The user who created this entry (read-only)
 - updated: Timestamp of the last update
+- updated_by: The user who last saved this entry (read-only)
 - systemgroups: array of system group IDs
 - config_params: The configuration parameters for this entry
 - systemimage: The ID of the system image.
@@ -295,6 +296,7 @@ Format returned:
         "updated": "2022-05-17T13:56:34.523913-05:00",
         "config_params": "",
         "created_by": 1,
+        "updated_by": 1,
         "systemimage": "compute",
         "systemgroups": [
         2
@@ -308,6 +310,7 @@ Format returned:
         "updated": "2022-05-23T16:00:11.526715-05:00",
         "config_params": "-- #Inherit from System Group or Distribution.",
         "created_by": 1,
+        "updated_by": 1,
         "systemimage": "compute",
         "systemgroups": [
         2
@@ -684,8 +687,9 @@ class SystemImagesAPIView(MProvView):
 - slug: a machine parsable version of the name
 - name: A human readable name
 - timestamp: (Optional) The time this entry was created
-- created_by: The User that is creating this 
+- created_by: (Auto) The user who created this entry (read-only)
 - updated: (Auto) The time this entry was last updated
+- updated_by: (Auto) The user who last saved this entry (read-only)
 - systemgroups: Array of system groups this system image is a part of (returned as
     nested objects, sent as an array of IDs on POST and PATCH)
 - needs_rebuild: If the user is asking to rebuild this image.
@@ -728,6 +732,7 @@ Format returned:
             - epel-release
             - tcpdump",
         "created_by": 1,
+        "updated_by": 1,
         "osdistro": 1,
         "systemgroups": [],
         "scripts": [
@@ -749,6 +754,7 @@ Format returned:
         "version": 7,
         "config_params": "- rootpw: '$6$<salt>$<hash>'",
         "created_by": 1,
+        "updated_by": 1,
         "osdistro": 1,
         "systemgroups": [
         2

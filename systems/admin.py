@@ -306,7 +306,7 @@ class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
 
   inlines = [ NetworkInterfaceInline, BMCInline, SerialHistoryInline]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
-  readonly_fields = ['timestamp', 'updated', 'created_by', 'last_booted', 'credential']
+  readonly_fields = ['timestamp', 'updated', 'created_by', 'updated_by', 'last_booted', 'credential']
   list_display_links = ['id', 'hostname']
   list_per_page = 25
   # NIC and BMC addresses too, so a system can be found by any of them (#496).
@@ -323,6 +323,7 @@ class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
         'created_by',
         'timestamp',
         'updated',
+        'updated_by',
         'last_booted',
         'credential',
       )
@@ -745,7 +746,7 @@ class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
   """ System images: their merged config, version and the job servers serving them;
   mark them for rebuild, or rebuild one now (#176). """
   list_display = ['slug', 'name', 'osdistro', 'version', 'registered_jobservers']
-  readonly_fields = ['timestamp', 'updated', 'created_by',  'jobservers']
+  readonly_fields = ['timestamp', 'updated', 'created_by', 'updated_by', 'jobservers']
   list_display_links = ['slug', 'name']
   actions= [mark_rebuild]
   exclude = ('slug', )
@@ -756,6 +757,7 @@ class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
         'created_by',
         'timestamp',
         'updated',
+        'updated_by',
         'version',
         'jobservers',
         'systemgroups',

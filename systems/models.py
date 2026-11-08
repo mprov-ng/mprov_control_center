@@ -13,6 +13,7 @@ from django.contrib.auth.models import AnonymousUser, User
 from django.utils import timezone
 from django.utils.functional import cached_property
 from common import render_config, flat_config
+from common.request import stamp_users
 import logging
 
 # serial number changes (#60), e.g. "serial: c01 changed ABC123 -> XYZ789 (node)".
@@ -101,6 +102,11 @@ class System(models.Model):
     settings.AUTH_USER_MODEL, 
     on_delete=models.SET(1),
     verbose_name="Created By"
+  )
+  # who saved it last during a request; created_by is who created it.
+  updated_by=models.ForeignKey(
+    settings.AUTH_USER_MODEL, null=True, blank=True, editable=False,
+    on_delete=models.SET_NULL, related_name='+', verbose_name="Updated By"
   )
   updated=models.DateTimeField(default=timezone.now, verbose_name="Last Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True, through=SystemGroup.systems.through)
@@ -325,6 +331,11 @@ class SystemImage(models.Model):
     on_delete=models.SET(1),
     verbose_name="Created By",
   )
+  # who saved it last during a request; created_by is who created it.
+  updated_by=models.ForeignKey(
+    settings.AUTH_USER_MODEL, null=True, blank=True, editable=False,
+    on_delete=models.SET_NULL, related_name='+', verbose_name="Updated By"
+  )
   updated=models.DateTimeField(default=timezone.now, verbose_name="Last Updated")
   systemgroups = models.ManyToManyField(SystemGroup, verbose_name="System Groups",blank=True)
   scripts = models.ManyToManyField(Script, blank=True, default="install_mprov_script_runner_sh")
@@ -462,16 +473,13 @@ def UpdateSystemAttributes(sender, instance, **kwargs):
   dhcp-update jobs (one pending job each at most, see requeue_job) for
   whichever of those job modules exist, so the job servers' boot, DNS and
   DHCP config follow the change.  For a system saved during a request, it
-  also sets created_by to the user the request acts as (acting_user), so
-  created_by is whoever saved the system last, not only who created it.
+  also records the user the request acts as (acting_user): as updated_by
+  always, and as created_by when the system is new.
   '''
   
-  # SystemImage isn't a sender here; UpdateSystemImages sets its created_by.
+  # SystemImage isn't a sender here; UpdateSystemImages sets its own.
   if sender == System:
-    from common.request import acting_user, get_current_request
-    request = get_current_request()
-    if request is not None:
-      instance.created_by = acting_user(request)
+    stamp_users(instance)
 
       
   for slug in ['pxe-update', 'dns-update', 'dhcp-update']:
@@ -525,17 +533,14 @@ def DeleteSystemImage(sender, instance, **kwargs):
 # emits an image-update job every time an image is saved with needs_rebuild set.
 @receiver(pre_save, sender=SystemImage)
 def UpdateSystemImages(sender, instance, **kwargs):
-  ''' Before an image is saved: set created_by to the user the request acts as,
-  and the slug (its primary key) from its name.  If needs_rebuild is set,
-  queue an image-update job for it, clear its job servers (none serve the
+  ''' Before an image is saved: record the user the request acts as (see
+  stamp_users), and set the slug (its primary key) from its name.  If
+  needs_rebuild is set, queue an image-update job for it, clear its job servers (none serve the
   old build any more), bump its version and clear needs_rebuild, so this
   save records the rebuild having been requested.  Nothing is queued if
   there is no image-update job module.
   '''
-  from common.request import acting_user, get_current_request
-  request = get_current_request()
-  if request is not None:
-      instance.created_by = acting_user(request)
+  stamp_users(instance)
   instance.slug = slugify(instance.name)
   if not instance.needs_rebuild:
     return

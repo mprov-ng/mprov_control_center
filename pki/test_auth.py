@@ -332,7 +332,8 @@ class AttributionTests(AgentTestCase):
     def test_an_agents_save_is_its_own(self):
         self.as_js("PATCH", f"/systemimages/{self.image.slug}/?addjs", {"slug": self.image.slug,
                                                                         "jobservers": [self.js.pk]})
-        self.assertEqual(SystemImage.objects.get(pk=self.image.pk).created_by.username, "mprov.js.host-abc")
+        # who saved it last; created_by stays its creator (#493).
+        self.assertEqual(SystemImage.objects.get(pk=self.image.pk).updated_by.username, "mprov.js.host-abc")
 
     def test_the_shared_key_still_falls_back_to_the_first_superuser(self):
         _, key = APIKey.objects.create_key(name="shared")
@@ -340,4 +341,4 @@ class AttributionTests(AgentTestCase):
             response = self.call("PATCH", f"/systems/{self.c02.pk}/", {"hostname": "c02b"},
                                  HTTP_AUTHORIZATION=f"Api-Key {key}")
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(System.objects.get(pk=self.c02.pk).created_by, self.admin)
+        self.assertEqual(System.objects.get(pk=self.c02.pk).updated_by, self.admin)

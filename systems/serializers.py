@@ -13,6 +13,7 @@ class SystemSerializer(serializers.ModelSerializer):
     class Meta:
         model = System
         fields = '__all__'
+        read_only_fields = ['created_by', 'updated_by']
 
     def save(self, **kwargs):
         # keep a serial number set through the API in the system's serial
@@ -54,12 +55,14 @@ class SystemImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemImage
         fields = '__all__'
+        read_only_fields = ['created_by', 'updated_by']
 class SystemImageDetailsSerializer(NoNestedUsersMixin, SystemImageSerializer):
     """ A system image with its relations nested three deep, for ?detail. """
     class Meta:
         model = SystemImage
         depth = 3
         fields = '__all__'
+        read_only_fields = ['created_by', 'updated_by']
 class SystemDetailSerializer(NoNestedUsersMixin, serializers.ModelSerializer): 
     """ A system with its image, groups, disks and Ansible nested, plus its merged
     config, for ?detail and ?self. """
@@ -75,6 +78,7 @@ class SystemDetailSerializer(NoNestedUsersMixin, serializers.ModelSerializer):
         model = System
         fields = '__all__'
         depth = 3
+        read_only_fields = ['created_by', 'updated_by']
 class SystemBMCDetailSerializer(NoNestedUsersMixin, serializers.ModelSerializer): 
     
     """ A BMC with its system nested, including the password, for the per-system paths
