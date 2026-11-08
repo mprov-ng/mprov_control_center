@@ -4,21 +4,23 @@
     slug: "rhel"
     name: "Yum/dnf based Linux OS"
 
-# update: True makes the OSDistroCreateRepos post_save handler (which loaddata
-# fires too) generate the BaseOS, AppStream, extras, PowerTools and EPEL repos
-# from baseurl.  managed: False leaves them unmirrored: nodes and image builds
-# use the upstream URLs, and no repo-update job is queued at install time.
+# A fresh install's distribution is Rocky Linux 9 (#495); a site that needs
+# Rocky 8 adds it like any other.  update: True makes the OSDistroCreateRepos
+# post_save handler (which loaddata fires too) generate the BaseOS, AppStream,
+# extras, CRB and EPEL repos from baseurl.  managed: False leaves them
+# unmirrored: nodes and image builds use the upstream URLs, and no
+# repo-update job is queued at install time.
 - model: osmanagement.osdistro
   pk: 1
   fields:
     id: 1
-    name: "Rocky Linux 8"
+    name: "Rocky Linux 9"
     vendor: "Rocky Linux"
-    version: "8"
+    version: "9"
     tmpfs_root_size: 8
     initial_mods: "e1000,tg3,ixgbe,bnx2x,megaraid_sas,sd_mod"
     prov_interface: "eth0"
     distType: "rhel"
     managed: False
     update: True
-    baseurl: "https://download.rockylinux.org/pub/rocky/8"
+    baseurl: "https://download.rockylinux.org/pub/rocky/9"
