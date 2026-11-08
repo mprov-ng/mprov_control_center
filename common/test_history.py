@@ -4,10 +4,10 @@ import json
 from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from rest_framework_api_key.models import APIKey
 
-from common.request import SHARED_KEY_USER
+from common.request import NADS_USER, SHARED_KEY_USER, acting_user
 from jobqueue.models import JobServer
 from mprov_control_center.version import API_VERSION
 from systems.models import NetworkInterface, System, SystemBMC, SystemGroup
@@ -86,3 +86,18 @@ class APIHistoryTests(TestCase):
         messages = [e.get_change_message() for e in self.entries(self.node)]
         self.assertEqual(messages, ["Changed Provision?.", "Changed Last Booted.", "Changed Last Booted."])
         self.assertTrue(all(e.user.username == SHARED_KEY_USER for e in self.entries(self.node)))
+
+    def test_nads_registration_is_its_own_user(self):
+        """ #5: N.A.D.S. registration acts as mprov.nads; any other
+        unauthenticated request still falls back to the first superuser. """
+        from django.contrib.auth.models import AnonymousUser
+        factory = RequestFactory()
+        for path, expected in (("/systems/register", NADS_USER), ("/systems/register/", NADS_USER),
+                               ("/ipxe/", "admin")):
+            request = factory.post(path)
+            request.user = AnonymousUser()
+            with self.subTest(path=path):
+                user = acting_user(request)
+                self.assertEqual(user.username, expected)
+        nads = User.objects.get(username=NADS_USER)
+        self.assertFalse(nads.is_staff or nads.is_superuser or nads.has_usable_password())
