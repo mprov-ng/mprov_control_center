@@ -8,7 +8,7 @@ from osmanagement.models import OSDistro, OSRepo
 from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, JobStatus, Job, JobServer, requeue_job
 from django.utils.text import slugify
-from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
+from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection, File
 from django.contrib.auth.models import AnonymousUser, User
 from django.utils import timezone
 from django.utils.functional import cached_property
@@ -47,6 +47,7 @@ class SystemGroup(models.Model):
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
   ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles")
   ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
+  files = models.ManyToManyField(File, blank=True, verbose_name="Managed Files", help_text="Files placed into the images built from this.")
   install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel, added after the inherited ones. Start with = to replace the inherited options instead.", blank=True)
   # install kernel parameters.
   tmpfs_root_size = models.IntegerField(default=0, help_text="Size of the root tmpfs filesystem in Gigabytes, 0 inherits from parent Group/Distro")
@@ -342,6 +343,7 @@ class SystemImage(models.Model):
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks")
   ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles")
   ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
+  files = models.ManyToManyField(File, blank=True, verbose_name="Managed Files", help_text="Files placed into the images built from this.")
   
   needs_rebuild = models.BooleanField(default=True, verbose_name="Rebuild Image?")
   version = models.BigIntegerField(default=1, verbose_name="Image Version")

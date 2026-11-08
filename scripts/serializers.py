@@ -73,9 +73,18 @@ class AnsibleCollectionAPISerializer(serializers.ModelSerializer):
         extra_kwargs = {'slug': {'required': False}}
 
 class FileAPISerializer(serializers.ModelSerializer):
-    """ An uploaded file. """
+    """ An uploaded file, and where it's placed in images (#519). """
     class Meta:
         model = File
         fields = '__all__'
         # File.save() makes the slug from the file name if it's not given.
         extra_kwargs = {'slug': {'required': False}}
+
+    def validate(self, attrs):
+        mode = attrs.get('mode', getattr(self.instance, 'mode', '0644'))
+        privileged = len(mode or "") == 4 and int(mode[0], 8) & 0o6 != 0
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if privileged and not (user is not None and user.is_authenticated and user.is_superuser):
+            raise serializers.ValidationError({'mode': "Only a superuser may set a setuid or setgid mode."})
+        return attrs

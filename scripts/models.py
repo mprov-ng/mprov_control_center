@@ -1,3 +1,4 @@
+import re
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_delete
@@ -93,17 +94,80 @@ class Script(models.Model):
     # don't save the content to the db.
     self.content=""
     super(Script, self).save(*args, **kwargs)
+MAX_FILE_BYTES = 10 * 1024 * 1024
+# never placed under these, nor at /
+FORBIDDEN_DEST_ROOTS = ("/proc", "/sys", "/dev", "/run")
+
+
+def validate_file_size(value):
+  """ Uploads are capped at MAX_FILE_BYTES (#519). """
+  if value and getattr(value, "size", 0) > MAX_FILE_BYTES:
+    raise ValidationError(f"Files are limited to {MAX_FILE_BYTES // (1024 * 1024)} MiB.")
+
+
+def validate_dest_path(value):
+  """ An absolute, normalised path inside an image, not / nor under a
+  pseudo-filesystem (#519).  Empty means the file isn't placed in images. """
+  if not value:
+    return
+  import posixpath
+  if not value.startswith("/") or posixpath.normpath(value) != value or "/../" in value + "/" \
+     or value.endswith("/") or "//" in value:
+    raise ValidationError("Must be an absolute, normalised path, such as /etc/chrony.conf.")
+  if value == "/" or any(value == root or value.startswith(root + "/") for root in FORBIDDEN_DEST_ROOTS):
+    raise ValidationError(f"Files can't be placed at / or under {', '.join(FORBIDDEN_DEST_ROOTS)}.")
+
+
+def validate_mode(value):
+  """ 3 or 4 octal digits, such as 0644. """
+  if not re.fullmatch(r"[0-7]{3,4}", value or ""):
+    raise ValidationError("Must be 3 or 4 octal digits, such as 0644.")
+
+
+def validate_owner(value):
+  """ A user or group name, or a numeric id. """
+  if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.-]{0,31}\$?|[0-9]{1,10}", value or ""):
+    raise ValidationError("Must be a user or group name, or a numeric id.")
+
+
 class File(models.Model):
   """
   Files are uploaded to the mPCC and can be served via the link provided.
+  A file with a destination is also placed into the images it's attached to
+  (through their OS distro, system groups or the image itself), with its
+  owner, group and mode; a template is rendered with the image's merged
+  config_params first (#519).  Anything placed in an image can be read by
+  anyone who can download the image: no secrets.
   """
   endpoint="/files/"
   name=models.CharField(max_length=120, verbose_name=("File Name"))
   slug=models.SlugField(unique=True, primary_key=True)
-  filename = models.FileField(upload_to='')
+  filename = models.FileField(upload_to='', validators=[validate_file_size])
   version = models.BigIntegerField(default=1)
-  
-  
+  dest_path = models.CharField(max_length=4096, blank=True, default="", validators=[validate_dest_path],
+    verbose_name="Destination in the Image",
+    help_text="Where the file is placed in images, e.g. /etc/chrony.conf. Leave empty to only serve it for download. "
+              "Anyone who can download an image can read what's in it: never put secrets here.")
+  owner = models.CharField(max_length=32, default="root", validators=[validate_owner],
+    help_text="User name or id, as known inside the image.")
+  group = models.CharField(max_length=32, default="root", validators=[validate_owner],
+    help_text="Group name or id, as known inside the image.")
+  mode = models.CharField(max_length=4, default="0644", validators=[validate_mode],
+    help_text="Octal permissions, e.g. 0644. Setuid and setgid need a superuser.")
+  template = models.BooleanField(default=False, verbose_name="Jinja Template",
+    help_text="Render with each image's merged Configuration Parameters (params), image and distro before placing it. "
+              "Otherwise it's copied byte for byte.")
+
+  def clean(self):
+    super().clean()
+    if self.dest_path and not self.filename:
+      raise ValidationError({"filename": "A file placed in images needs its content."})
+
+  @property
+  def privileged_mode(self):
+    """ Whether the mode sets setuid or setgid. """
+    return len(self.mode or "") == 4 and int(self.mode[0], 8) & 0o6 != 0
+
   def save(self, *args, **kwargs):
     if not self.slug:
       self.slug = slugify(self.filename.name)
