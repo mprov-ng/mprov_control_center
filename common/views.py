@@ -25,9 +25,12 @@ def depth3_serializer(serializer_class):
     Returns a subclass of serializer_class that nests relations to depth 3.
     A subclass, so the depth never leaks into serializer_class itself.
     '''
+    from common.serializers import NoNestedUsersMixin
     class Meta(serializer_class.Meta):
         depth = 3
-    return type(serializer_class.__name__ + 'Depth3', (serializer_class,), {'Meta': Meta})
+    # a related user stays an ID (NoNestedUsersMixin).
+    bases = (serializer_class,) if issubclass(serializer_class, NoNestedUsersMixin) else (NoNestedUsersMixin, serializer_class)
+    return type(serializer_class.__name__ + 'Depth3', bases, {'Meta': Meta})
 
 class MProvView( 
                 generics.ListAPIView,

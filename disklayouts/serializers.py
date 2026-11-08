@@ -1,9 +1,10 @@
 
 from rest_framework import serializers
+from common.serializers import NoNestedUsersMixin
 
 from .models import DiskLayout, DiskPartition, RaidLayout
 
-class DiskPartitionAPISerializer(serializers.ModelSerializer):
+class DiskPartitionAPISerializer(NoNestedUsersMixin, serializers.ModelSerializer):
   """ A partition, with its layout nested two deep. """
   disklayout = serializers.PrimaryKeyRelatedField(queryset=DiskLayout.objects.all())
   class Meta:
@@ -12,7 +13,7 @@ class DiskPartitionAPISerializer(serializers.ModelSerializer):
     depth=2
 
 
-class RaidLayoutAPISerializer(serializers.ModelSerializer):
+class RaidLayoutAPISerializer(NoNestedUsersMixin, serializers.ModelSerializer):
   # systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
 
   """ A software RAID layout, nested one deep. """
@@ -26,7 +27,7 @@ class RaidLayoutAPISerializer(serializers.ModelSerializer):
   #     kwargs.pop('membersOnly')
   #   super().__init__(*args, **kwargs)
 
-class DiskLayoutAPISerializer(serializers.ModelSerializer):
+class DiskLayoutAPISerializer(NoNestedUsersMixin, serializers.ModelSerializer):
   #systems = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), many=True)
   """ A disk layout as the stateful installer reads it: its partitions, plus the RAID
   members, filesystem, level and mount worked out from its RAID layout (empty for a
