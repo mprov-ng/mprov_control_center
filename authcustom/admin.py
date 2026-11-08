@@ -10,3 +10,6 @@ admin.site.register(User, UserAdminCustom)
 
 # the API Keys pages, marked as legacy.
 from . import apikey_admin  # noqa: E402,F401
+
+# people's API tokens.
+from . import token_admin  # noqa: E402,F401

@@ -9,7 +9,7 @@ class SystemBMCPasswordTests(TestCase):
   mprov_scripts' setupBMC.py reads. """
 
   def setUp(self):
-    self.user = User.objects.create(username="bmc-test")
+    self.user = User.objects.create_superuser(username="bmc-test")
     self.system = System.objects.create(hostname="bmc-node", created_by=self.user)
     self.bmc = SystemBMC.objects.create(system=self.system, ipaddress="10.0.1.5", username="admin", password="bmc-secret")
     self.client.force_login(self.user)

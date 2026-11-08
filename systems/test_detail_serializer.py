@@ -18,7 +18,7 @@ class DetailSerializerTests(TestCase):
   (#267). """
 
   def setUp(self):
-    self.user = User.objects.create(username="detail-test")
+    self.user = User.objects.create_superuser(username="detail-test")
     distro_args = dict(vendor="test", version="9", baseurl="http://localhost/", install_kernel_cmdline="quiet",
                        initial_mods="e1000", prov_interface="eth0", tmpfs_root_size=8)
     self.ostype = OSType.objects.create(slug="rhel", name="RHEL")
@@ -77,7 +77,7 @@ class BMCDetailSerializerTests(TestCase):
   scopes its query with ?system= (#316). """
 
   def setUp(self):
-    self.user = User.objects.create(username="bmc-detail-test")
+    self.user = User.objects.create_superuser(username="bmc-detail-test")
     self.system = System.objects.create(hostname="bmc-detail-node", created_by=self.user)
     self.bmc = SystemBMC.objects.create(system=self.system, ipaddress="10.0.1.5", username="admin", password="bmc-secret")
     self.client.force_login(self.user)
