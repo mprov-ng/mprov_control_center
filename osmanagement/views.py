@@ -232,8 +232,11 @@ Format returned:
                 if 'name' not in request.data:
                     return Response({'name': "This field is required."}, status=400)
                 obj = queryset[0]
+                renamed = obj.name != request.data['name']
                 obj.name = request.data['name']
                 obj.save()
+                from common import history
+                history.record(request, obj, history.CHANGE, ["name"] if renamed else [])
                 return Response(None, status=200)
         
         return super().post(request, *args, **kwargs)

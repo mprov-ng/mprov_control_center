@@ -20,16 +20,36 @@ class CurrentRequestMiddleware:
                 del _thread_locals.request
 
 
+SHARED_KEY_USER = "mprov.shared-key"
+
+
+def shared_key_user():
+    """ The service user the shared API key's writes are attributed to (#5):
+    made the first time, with no usable password, never staff.  It goes with
+    the key in 0.8.0. """
+    from django.contrib.auth import get_user_model
+    user, created = get_user_model().objects.get_or_create(username=SHARED_KEY_USER, defaults={
+        "first_name": "Shared API key", "is_staff": False, "is_superuser": False})
+    if created:
+        user.set_unusable_password()
+        user.save(update_fields=["password"])
+    return user
+
+
 def acting_user(request):
     """ Who a save made during this request is attributed to (#327, #331,
-    #381): the request's user, which for an agent with a client certificate
-    is its own service user.  Only a request with no user (the shared API key,
-    or an unauthenticated endpoint such as N.A.D.S. registration) falls back to
+    #381, #5): the request's user, which for an agent with a client
+    certificate is its own service user, and for a person is them.  A
+    request with the shared API key and no user is mprov.shared-key.  Only an
+    unauthenticated endpoint (such as N.A.D.S. registration) falls back to
     the first superuser, as before. """
     from django.contrib.auth import get_user_model
     user = getattr(request, "user", None)
     if user is not None and user.is_authenticated:
         return user
+    scheme = request.META.get("HTTP_AUTHORIZATION", "").split(" ", 1)[0].lower() if hasattr(request, "META") else ""
+    if scheme == "api-key":
+        return shared_key_user()
     return get_user_model().objects.filter(is_superuser=True).order_by("pk").first()
 
 

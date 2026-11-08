@@ -67,20 +67,23 @@ class CreatedByRequestTests(TestCase):
         self.assertEqual(resp.status_code, 201, resp.content)
         return SystemImage.objects.get(name=name)
 
-    # 5: API-key request -> created_by pk=1
+    # 5: API-key request -> created_by is the mprov.shared-key service user (#5)
 
-    def test_api_key_sets_created_by_to_pk1_system(self):
+    def test_api_key_sets_created_by_to_the_shared_key_user_system(self):
         # Item 5 System
         obj = self._create_system_via_api(HTTP_AUTHORIZATION=f"Api-Key {self.api_key}", HTTP_MPROV_VERSION=API_VERSION, dummy_created_by=self.staff.pk)
-        self.assertEqual(obj.created_by_id, 1)
+        # the shared key's own service user (#5), not pk=1
+        self.assertEqual(obj.created_by.username, "mprov.shared-key")
 
-    def test_api_key_sets_created_by_to_pk1_switch(self):
+    def test_api_key_sets_created_by_to_the_shared_key_user_switch(self):
         obj = self._create_switch_via_api(HTTP_AUTHORIZATION=f"Api-Key {self.api_key}", HTTP_MPROV_VERSION=API_VERSION)
-        self.assertEqual(obj.created_by_id, 1)
+        # the shared key's own service user (#5), not pk=1
+        self.assertEqual(obj.created_by.username, "mprov.shared-key")
 
-    def test_api_key_sets_created_by_to_pk1_systemimage(self):
+    def test_api_key_sets_created_by_to_the_shared_key_user_systemimage(self):
         obj = self._create_systemimage_via_api(HTTP_AUTHORIZATION=f"Api-Key {self.api_key}", HTTP_MPROV_VERSION=API_VERSION, dummy_created_by=self.staff.pk)
-        self.assertEqual(obj.created_by_id, 1)
+        # the shared key's own service user (#5), not pk=1
+        self.assertEqual(obj.created_by.username, "mprov.shared-key")
 
     # 6: logged-in staff via session auth (admin/API) -> created_by is that user
 

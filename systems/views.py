@@ -375,11 +375,17 @@ Format returned:
             if netboot is None and booted is None and serial is None:
                 return Response({"netboot": "Must be true or false."}, status=400)
             image = system.systemimage.slug if system.systemimage else "(no image)"
+            from common import history
+            before = history.snapshot(system, ["provision", "serial"])
+            changed = []
             if netboot is not None:
                 if netboot:
                     # boot from the NIC that asked; saving it clears bootable on the others.
+                    was_bootable = nic.bootable
                     nic.bootable = True
                     nic.save()
+                    if not was_bootable:
+                        history.record(request, nic, history.CHANGE, ["bootable"])
                 system.provision = netboot
                 system.save()
                 if not netboot:
@@ -388,10 +394,15 @@ Format returned:
                 # update(), not save(): a boot report shouldn't fire the save
                 # signals, which queue a genders job.
                 System.objects.filter(pk=system.pk).update(last_booted=timezone.now())
+                changed.append("last_booted")
                 provisioning_log.info(f"provisioning: {system.hostname} ({ip}) booted image {image}")
             if serial is not None:
                 # a placeholder ("To Be Filled By O.E.M.") is ignored (#60).
                 system.set_serial(serial, "node")
+            system.refresh_from_db(fields=["provision", "serial"])
+            changed = history.changed_fields(before, history.snapshot(system, ["provision", "serial"])) + changed
+            # every boot report is recorded (#5): the system's provisioning history
+            history.record(request, system, history.CHANGE, changed)
             return Response({"provision": system.provision, "bootable_nic": nic.name}, status=200)
 
         self.serializer_class = SystemSerializer
@@ -1116,6 +1127,9 @@ the response is still 200.
         if bootdev_failed(result):
             # nothing was reset, so nothing changes (#311).
             self._restoreProvision(bmc.system, was_provisioning)
+        elif not was_provisioning:
+            from common import history
+            history.record(self.request, bmc.system, history.CHANGE, ["provision"])
         return result
 
     def _restoreProvision(self, system, provision):
