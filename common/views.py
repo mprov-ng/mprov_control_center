@@ -225,6 +225,25 @@ key instead of being ignored, so a typo can't return every row.
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
+    # API writes go in the Admin Site History (#5, common.history)
+    def perform_create(self, serializer):
+        from common import history
+        super().perform_create(serializer)
+        history.record(self.request, serializer.instance, history.ADDITION)
+
+    def perform_update(self, serializer):
+        from common import history
+        names = list(serializer.validated_data)
+        before = history.snapshot(serializer.instance, names)
+        super().perform_update(serializer)
+        after = history.snapshot(serializer.instance, names)
+        history.record(self.request, serializer.instance, history.CHANGE, history.changed_fields(before, after))
+
+    def perform_destroy(self, instance):
+        from common import history
+        history.record(self.request, instance, history.DELETION)
+        super().perform_destroy(instance)
+
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
     
