@@ -18,6 +18,17 @@ use(session, url) then points a requests session at the mPCC over HTTPS with
 that certificate.  When there's nothing to enroll with (an mPCC before 0.7, a
 N.A.D.S. boot) or enrollment fails, the scripts carry on with the shared API
 key, as before, and say why.
+
+Images also install this file and run it at boot and daily, to keep the
+credential current:
+
+  mprov_enroll.py renew    renew it in its last RENEW_DAYS days; if it has
+                           expired, re-enroll through a window an admin opened
+                           ("Let these systems re-enroll" in the mPCC)
+  mprov_enroll.py status   show when it expires
+
+Both exit 0 when there's nothing to do, including on a node without a
+credential.
 """
 import base64
 import hashlib
@@ -29,7 +40,9 @@ import tempfile
 from urllib.parse import urlsplit, urlunsplit
 
 TLS_DIR = "/etc/mprov/tls"
-KEY, CERT, CA = "node.key", "node.crt", "ca.crt"
+KEY, CERT, CA, URL = "node.key", "node.crt", "ca.crt", "mpcc_url"
+# renew this many days before the credential expires (the mPCC allows 15)
+RENEW_DAYS = 14
 
 
 def kernel_params(path="/proc/cmdline"):
@@ -121,7 +134,8 @@ def enroll(session, mprov_url, cmdline="/proc/cmdline", tls_dir=TLS_DIR, log=pri
         log(f"Error: enrollment refused ({reply.status_code}): {reply.text[:200]}; using the shared API key.")
         return False
       _write(os.path.join(tmp, CERT), reply.json()["certificate"], 0o644)
-      for name in (KEY, CERT, CA):
+      _write(os.path.join(tmp, URL), https_url(mprov_url) + "\n", 0o644)
+      for name in (KEY, CERT, CA, URL):
         os.replace(os.path.join(tmp, name), os.path.join(tls_dir, name))
   except (OSError, ValueError, KeyError, subprocess.CalledProcessError, Exception) as e:
     log(f"Error: couldn't enroll ({e.__class__.__name__}: {e}); using the shared API key.")
@@ -137,3 +151,99 @@ def use(session, mprov_url, tls_dir=TLS_DIR):
   session.verify = os.path.join(tls_dir, CA)
   session.headers.pop("Authorization", None)
   return https_url(mprov_url)
+
+
+def valid_for(seconds, tls_dir=TLS_DIR):
+  """ Whether the credential is still valid seconds from now (openssl x509
+  -checkend). """
+  result = subprocess.run(["openssl", "x509", "-noout", "-checkend", str(int(seconds)),
+                           "-in", os.path.join(tls_dir, CERT)], capture_output=True, text=True)
+  return result.returncode == 0
+
+
+def _new_credential(session, url, tls_dir, log, what, **kwargs):
+  """ POST a new CSR to url and swap in the key and certificate it returns.
+  True on success. """
+  with tempfile.TemporaryDirectory(dir=tls_dir) as tmp:
+    csr = make_csr(os.path.join(tmp, KEY))
+    reply = session.post(url, data=json.dumps({"csr": csr}), timeout=(10, 30),
+                         headers={"Content-Type": "application/json", "Authorization": None},
+                         verify=os.path.join(tls_dir, CA), **kwargs)
+    if reply.status_code != 200:
+      log(f"Error: {what} refused ({reply.status_code}): {reply.text[:300]}")
+      return False
+    _write(os.path.join(tmp, CERT), reply.json()["certificate"], 0o644)
+    # the certificate first: a node stopped between the two renames has a
+    # certificate its old key doesn't match, which a recovery window fixes;
+    # the other way round it'd look valid and fail every handshake.
+    os.replace(os.path.join(tmp, CERT), os.path.join(tls_dir, CERT))
+    os.replace(os.path.join(tmp, KEY), os.path.join(tls_dir, KEY))
+  return True
+
+
+def renew(session=None, tls_dir=TLS_DIR, log=print, days=RENEW_DAYS):
+  """ Keep this node's credential current.  True when it's current afterwards,
+  or there's none to keep. """
+  if not have(tls_dir) or not os.path.isfile(os.path.join(tls_dir, URL)):
+    log("No credential to renew; this node uses the shared API key.")
+    return True
+  if valid_for(days * 86400, tls_dir):
+    log("The credential isn't due for renewal.")
+    return True
+  if session is None:
+    import requests
+    session = requests.Session()
+  with open(os.path.join(tls_dir, URL)) as f:
+    base = f.read().strip()
+  if valid_for(60, tls_dir):
+    try:
+      if _new_credential(session, base + "enroll/renew/", tls_dir, log, "renewal",
+                         cert=(os.path.join(tls_dir, CERT), os.path.join(tls_dir, KEY))):
+        log("Renewed the credential.")
+        return True
+    except Exception as e:
+      log(f"Error: couldn't renew ({e.__class__.__name__}: {e}).")
+  return recover(session, tls_dir, log)
+
+
+def recover(session=None, tls_dir=TLS_DIR, log=print):
+  """ Re-enroll through the window an admin opened for this system. """
+  if session is None:
+    import requests
+    session = requests.Session()
+  try:
+    with open(os.path.join(tls_dir, URL)) as f:
+      base = f.read().strip()
+    if _new_credential(session, base + "enroll/recover/", tls_dir, log, "re-enrollment"):
+      log("Re-enrolled; the credential is current again.")
+      return True
+  except Exception as e:
+    log(f"Error: couldn't re-enroll ({e.__class__.__name__}: {e}).")
+  log("The credential has expired or is about to. In the mPCC, select this system and use "
+      "\"Let these systems re-enroll\"; this node picks it up on its next check or boot.")
+  return False
+
+
+def status(tls_dir=TLS_DIR, log=print):
+  if not have(tls_dir):
+    log("No credential; this node uses the shared API key.")
+    return True
+  result = subprocess.run(["openssl", "x509", "-noout", "-subject", "-enddate", "-in", os.path.join(tls_dir, CERT)],
+                          capture_output=True, text=True)
+  log(result.stdout.strip())
+  log("valid" if valid_for(0, tls_dir) else "EXPIRED")
+  return True
+
+
+def main(argv=None):
+  import sys
+  args = sys.argv[1:] if argv is None else argv
+  commands = {"renew": renew, "recover": recover, "status": status}
+  if len(args) != 1 or args[0] not in commands:
+    print(f"usage: mprov_enroll.py {{{'|'.join(commands)}}}")
+    return 2
+  return 0 if commands[args[0]]() else 1
+
+
+if __name__ == "__main__":
+  raise SystemExit(main())

@@ -115,7 +115,7 @@ class NodeEnrollModuleTests(SimpleTestCase):
             key = serialization.load_pem_private_key(f.read(), password=None)
         from pki.ca import key_matches
         self.assertTrue(key_matches(cert, key))
-        self.assertEqual(sorted(os.listdir(self.tls)), ["ca.crt", "node.crt", "node.key"])
+        self.assertEqual(sorted(os.listdir(self.tls)), ["ca.crt", "mpcc_url", "node.crt", "node.key"])
 
     def test_no_params_means_the_shared_key(self):
         self.write_cmdline("quiet")

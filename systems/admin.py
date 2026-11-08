@@ -199,15 +199,49 @@ def bmc_credentials_action(modeladmin, request, queryset, systems):
   })
 
 
+def open_reenroll_windows(modeladmin, request, systems):
+  """ Open a one-hour re-enrollment window for each system, so one whose
+  credential has expired can get a new one (POST /enroll/recover/). """
+  import logging
+  from pki.models import BootNonce
+  for system in systems:
+    BootNonce.open_recovery(system, request.user)
+  names = ", ".join(s.hostname for s in systems[:10]) + (" …" if len(systems) > 10 else "")
+  count = f"{len(systems)} system" + ("" if len(systems) == 1 else "s")
+  logging.getLogger("mprov.enroll").info(
+    f"{request.user.username} opened a re-enrollment window for {count}: {names}")
+  modeladmin.message_user(request, f"For the next hour, {count} can re-enroll once from their own addresses: "
+                                   f"{names}. Their nodes do it on their next renewal check or boot.")
+
+
 class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
   """ Systems: their NICs, BMC and serial history inline, power and PXE actions, bulk
-  updates, bulk BMC credentials (#374), adding a range (#38), live search, and the
-  hostname lookup behind the member chips (#497). """
-  actions = [ 'bulk_update', 'set_bmc_credentials', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
+  updates, bulk BMC credentials (#374), re-enrollment windows (#506), adding a range
+  (#38), live search, and the hostname lookup behind the member chips (#497). """
+  actions = [ 'bulk_update', 'set_bmc_credentials', 'reenroll', 'sys_on', 'sys_off', 'sys_cycle', 'sys_pxe', 'sys_pxe_efi']
 
   @admin.action(description="Set BMC credentials")
   def set_bmc_credentials(self, request, queryset):
     return bmc_credentials_action(self, request, queryset, list(queryset))
+
+  @admin.action(description="Let these systems re-enroll (1 hour)")
+  def reenroll(self, request, queryset):
+    open_reenroll_windows(self, request, list(queryset))
+
+  @admin.display(description="Credential")
+  def credential(self, obj):
+    """ The system's own client certificate: when it expires and was last used. """
+    from pki.models import AgentCredential
+    if obj is None or obj.pk is None:
+      return "-"
+    current = AgentCredential.objects.active().filter(system=obj).order_by('-not_after').first()
+    if current is None:
+      last = AgentCredential.objects.filter(system=obj).order_by('-not_after').first()
+      if last is None:
+        return "None: this system uses the shared API key."
+      return f"Expired or revoked (last valid to {last.not_after:%Y-%m-%d %H:%M}). Re-enroll it from the Systems list."
+    seen = f"{current.last_seen:%Y-%m-%d %H:%M}" if current.last_seen else "never"
+    return f"Valid to {current.not_after:%Y-%m-%d %H:%M} ({(current.not_after - timezone.now()).days} days left); last used {seen}."
 
   def get_urls(self):
     from django.urls import path
@@ -272,7 +306,7 @@ class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
 
   inlines = [ NetworkInterfaceInline, BMCInline, SerialHistoryInline]
   list_display = ['id', 'getPower', 'hostname', 'getMacs', 'getSwitchPort', 'getBMClink']
-  readonly_fields = ['timestamp', 'updated', 'created_by', 'last_booted']
+  readonly_fields = ['timestamp', 'updated', 'created_by', 'last_booted', 'credential']
   list_display_links = ['id', 'hostname']
   list_per_page = 25
   # NIC and BMC addresses too, so a system can be found by any of them (#496).
@@ -290,6 +324,7 @@ class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
         'timestamp',
         'updated',
         'last_booted',
+        'credential',
       )
     }),
     ('System Parameters', {
@@ -646,12 +681,16 @@ class SystemGroupAdmin(SystemMembersMixin, admin.ModelAdmin):
   list_display = ['id', 'name']
   list_display_links = ['id', 'name']
   raw_id_fields = ['systems']
-  actions = ['set_bmc_credentials']
+  actions = ['set_bmc_credentials', 'reenroll']
 
   @admin.action(description="Set BMC credentials for these groups' systems")
   def set_bmc_credentials(self, request, queryset):
     systems = list(System.objects.filter(systemgroups__in=queryset).distinct())
     return bmc_credentials_action(self, request, queryset, systems)
+
+  @admin.action(description="Let these groups' systems re-enroll (1 hour)")
+  def reenroll(self, request, queryset):
+    open_reenroll_windows(self, request, list(System.objects.filter(systemgroups__in=queryset).distinct()))
 
 class SystemModelAdmin(admin.ModelAdmin):
   """ System models: the vendor and model N.A.D.S. matches a booting node's dmidecode

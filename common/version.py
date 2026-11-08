@@ -6,8 +6,9 @@ the shared API key, Basic or a token, which is how job servers, mash and node
 scripts authenticate, must send the same major.minor in that header, or it
 gets 426 Upgrade Required.
 
-Browser sessions (the admin, the API's docs pages) and unauthenticated
+Browser sessions (the admin, the API's docs pages), unauthenticated
 requests (image, repo and iPXE serves, node registration, the health check)
+and enrollment (/enroll/, how an agent gets and renews its credential)
 aren't checked.  Node scripts baked into images can't be rebuilt with every
 mPCC release, so the endpoints in settings.MPROV_VERSION_EXEMPT pass for a
 request that comes from one of a known system's network interface
@@ -74,6 +75,11 @@ class APIVersionMiddleware:
         if settings.MPROV_SKIP_VERSION_CHECK:
             return None
         if not self.from_an_agent(request):
+            return None
+        if request.path.startswith("/enroll/"):
+            # how an agent gets and keeps a credential at all: {csr} in,
+            # {certificate} out, the same in every release.  A node's renewal
+            # helper is baked into its image and can't follow the mPCC's version.
             return None
         sent = request.headers.get(HEADER)
         if major_minor(sent) == API_VERSION:
