@@ -4,7 +4,7 @@ from jobqueue.models import JobServer
 from disklayouts.serializers import DiskLayoutAPISerializer
 from networks.models import SwitchPort, Network
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
-from common.serializers import NestedPrimaryKeyRelatedField
+from common.serializers import NestedPrimaryKeyRelatedField, NoNestedUsersMixin
 from scripts.serializers import ScriptAPISerializer, AnsibleCollectionAPISerializer, AnsiblePlaybookAPISerializer, AnsibleRoleAPISerializer
 
 class SystemSerializer(serializers.ModelSerializer): 
@@ -54,13 +54,13 @@ class SystemImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = SystemImage
         fields = '__all__'
-class SystemImageDetailsSerializer(SystemImageSerializer):
+class SystemImageDetailsSerializer(NoNestedUsersMixin, SystemImageSerializer):
     """ A system image with its relations nested three deep, for ?detail. """
     class Meta:
         model = SystemImage
         depth = 3
         fields = '__all__'
-class SystemDetailSerializer(serializers.ModelSerializer): 
+class SystemDetailSerializer(NoNestedUsersMixin, serializers.ModelSerializer): 
     """ A system with its image, groups, disks and Ansible nested, plus its merged
     config, for ?detail and ?self. """
     disks = DiskLayoutAPISerializer(many=True, read_only=True)
@@ -75,7 +75,7 @@ class SystemDetailSerializer(serializers.ModelSerializer):
         model = System
         fields = '__all__'
         depth = 3
-class SystemBMCDetailSerializer(serializers.ModelSerializer): 
+class SystemBMCDetailSerializer(NoNestedUsersMixin, serializers.ModelSerializer): 
     
     """ A BMC with its system nested, including the password, for the per-system paths
     setupBMC.py reads. """
@@ -101,7 +101,7 @@ class NetworkInterfaceSerializer(serializers.ModelSerializer):
         # a value sent here would be overwritten anyway (#382).
         read_only_fields = ['hostname']
 
-class NetworkInterfaceDetailsSerializer(serializers.ModelSerializer):
+class NetworkInterfaceDetailsSerializer(NoNestedUsersMixin, serializers.ModelSerializer):
     """ A NIC with its system, network and switch port nested three deep; hostname is
     read-only. """
     class Meta:

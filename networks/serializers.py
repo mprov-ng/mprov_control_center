@@ -1,6 +1,7 @@
 
 
 from rest_framework import serializers
+from common.serializers import NoNestedUsersMixin
 from .models import Network, Switch, NetworkType, SwitchPort
 
 class NetworkAPISerializer(serializers.ModelSerializer):
@@ -10,7 +11,7 @@ class NetworkAPISerializer(serializers.ModelSerializer):
     model = Network
     fields = '__all__'
 
-class NetworkDetailSerializer(serializers.ModelSerializer):
+class NetworkDetailSerializer(NoNestedUsersMixin, serializers.ModelSerializer):
   """ GET /networks/<pk>/ and ?detail: relations nested 3 levels deep (#298).
   A depth-3 copy of NetworkAPISerializer would leave its declared net_type
   an ID. """
