@@ -108,14 +108,17 @@ def secret(rotation):
 def _store(rotation, username, password, what):
     """ Store a pair that was just verified on the BMC. """
     from systems.models import SystemBMC
+    before = SystemBMC.objects.filter(pk=rotation.bmc_id).values("username", "password").first() or {}
     SystemBMC.objects.filter(pk=rotation.bmc_id).update(username=username, password=password,
                                                         credentials_changed=timezone.now())
     rotation.stored = what
-    if rotation.requested_by_id:
+    # name what actually changed, never the values
+    fields = [label for label, key, value in (("BMC User", "username", username), ("BMC Password", "password", password))
+              if before.get(key) != value]
+    if rotation.requested_by_id and fields:
         LogEntry.objects.log_actions(
             user_id=rotation.requested_by_id, queryset=[rotation.bmc], action_flag=CHANGE,
-            change_message=[{"changed": {"fields": ["BMC User", "BMC Password"] if "user" in what
-                                         else ["BMC Password"]}}], single_object=True)
+            change_message=[{"changed": {"fields": fields}}], single_object=True)
 
 
 def apply_result(rotation, data):

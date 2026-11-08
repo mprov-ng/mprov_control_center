@@ -126,6 +126,9 @@ class ResultTests(BMCRotationTestCase):
                                       error="rename refused")
         self.assertEqual((self.bmc().username, self.bmc().password), ("admin", "new-secret"))
         self.assertEqual(rotation.status, BMCRotation.PARTIAL)
+        # History names only what changed: the password, not the user
+        entry = LogEntry.objects.filter(object_id=str(self.bmc1.pk)).latest("pk")
+        self.assertEqual(entry.get_change_message(), "Changed BMC Password.")
 
     def test_a_failure_stores_nothing(self):
         rotation, _ = self.run_change(status="failed", verified="current", error="auth new-secret refused")
