@@ -84,6 +84,16 @@ Upload a file under **Scripts → Files** and give it a **Destination in the Ima
 - Changing a file doesn't rebuild images by itself, as with scripts. The admin lists the images that need a rebuild.
 - **Anything placed in an image can be read by anyone who can download the image. Never put passwords, keys or other secrets in a managed file.**
 
+## Changing BMC credentials
+
+Select systems (or system groups) and use **Set BMC credentials**. You can:
+
+- **store** the user and password in the mPCC only, and change the BMCs yourself;
+- **change** them on the BMCs: a job server on each BMC's network runs a `bmc-rotate` job, which needs the module in its `MPROV_MODS`. It uses Redfish, or IPMI where Redfish isn't available. The password is changed first, and the user only after a login with the new password works. The mPCC stores only credentials a job server has just logged in with;
+- **check** that the stored credentials still work, changing nothing.
+
+Follow progress under **BMC Credential Changes**. If a change can't be confirmed (for example, the job server lost touch with the mPCC after the BMC accepted it), it's marked *unconfirmed*: the old credentials stay stored, and **Find which credentials work** tries the old and new ones and stores whichever logs in. Job servers don't verify BMCs' HTTPS certificates unless `bmcCABundle` is set, and the report flags each change made without verification.
+
 ## Image tags
 - `:vX.Y.Z` is a release, and `:latest` is the newest release.
 - `:dev` is built from `main` after every merge, once the tests pass.

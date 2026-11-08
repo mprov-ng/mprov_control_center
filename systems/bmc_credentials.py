@@ -11,6 +11,13 @@ bmc_log = logging.getLogger('mprov.bmc')
 
 
 class BMCCredentialsForm(forms.Form):
+  STORE, CHANGE, CHECK = "store", "change", "check"
+  # missing means store, as before #486
+  mode = forms.ChoiceField(label="What to do", initial=STORE, required=False, widget=forms.RadioSelect, choices=[
+    (STORE, "Store them in the mPCC only (change the BMCs yourself)"),
+    (CHANGE, "Change them on the BMCs, then store what the BMCs accepted"),
+    (CHECK, "Check that the stored credentials work on the BMCs (changes nothing)"),
+  ], help_text="Changing or checking on the BMCs is done by a job server on each BMC's network (#486).")
   username = forms.CharField(max_length=255, required=False, label="BMC User",
     help_text="Leave blank to keep each BMC's current user.")
   password = forms.CharField(max_length=100, required=False, label="New BMC Password",
@@ -21,6 +28,14 @@ class BMCCredentialsForm(forms.Form):
 
   def clean(self):
     data = super().clean()
+    mode = data.get('mode') or self.STORE
+    if mode != self.STORE:
+      from bmcrotate.logic import available
+      if not available():
+        raise forms.ValidationError("No job server runs the bmc-rotate module, so the BMCs can't be changed or "
+                                    "checked. Add it to a job server on the BMCs' network (MPROV_MODS).")
+    if mode == self.CHECK:
+      return data
     if data.get('password', '') != data.get('confirm', ''):
       self.add_error('confirm', "The passwords don't match.")
     elif not data.get('username') and not data.get('password'):
