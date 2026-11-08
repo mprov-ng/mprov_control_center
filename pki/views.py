@@ -9,6 +9,9 @@ certificates.
   address that booted.
 - POST /enroll/renew/ {csr}: an agent, authenticated with its current
   certificate, in the last part of that certificate's life.
+- POST /enroll/recover/ {csr}: a system whose credential has expired, from
+  one of its own addresses, while an admin has a re-enrollment window open
+  for it ("Let these systems re-enroll" in the admin).
 - GET /enroll/ca.crt: the CA certificate, which agents check against the
   fingerprint they were given (mprov_ca= on the kernel command line, or next
   to the token) before trusting it.
@@ -208,6 +211,36 @@ class RenewView(EnrollBase):
             return error
         log.info(f"renewed {credential.user.username}: serial {new.serial}")
         return self.issued(new, pem)
+
+
+class RecoverView(EnrollView):
+    """ A system re-enrolls through the window an admin opened for it.  The
+    caller is the system its address belongs to; the window is the proof. """
+
+    def post(self, request):
+        if self.refusal:
+            return self.refusal
+        from common.permissions import system_from_address
+        from systems.views_noauth import get_client_ip
+        data = request.data if isinstance(request.data, dict) else {}
+        if not isinstance(data.get("csr"), str):
+            return Response({"csr": "Must be a PEM certificate signing request."}, status=status.HTTP_400_BAD_REQUEST)
+        ip = get_client_ip(request)
+        system = system_from_address(request)
+        with transaction.atomic():
+            if not BootNonce.redeem_recovery(system):
+                who = system.hostname if system else "no known system"
+                log.warning(f"re-enrollment from {ip} ({who}) refused: no window open")
+                return Response({"detail": "No re-enrollment window is open for this system. An admin can open one: "
+                                           "Systems, select it, \"Let these systems re-enroll\"."},
+                                status=status.HTTP_403_FORBIDDEN)
+            credential, pem, error = self.sign(data["csr"], LIFETIMES[AgentCredential.SYSTEM], system=system)
+            if error:
+                transaction.set_rollback(True)
+                return error
+            self.revoke_others(credential, system=system)
+        log.info(f"re-enrolled {system.hostname} ({ip}) through an admin's window")
+        return self.issued(credential, pem)
 
 
 def ca_certificate(request):

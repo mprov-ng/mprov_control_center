@@ -173,15 +173,24 @@ class EnrollmentToken(models.Model):
 class BootNonce(models.Model):
     """ A one-time enrollment nonce for one boot of one system, put on
     the kernel command line by /ipxe/ (mprov_enroll=...).  Single-use, bound
-    to the address that booted, valid NONCE_LIFETIME, stored hashed. """
+    to the address that booted, valid NONCE_LIFETIME, stored hashed.
+
+    A recovery row is a re-enrollment window an admin opened for a system
+    whose credential has expired: no secret and no fixed address.  The
+    system enrolls through it from any of its own addresses, once, within
+    RECOVERY_LIFETIME (POST /enroll/recover/). """
     NONCE_LIFETIME = datetime.timedelta(minutes=15)
+    RECOVERY_LIFETIME = datetime.timedelta(hours=1)
 
     nonce_hash = models.CharField(max_length=64, unique=True)
     system = models.ForeignKey('systems.System', on_delete=models.CASCADE, related_name='+')
-    ipaddress = models.GenericIPAddressField()
+    # a boot's address; empty for a recovery window
+    ipaddress = models.GenericIPAddressField(null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     expires = models.DateTimeField()
     used_at = models.DateTimeField(null=True, blank=True)
+    recovery = models.BooleanField(default=False)
+    opened_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
 
     class Meta:
         verbose_name = "Boot Enrollment Nonce"
@@ -189,7 +198,7 @@ class BootNonce(models.Model):
     @classmethod
     def issue(cls, system, ipaddress):
         """ A new nonce for this boot; the system's unused ones are dropped. """
-        cls.objects.filter(system=system, used_at__isnull=True).delete()
+        cls.objects.filter(system=system, used_at__isnull=True, recovery=False).delete()
         nonce = secrets.token_hex(16)
         cls.objects.create(nonce_hash=_hash(nonce), system=system, ipaddress=ipaddress,
                            expires=timezone.now() + cls.NONCE_LIFETIME)
@@ -202,7 +211,8 @@ class BootNonce(models.Model):
         if not isinstance(nonce, str) or not nonce:
             return None, "no nonce"
         with transaction.atomic():
-            row = cls.objects.select_for_update().select_related("system").filter(nonce_hash=_hash(nonce)).first()
+            row = cls.objects.select_for_update().select_related("system").filter(
+                nonce_hash=_hash(nonce), recovery=False).first()
             if row is None:
                 return None, "unknown nonce"
             if row.used_at is not None:
@@ -214,3 +224,24 @@ class BootNonce(models.Model):
             row.used_at = timezone.now()
             row.save(update_fields=["used_at"])
             return row.system, None
+
+    @classmethod
+    def open_recovery(cls, system, user=None):
+        """ Open (or reopen) a RECOVERY_LIFETIME re-enrollment window for system. """
+        cls.objects.filter(system=system, recovery=True, used_at__isnull=True).delete()
+        return cls.objects.create(nonce_hash=_hash(secrets.token_hex(16)), system=system, recovery=True,
+                                  opened_by=user, expires=timezone.now() + cls.RECOVERY_LIFETIME)
+
+    @classmethod
+    def redeem_recovery(cls, system):
+        """ Burn system's open re-enrollment window: True if there was one. """
+        if system is None:
+            return False
+        with transaction.atomic():
+            row = cls.objects.select_for_update().filter(system=system, recovery=True, used_at__isnull=True,
+                                                         expires__gt=timezone.now()).first()
+            if row is None:
+                return False
+            row.used_at = timezone.now()
+            row.save(update_fields=["used_at"])
+            return True
