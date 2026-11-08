@@ -25,6 +25,8 @@
     scripts:
       - install_mprov_script_runner_sh
       - extra_packages_sh
+      # renews the node's own certificate (#506, mprov_scripts#96)
+      - install_mprov_cert_renew_sh
 
 - model: systems.systemgroup
   pk: 1
