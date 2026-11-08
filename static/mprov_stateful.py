@@ -34,6 +34,8 @@ class mProvStatefulInstaller():
   config_data = {}
   mprovURL = "http://127.0.0.1:8080/"
   apikey = ""
+  # the mPCC's CA certificate, for an https mprovURL (the global caBundle setting).
+  caBundle = ""
   heartbeatInterval = 10
   runonce = False
   sessionOk = False
@@ -118,6 +120,8 @@ class mProvStatefulInstaller():
       'Authorization': 'Api-Key ' + self.apikey,
       'Content-Type': 'application/json'
       })
+    if self.caBundle:
+      self.session.verify = self.caBundle
     # genNetworkInterfaces.py enrolled this boot: use its certificate, over
     # HTTPS.  copyRoot() copies /etc/mprov/tls to the disk with the rest (#381).
     if mprov_enroll is not None and mprov_enroll.have():
