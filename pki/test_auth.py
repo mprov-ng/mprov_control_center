@@ -277,6 +277,14 @@ class SharedKeyModeTests(AgentTestCase):
     def with_key(self, method, url, body=None, ip="10.0.0.20"):
         return self.call(method, url, body, ip=ip, HTTP_AUTHORIZATION=f"Api-Key {self.key}")
 
+    def test_the_default_is_off(self):
+        # 0.7.0 refuses the shared key unless a site turns it back on.
+        from django.conf import settings
+        self.assertEqual(settings.MPROV_SHARED_KEY_MODE, "off")
+        response = self.with_key("GET", "/systems/?self")
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("MPROV_SHARED_KEY_MODE=off", response.json()["detail"])
+
     def test_all_is_as_before(self):
         with self.settings(MPROV_SHARED_KEY_MODE="all"):
             self.assertEqual(self.with_key("GET", "/systems/", ip="192.0.2.1").status_code, 200)

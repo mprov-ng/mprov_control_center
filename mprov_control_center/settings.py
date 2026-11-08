@@ -372,9 +372,10 @@ MPROV_BACKUP_DIR = os.environ.get('MPROV_BACKUP_DIR', '/var/lib/mprov/backups')
 MPROV_TLS_DIR = os.environ.get('MPROV_TLS_DIR', '/var/lib/mprov/tls')
 
 # Where the shared API key is still accepted (#381, common/permissions.py):
-# "all" (as before 0.7), "nodes" (only for what a node does to itself, for
-# images not yet rebuilt) or "off".
-MPROV_SHARED_KEY_MODE = os.environ.get('MPROV_SHARED_KEY_MODE', 'all').strip().lower()
+# "off" (the default from 0.7.0), "nodes" (only for what a node does to
+# itself, for images not yet rebuilt) or "all" (as before 0.7).  0.8.0
+# removes the key.
+MPROV_SHARED_KEY_MODE = os.environ.get('MPROV_SHARED_KEY_MODE', 'off').strip().lower()
 
 # The root-run signing helper's socket (pki/signer.py, #381): the only
 # process that reads the CA's key.

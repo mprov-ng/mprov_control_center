@@ -4,7 +4,7 @@ from unittest import mock
 
 from django.contrib.auth.models import Permission, User
 from django.db import IntegrityError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from rest_framework_api_key.models import APIKey
 
@@ -13,6 +13,7 @@ from systems.models import System, SystemImage
 from mprov_control_center.version import API_VERSION
 
 
+@override_settings(MPROV_SHARED_KEY_MODE="all")  # these test other things over the shared key
 class CreatedByRequestTests(TestCase):
     """Items 5-8 via Django test client (exercises MIDDLEWARE order) for System, SystemImage, Switch."""
 

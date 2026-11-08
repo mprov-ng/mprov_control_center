@@ -41,6 +41,7 @@ class APIVersionTestCase(APITestCase):
     return getattr(self.client, method)(url, CONTENT_TYPE="application/json", **headers)
 
 
+@override_settings(MPROV_SHARED_KEY_MODE="all")  # these test other things over the shared key
 class APIVersionCheckTests(APIVersionTestCase):
 
   def test_matching_version_passes(self):
@@ -113,6 +114,7 @@ class APIVersionCheckTests(APIVersionTestCase):
     self.assertEqual(response["mProv-Version"], API_VERSION)
 
 
+@override_settings(MPROV_SHARED_KEY_MODE="all")  # these test other things over the shared key
 class APIVersionExemptionTests(APIVersionTestCase):
   """ Baked node scripts' endpoints pass from a known system's address. """
 

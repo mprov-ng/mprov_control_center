@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework_api_key.models import APIKey
 
 from networks.models import Network, NetworkType
@@ -20,6 +20,7 @@ class NetworkFunctionViewPermissionTests(TestCase):
     return self.client.post(f"/networks/{self.lan.pk}/update-with-confirmation/", '{"network_data": {"domain": "perm-test"}}',
                             content_type="application/json", **extra)
 
+  @override_settings(MPROV_SHARED_KEY_MODE="all")
   def test_api_key_alone_is_enough(self):
     self.assertEqual(self.preview(HTTP_AUTHORIZATION=f"Api-Key {self.key}", HTTP_MPROV_VERSION=API_VERSION).status_code, 200)
     self.assertEqual(self.update(HTTP_AUTHORIZATION=f"Api-Key {self.key}", HTTP_MPROV_VERSION=API_VERSION).status_code, 200)
