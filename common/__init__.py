@@ -18,6 +18,11 @@ import yaml
 #   YAML, or isn't a mapping (or a list of mappings), is skipped and reported.
 # - scripts and the ansible playbooks, roles and collections are the union of
 #   every layer, by slug.
+# - files (managed files, #519) are the union of the distro, groups and image
+#   layers, by slug, of the files that have a destination.  Two files with
+#   the same destination: the later layer's wins, and the conflict is
+#   reported.  Systems don't add files: an image is built once for all its
+#   systems.
 #
 # The script runner in mprov_jobserver merges the same way, so keep the two
 # in step.
@@ -145,7 +150,44 @@ def render_config(obj):
   }
   for name in LIST_FIELDS:
     rendered[name] = list(lists[name].values())
+  rendered['files'], rendered['file_conflicts'] = merge_files(layers)
+  rendered['image'] = next((layer for layer in reversed(layers) if layer._meta.model_name == 'systemimage'), None)
   return rendered
+
+
+def merge_files(layers):
+  """ The managed files of these layers (#519): [{'item': File, 'sources':
+  [layer, ...]}] for the files with a destination, by slug, and the conflicts
+  as [{'dest_path', 'replaced': File, 'by': File, 'layer': layer}], where a
+  later layer's file replaced an earlier one at the same destination. """
+  by_dest = {}
+  conflicts = []
+  for layer in layers:
+    if layer.pk is None or layer._meta.model_name == 'system' or not hasattr(layer, 'files'):
+      continue
+    for item in layer.files.exclude(dest_path="").order_by('dest_path', 'slug'):
+      current = by_dest.get(item.dest_path)
+      if current is not None and current['item'].pk == item.pk:
+        current['sources'].append(layer)
+        continue
+      if current is not None:
+        conflicts.append({'dest_path': item.dest_path, 'replaced': current['item'], 'by': item, 'layer': layer})
+      by_dest[item.dest_path] = {'item': item, 'sources': [layer]}
+  return sorted(by_dest.values(), key=lambda entry: entry['item'].dest_path), conflicts
+
+
+def file_entry(item, image):
+  """ One managed file as the job server sees it in config.files (#519).  url
+  is a path on the mPCC: the copy rendered for this image for a template,
+  else the uploaded file. """
+  if item.template and image is not None:
+    # root-relative, with any path prefix the mPCC is served under
+    from django.urls import reverse
+    url = reverse('systemimage-file', kwargs={'pk': image.slug, 'slug': item.slug})
+  else:
+    url = item.filename.url if item.filename else ""
+  return {'slug': item.slug, 'name': item.name, 'version': item.version, 'dest_path': item.dest_path,
+          'owner': item.owner, 'group': item.group, 'mode': item.mode, 'template': item.template, 'url': url}
 
 
 def flat_config(rendered):
@@ -155,4 +197,5 @@ def flat_config(rendered):
   config['config_params'] = {key: entry['value'] for key, entry in rendered['config_params'].items()}
   for name in LIST_FIELDS:
     config[name] = [entry['item'].pk for entry in rendered[name]]
+  config['files'] = [file_entry(entry['item'], rendered.get('image')) for entry in rendered.get('files', [])]
   return config

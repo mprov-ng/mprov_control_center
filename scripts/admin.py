@@ -42,14 +42,40 @@ class ScriptAdmin(LiveSearchMixin, admin.ModelAdmin):
 
 
 class FileAdmin(LiveSearchMixin, admin.ModelAdmin):
-  """ Files uploaded to the mPCC. """
+  """ Files uploaded to the mPCC, and where they're placed in images (#519). """
   ordering = ['name']
-  search_fields = ['name', 'filename']
+  search_fields = ['name', 'filename', 'dest_path']
   model = File
   formfield_overrides = VERSION_OVERRIDES
   readonly_fields = ['slug']
-  list_display = ['name', 'filename']
+  list_display = ['name', 'filename', 'dest_path', 'owner', 'group', 'mode', 'template']
   exclude = ('slug',)
+
+  def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+    if request.method == "GET":
+      from django.contrib import messages
+      messages.warning(request, "Anything placed in an image can be read by anyone who can download the image. "
+                                "Never put passwords, keys or other secrets in a managed file.")
+    return super().changeform_view(request, object_id, form_url, extra_context)
+
+  def get_form(self, request, obj=None, **kwargs):
+    form = super().get_form(request, obj, **kwargs)
+    superuser = request.user.is_superuser
+
+    class Form(form):
+      def clean(self):
+        data = super().clean()
+        mode = data.get('mode') or ""
+        if len(mode) == 4 and int(mode[0], 8) & 0o6 and not superuser:
+          self.add_error('mode', "Only a superuser may set a setuid or setgid mode.")
+        return data
+    return Form
+
+  def save_model(self, request, obj, form, change):
+    super().save_model(request, obj, form, change)
+    if change and obj.dest_path:
+      from scripts.files import images_using, tell_rebuild
+      tell_rebuild(self, request, images_using([obj]), f"the file {obj.name}")
 
 class AnsiblePlaybookAdmin(LiveSearchMixin, admin.ModelAdmin):
   """ Ansible playbooks. """

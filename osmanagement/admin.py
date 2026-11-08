@@ -1,3 +1,4 @@
+from scripts.files import FilesRebuildNoticeMixin
 from jobqueue.models import JobModule, queue_job
 from django.contrib import admin
 from django.db.models import F
@@ -36,7 +37,7 @@ class OSRepoAdmin(admin.ModelAdmin):
   readonly_fields=['hosted_by']
   actions = [resync_repos]
 
-class OSDistroAdmin(admin.ModelAdmin):
+class OSDistroAdmin(FilesRebuildNoticeMixin, admin.ModelAdmin):
   """ OS distributions: the base for images, with their repositories and default boot
   options. """
   model = OSDistro
@@ -74,6 +75,7 @@ class OSDistroAdmin(admin.ModelAdmin):
         'ansiblecollections',
         'ansibleplaybooks',
         'ansibleroles',
+        'files',
         'install_kernel_cmdline',
         'tmpfs_root_size',
         'initial_mods',

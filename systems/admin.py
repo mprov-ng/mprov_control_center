@@ -22,6 +22,7 @@ from systems.bootdev import bootdev_failed, set_pxe_bootdev
 from func_timeout import func_timeout, FunctionTimedOut
 
 from .member_widget import SystemMembersMixin
+from scripts.files import FilesRebuildNoticeMixin
 from .bmc_credentials import BMCCredentialsForm, set_bmc_credentials, split_by_bmc, summarize
 from .models import (
   System,
@@ -676,7 +677,7 @@ class SystemAdmin(LiveSearchMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
     # pass
 
 
-class SystemGroupAdmin(SystemMembersMixin, admin.ModelAdmin):
+class SystemGroupAdmin(FilesRebuildNoticeMixin, SystemMembersMixin, admin.ModelAdmin):
   """ System groups, their members as hostname chips (#497), and setting the BMC
   credentials of their members (#374). """
   list_display = ['id', 'name']
@@ -742,7 +743,7 @@ def mark_rebuild(modeladmin, request, queryset):
     instance.jobservers.clear()
     SystemImage.objects.filter(pk=instance.pk).update(version=F('version') + 1)
 
-class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
+class SystemImageAdmin(FilesRebuildNoticeMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
   """ System images: their merged config, version and the job servers serving them;
   mark them for rebuild, or rebuild one now (#176). """
   list_display = ['slug', 'name', 'osdistro', 'version', 'registered_jobservers']
@@ -765,6 +766,7 @@ class SystemImageAdmin(RenderedConfigAdminMixin, admin.ModelAdmin):
         'ansiblecollections',
         'ansibleplaybooks',
         'ansibleroles',
+        'files',
         'customIPXE',
         'config_params',
         'needs_rebuild',

@@ -10,6 +10,10 @@ The merge rules below must match common/__init__.py.  Each section is a card
   <p><strong>{% trans 'Inherits from, in this order:' %} </strong>
   {% for layer in layers %}{% if not forloop.first %} &rarr; {% endif %}{% if layer.url %}<a href="{{ layer.url }}">{{ layer.label }}</a>{% else %}{{ layer.label }}{% endif %}{% endfor %}</p>
 
+  {% for warning in file_warnings %}
+  <div class="alert alert-warning">{% trans 'Managed files' %}: {{ warning }}</div>
+  {% endfor %}
+
   {% for error in errors %}
   <div class="alert alert-warning">
     {% if error.source.url %}<a href="{{ error.source.url }}">{{ error.source.label }}</a>{% else %}{{ error.source.label }}{% endif %}: {{ error.message }}
@@ -26,6 +30,7 @@ The merge rules below must match common/__init__.py.  Each section is a card
     <li>{% trans 'Root tmpfs size and provisioning interface replace the inherited value. 0 or empty inherits.' %}</li>
     <li>{% trans "Configuration Parameters are merged by top-level key: a key set lower down replaces that key's whole value, and other keys are kept. A block that is only comments inherits. A block that isn't valid YAML, or isn't a mapping, is skipped and shown above." %}</li>
     <li>{% trans 'Scripts and Ansible playbooks, roles and collections are the union of every layer. Which ones run depends on their type (image generation or post-boot).' %}</li>
+    <li>{% trans "Managed files are the union of the OS Distribution, System Groups and System Image. They are placed into the image before its image generation scripts and Ansible run. Two files with the same destination: the later layer's wins. A template is rendered with the merged Configuration Parameters (params), the image and the distro." %}</li>
   </ul>
     </div>
   </div>
@@ -88,6 +93,26 @@ The merge rules below must match common/__init__.py.  Each section is a card
     {% endif %}
   </div>
   {% endfor %}
+
+  <div class="card card-secondary card-outline">
+    <div class="card-header"><h3 class="card-title">{% trans 'Managed Files' %}</h3></div>
+    {% if files %}
+    <div class="card-body p-0">
+  <table class="table table-sm table-striped mb-0">
+    <thead><tr><th>{% trans 'Destination' %}</th><th>{% trans 'File' %}</th><th>{% trans 'Owner' %}</th><th>{% trans 'Mode' %}</th><th>{% trans 'Template' %}</th><th>{% trans 'From' %}</th></tr></thead>
+    <tbody>
+    {% for f in files %}
+      <tr><td><code>{{ f.dest_path }}</code></td><td>{% if f.url %}<a href="{{ f.url }}">{{ f.name }}</a>{% else %}{{ f.name }}{% endif %}</td>
+      <td>{{ f.owner }}</td><td>{{ f.mode }}</td><td>{% if f.template %}{% trans 'yes' %}{% endif %}</td>
+      <td>{% for s in f.sources %}{% if not forloop.first %}, {% endif %}{% if s.url %}<a href="{{ s.url }}">{{ s.label }}</a>{% else %}{{ s.label }}{% endif %}{% endfor %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+    </div>
+    {% else %}
+    <div class="card-body"><p>{% trans 'None.' %}</p></div>
+    {% endif %}
+  </div>
 
   <div class="card card-secondary card-outline">
     <div class="card-header"><h3 class="card-title">{% trans 'Merged result' %}</h3></div>

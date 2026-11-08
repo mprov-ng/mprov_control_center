@@ -97,7 +97,7 @@ class RenderedConfigTabTests(APITestCase):
     titles = re.findall(r'<div class="card card-secondary card-outline"><div class="card-header">'
                         r'<h3 class="card-title">([^<]*)</h3></div>', html)
     self.assertEqual(titles, ["How this is merged", "Boot options", "Configuration Parameters", *LIST_LABELS.values(),
-                              "Merged result"])
+                              "Managed Files", "Merged result"])
     return html
 
   def test_system_tab_sections_are_cards(self):

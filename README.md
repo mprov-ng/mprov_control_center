@@ -74,6 +74,16 @@ At first start the mPCC makes its own CA and an HTTPS certificate signed by it, 
 - **From 0.7.0 people get only their own Django model permissions through the API**, however they sign in (login, Basic or a token): reading needs the model's *view* permission, adding *add*, changing *change*, deleting *delete*. Power actions need *change* on systems, and *view* on BMCs. Superusers can do everything, as before. Before 0.7.0 any logged-in user could use the whole API, so **after upgrading, give non-superuser staff the permissions they need** (Authentication and Authorization → Users or Groups).
 - If `/var/lib/mprov/tls` can't be set up (for example only one of `MPROV_TLS_CERT` and `MPROV_TLS_KEY` is set), the container stops with the reason in its log.
 
+## Managed files
+
+Upload a file under **Scripts → Files** and give it a **Destination in the Image** (for example `/etc/chrony.conf`), with its owner, group and mode. Then attach it to an OS distribution, a system group or a system image. Every image built from those gets the file:
+
+- Files are placed **before** the image's image-generation scripts and Ansible run, so those can use them. A package a later script installs may replace a placed file: rpm keeps an existing `%config` file and saves its own copy as `.rpmnew`, but not every file is marked `%config`.
+- Files from the distro, the groups and the image add up. If two of them have the same destination, the later layer's wins (image over groups over distro), and the image's **Rendered Config** tab shows the conflict.
+- Tick **Jinja Template** to render the file for each image, with the image's merged Configuration Parameters as `params`, plus `image` and `distro`. For example, `server {{ params.ntp_server }} iburst`. An undefined name is an error, and the Rendered Config tab shows it before you build.
+- Changing a file doesn't rebuild images by itself, as with scripts. The admin lists the images that need a rebuild.
+- **Anything placed in an image can be read by anyone who can download the image. Never put passwords, keys or other secrets in a managed file.**
+
 ## Image tags
 - `:vX.Y.Z` is a release, and `:latest` is the newest release.
 - `:dev` is built from `main` after every merge, once the tests pass.

@@ -6,7 +6,7 @@ from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import pre_delete, post_delete, post_save
 from jobqueue.models import JobModule, Job, JobStatus, JobServer, queue_job, requeue_job
-from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
+from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection, File
 
 validate_http_url = URLValidator(schemes=['http', 'https'])
 
@@ -123,6 +123,7 @@ class OSDistro(models.Model):
   ansibleplaybooks = models.ManyToManyField(AnsiblePlaybook, blank=True, verbose_name="Ansible Playbooks" )
   ansibleroles = models.ManyToManyField(AnsibleRole, blank=True, verbose_name="Ansible Roles" )
   ansiblecollections = models.ManyToManyField(AnsibleCollection, blank=True, verbose_name="Ansible Collections" )
+  files = models.ManyToManyField(File, blank=True, verbose_name="Managed Files", help_text="Files placed into the images built from this.")
   
   install_kernel_cmdline=models.CharField(max_length=4096, default="",help_text="Options to pass to the install kernel. System groups and systems add to these, or replace them with a value starting with =.", blank=True)
   # install kernel parameters.

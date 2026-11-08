@@ -77,7 +77,28 @@ def rendered_config_context(obj):
       for entry in rendered[name]
     ]
     lists.append({'label': LIST_LABELS[name], 'items': items})
+  files = [
+    {'dest_path': entry['item'].dest_path, 'name': entry['item'].name, 'url': admin_url(entry['item']),
+     'owner': f"{entry['item'].owner}:{entry['item'].group}", 'mode': entry['item'].mode,
+     'template': entry['item'].template,
+     'sources': [source(layer, obj) for layer in entry['sources']]}
+    for entry in rendered['files']
+  ]
+  file_warnings = [
+    f"{c['dest_path']}: {c['by'].name} ({source(c['layer'], obj)['label']}) replaces {c['replaced'].name}."
+    for c in rendered['file_conflicts']
+  ]
+  if obj._meta.model_name == 'systemimage' and obj.pk is not None:
+    # a template that doesn't render would fail this image's build: say so now
+    from scripts.templating import render
+    for entry in rendered['files']:
+      if entry['item'].template:
+        _, error = render(entry['item'], obj)
+        if error:
+          file_warnings.append(f"Template error, this image won't build: {error}")
   return {
+    'files': files,
+    'file_warnings': file_warnings,
     'kind': LAYER_LABELS.get(obj._meta.model_name, obj._meta.verbose_name).lower(),
     'layers': [source(layer, obj) for layer in rendered['layers']],
     'errors': [{'source': source(layer, obj), 'message': message} for layer, message in rendered['errors']],
