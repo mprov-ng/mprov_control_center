@@ -141,6 +141,18 @@ class ResultTests(BMCRotationTestCase):
                                                {"username": "admin", "password": "new-secret"},
                                                {"username": "admin2", "password": "new-secret"}])
 
+    def test_refused_current_credentials_are_a_plain_failure(self):
+        """ The BMC was never touched: failed, nothing kept to find. """
+        rotation, stored = self.run_change(username="admin2", status="failed", verified=None,
+                                           error="current credentials refused")
+        self.assertEqual((rotation.status, stored, rotation.candidates), (BMCRotation.FAILED, "unchanged", []))
+        self.assertEqual(self.bmc().password, "secret1")
+        self.assertFalse(logic.find(rotation, self.admin))
+
+    def test_an_unreachable_bmc_is_unchanged_too(self):
+        rotation, _ = self.run_change(status="unreachable", verified=None)
+        self.assertEqual((rotation.status, rotation.candidates), (BMCRotation.UNREACHABLE, []))
+
     def test_a_result_only_once(self):
         rotation, _ = self.run_change(status="succeeded", verified="new")
         self.assertEqual(self.result(rotation, status="failed").status_code, 409)

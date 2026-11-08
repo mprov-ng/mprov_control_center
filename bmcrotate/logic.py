@@ -143,8 +143,14 @@ def apply_result(rotation, data):
         elif verified == "current":
             rotation.stored = "unchanged"
             status = status if status in (BMCRotation.FAILED, BMCRotation.UNREACHABLE) else BMCRotation.FAILED
+        elif status in (BMCRotation.FAILED, BMCRotation.UNREACHABLE):
+            # nothing verified, and the job server says it never got to change
+            # the BMC (the current credentials were refused, or it couldn't
+            # be reached): nothing changed, so nothing to find either
+            rotation.stored = "unchanged"
         else:
-            # nothing verified at the end: keep every pair that might work
+            # it may have changed the BMC but couldn't verify a pair after:
+            # keep every pair that might work
             rotation.candidates = candidates_for(rotation)
             rotation.stored = "unchanged, unconfirmed"
             status, keep = BMCRotation.UNCONFIRMED, True
