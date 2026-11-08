@@ -21,7 +21,7 @@ The Django process (Apache user) never reads `ca.key`. `pki/signer.py` is a stan
 
 - **AgentCredential** — one issued client cert per jobserver or system. `kind` (`jobserver`/`system`) with FKs to `jobqueue.JobServer` / `systems.System` (CASCADE: deleting the agent revokes its certs), a FK to a dedicated service user (`mprov.js.<host_id>` / `mprov.sys.<pk>`, unusable password, no staff), unique hex `serial` and SHA-256 `fingerprint`, the PEM `certificate`, validity window, `revoked_at`, `last_seen`. A DB check constraint enforces exactly one agent target per row.
 - **EnrollmentToken** — one-time jobserver token: stored as SHA-256 `token_hash` (shown once), `prefix`, `note`, `expires` (default 24 h), `used_at`, enrolled jobserver. `make()`/`redeem()` under `select_for_update`.
-- **BootNonce** — one-time per-boot nonce bound to a system and its source `ipaddress`, 15-minute expiry; `issue()` drops prior unused nonces, `redeem()` burns the nonce and validates the address.
+- **BootNonce** — one-time per-boot nonce bound to a system and its source `ipaddress`, 15-minute expiry; `issue()` drops prior unused nonces, `redeem()` burns the nonce and validates the address. It doubles as the **recovery window** (#506, migration `0004_recovery_windows.py`): `open_recovery(system, user)` creates a `recovery=True` row (no secret, nullable address, 1-hour `RECOVERY_LIFETIME`, reopens by deleting prior unused ones) that an expired node redeems once via `redeem_recovery(system)`.
 
 ## How an agent authenticates (mTLS)
 
@@ -35,18 +35,19 @@ The Django process (Apache user) never reads `ca.key`. `pki/signer.py` is a stan
 - **JOBSERVER_RULES**: `GET` everything except `power/` and `datamodel/`; `POST /jobservers/` for its own `host_id`; own heartbeats and job claims; `PATCH` own or unclaimed jobs; `POST /jobs/`; `?addjs` on its own listings; `hosted_by=[itself]` filters; `POST /ostypes/`; `POST /enroll/renew/`.
 - Anything else → 403.
 
-The shared API key still exists for admin/automation but is governed by `MPROV_SHARED_KEY_MODE` (`all`/`nodes`/`off`) — jobservers and nodes no longer need it once enrolled. Auth ordering details are in [Authentication](../architecture/api-foundation.md#authentication).
+The shared API key still exists for admin/automation but is governed by `MPROV_SHARED_KEY_MODE` (`all`/`nodes`/`off`), which **defaults to `off`** since #501: a fresh install accepts no shared key at all, `nodes` keeps old pre-0.7 node images working (acting as the system whose NIC address the caller has), and `all` is only for not-yet-enrolled jobservers — `all`/`nodes` log a startup warning and the key is removed in 0.8.0. People use per-user API tokens instead. Auth ordering and the token scheme are detailed in [Authentication](../architecture/api-foundation.md#authentication).
 
 ## Enrollment flow (`/enroll/`, HTTPS-only)
 
 Routes in `pki/urls.py` mounted at `/enroll/` (`pki/views.py`):
 
 - `POST /enroll/jobserver/` `{token, csr, host_id, name}` — redeems an `EnrollmentToken`, registers the jobserver by `host_id`, issues a 90-day cert. Tokens come from `manage.py mprov_enroll_token`; with `--bootstrap /etc/mprov/enroll_token` the entrypoint writes one (mode 0600) so the local compose jobserver can enroll on first start, and it is consumed only until the first enrollment. This replaces baking the shared key into the jobserver — see [Jobs & Scripts](../domain/jobs-and-scripts.md).
-- `POST /enroll/system/` `{nonce, csr}` — the nonce is minted at boot time: the unauthenticated `/ipxe/` endpoint appends `mprov_enroll=<nonce> mprov_ca=<fingerprint>` to the install kernel cmdline (`enroll_params()` in `systems/views_noauth.py`, skipped for N.A.D.S. boots and when no CA exists), so only the node booting from that address on that boot can redeem it (15-min expiry). Issues a 30-day cert.
-- `POST /enroll/renew/` — a current cert may renew within its last 30 days (jobserver) / 15 days (system); re-enrollment revokes the older credential. Signer down → 503.
-- `GET /enroll/ca.crt` — the CA bundle, so agents can verify the mPCC.
+- `POST /enroll/system/` `{nonce, csr}` — the nonce is minted at boot time: the unauthenticated `/ipxe/` endpoint appends `mprov_enroll=<nonce> mprov_ca=<fingerprint>` to the install kernel cmdline (`enroll_params()` in `systems/views_noauth.py`, skipped for N.A.D.S. boots and when no CA exists), so only the node booting from that address on that boot can redeem it (15-min expiry). Issues a 30-day cert. The node-side fetch of `enroll/ca.crt` always goes over **plain HTTP** even when `mprovURL` is https (the node can't validate mPCC's TLS before it has the CA; trust comes from the cmdline fingerprint, #517), and the node scripts honor a global `caBundle` from `/etc/mprov/script-runner.yaml` when verifying an https mPCC afterwards (`static/mprov_enroll.py`, `static/mprov_stateful.py`, `systems/test_stateful_ca_bundle.py`).
+- `POST /enroll/renew/` — a current cert may renew within its last 30 days (jobserver) / 15 days (system); too early is a 409 naming the renewal date, and re-enrollment revokes the older credential. Signer down → 503. `/enroll/` is exempted from the [API version lock](../architecture/api-foundation.md#api-version-lock) because the renewal helper is baked into images (#506, `common/version.py`). The node CLI (`static/mprov_enroll.py`) runs `renew`/`recover`/`status`.
+- `POST /enroll/recover/` `{csr}` — for a stateful node whose 30-day cert already **expired** (an expired cert can't renew itself). An admin opens a 1-hour recovery window with the admin action "Let these systems re-enroll (1 hour)" on `SystemAdmin`/`SystemGroupAdmin` (`systems/admin.py`); the node redeems it from one of its own NIC addresses (`system_from_address`), gets a fresh SYSTEM cert, and older credentials are revoked. No open window → 403, logged as refused. `SystemAdmin` also shows a read-only `credential` summary per system (#506, `pki/test_renewal.py`).
+- `GET /enroll/ca.crt` — the CA bundle, so agents can verify the mPCC. Its `mProv-Version` response header is how the mPCC's own node scripts learn the API version to send going forward (`learn_mprov_version()` in `static/mprov_stateful.py` / `genNetworkInterfaces.py`, #520).
 
-Tests: `pki/test_ca.py`, `pki/test_models.py`, `pki/test_auth.py`, `pki/test_enroll.py`.
+Tests: `pki/test_ca.py`, `pki/test_models.py`, `pki/test_auth.py`, `pki/test_enroll.py`, `pki/test_node_enroll.py`, `pki/test_renewal.py`.
 
 ## Change guidance
 
