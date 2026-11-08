@@ -96,19 +96,20 @@ class CreatedByRequestTests(TestCase):
         obj = self._create_systemimage_via_api(dummy_created_by=self.anon_target.pk)
         self.assertEqual(obj.created_by, self.staff)
 
-    def test_session_patch_sets_created_by_to_the_patcher(self):
-        """Item 6 also covers change: PATCH updates created_by to the actor."""
+    def test_session_patch_sets_updated_by_to_the_patcher(self):
+        """A PATCH records the patcher as updated_by; created_by stays the
+        creator (#493)."""
         self.client.force_login(self.staff)
         sys = self._create_system_via_api(hostname="change-me", dummy_created_by=self.anon_target.pk)
-        # Patch via same staff user; signal should overwrite created_by to staff (already staff).
-        # Now create a second actor and patch.
+        # a second actor patches it.
         other = User.objects.create_user("other", "other@example.com", "password")
         # Need staff perms? MProvView permission is MProvPermission, any authenticated user can write.
         self.client.force_login(other)
         resp = self._patch_json(f"/systems/{sys.id}/", {"hostname": "change-me-2"})
         self.assertEqual(resp.status_code, 200, resp.content)
         sys.refresh_from_db()
-        self.assertEqual(sys.created_by, other)
+        self.assertEqual(sys.created_by, self.staff)
+        self.assertEqual(sys.updated_by, other)
 
     # 7: HTTP Basic auth on API -> created_by is Basic user, not pk=1
 

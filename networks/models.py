@@ -82,6 +82,11 @@ class Switch(models.Model):
     on_delete=models.SET(1),
     verbose_name="Created By"
   )
+  # who saved it last during a request; created_by is who created it.
+  updated_by=models.ForeignKey(
+    settings.AUTH_USER_MODEL, null=True, blank=True, editable=False,
+    on_delete=models.SET_NULL, related_name='+', verbose_name="Updated By"
+  )
   updated=models.DateTimeField(default=timezone.now, verbose_name="Last Updated")
   network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Management Network')
   mgmt_ip=models.GenericIPAddressField(verbose_name="Management IP")
@@ -103,11 +108,9 @@ class SwitchPort(models.Model):
    
 @receiver(pre_save, sender=Switch)
 def UpdateSwitch(sender, instance, **kwargs):
-  if sender == Switch:
-    from common.request import acting_user, get_current_request
-    request = get_current_request()
-    if request is not None:
-      instance.created_by = acting_user(request)
+  ''' Before a switch is saved: record who saved it (see stamp_users). '''
+  from common.request import stamp_users
+  stamp_users(instance)
 @receiver(pre_save, sender=Network)
 def UpdateNetwork(sender, instance, **kwargs):
 

@@ -28,8 +28,9 @@ class NetworkTypeAPISerializer(serializers.ModelSerializer):
 
 class SwitchAPISerializer(serializers.ModelSerializer):
   # set from the request user by the UpdateSwitch pre_save signal.
-  """ A switch; created_by is read-only, set from the request. """
+  """ A switch; created_by and updated_by are read-only, set from the request. """
   created_by = serializers.PrimaryKeyRelatedField(read_only=True)
+  updated_by = serializers.PrimaryKeyRelatedField(read_only=True)
   network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all(), required=False, allow_null=True)
   class Meta:
     model = Switch

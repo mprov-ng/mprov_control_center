@@ -31,3 +31,18 @@ def acting_user(request):
     if user is not None and user.is_authenticated:
         return user
     return get_user_model().objects.filter(is_superuser=True).order_by("pk").first()
+
+
+def stamp_users(instance):
+    """ For a save made during a request: record the acting user as
+    instance.updated_by, and as instance.created_by too if the object is new
+    (#493).  Before, created_by was overwritten on every save, so it named
+    whoever saved last.  Saves outside a request (jobs, management commands)
+    change neither. """
+    request = get_current_request()
+    if request is None:
+        return
+    user = acting_user(request)
+    if instance._state.adding:
+        instance.created_by = user
+    instance.updated_by = user

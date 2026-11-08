@@ -251,7 +251,7 @@ class SwitchAdmin(admin.ModelAdmin):
   and port against. """
   model = Switch
   inlines = [SwitchPortInline]
-  readonly_fields = ['created_by']
+  readonly_fields = ['created_by', 'updated_by']
   list_display = ['id', 'hostname', 'mgmt_ip', 'mgmt_mac', 'network']
   list_display_links = ['id', 'hostname']
 

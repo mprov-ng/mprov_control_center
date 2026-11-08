@@ -202,7 +202,8 @@ class SwitchAPIView(MProvView):
 - updated: (Default: now) Last update time for this switch (not changed automatically on save)
 - mgmt_ip: The IP Address of the management interface for this switch
 - mgmt_mac: The MAC address of the management interface for this switch
-- created_by: The user who last saved this switch (set automatically on every save)
+- created_by: The user who created this switch (set automatically, read-only)
+- updated_by: The user who last saved this switch (set automatically on every save, read-only)
 - network: (Optional) ID of the management network for this switch.
 
 ### Query Parameters
@@ -227,6 +228,7 @@ Format returned:
         "mgmt_ip": "172.16.253.1",
         "mgmt_mac": "de:ad:be:ef:01:02",
         "created_by": 1,
+        "updated_by": 1,
         "network": 1
     }
     ]
