@@ -10,7 +10,7 @@ class BMCPasswordOwnSystemTests(TestCase):
   one of the system's network interface addresses. """
 
   def setUp(self):
-    self.user = User.objects.create(username="bmc-own-test")
+    self.user = User.objects.create_superuser(username="bmc-own-test")
     self.node = System.objects.create(hostname="node01", created_by=self.user)
     self.other = System.objects.create(hostname="node02", created_by=self.user)
     NetworkInterface.objects.create(system=self.node, name="ens18", ipaddress="10.0.0.11")

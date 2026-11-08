@@ -15,6 +15,7 @@ BACKUP_LABELS = [
     "auth.User",
     "auth.Group",
     "rest_framework_api_key",
+    "authcustom",
     "scripts",
     "networks",
     "jobqueue",

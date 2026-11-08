@@ -2,7 +2,7 @@ import base64
 import json
 from unittest import mock
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from django.db import IntegrityError
 from django.test import TestCase
 
@@ -22,6 +22,9 @@ class CreatedByRequestTests(TestCase):
         assert self.anon_target.pk == 1, f"expected pk=1, got {self.anon_target.pk}"
         self.staff = User.objects.create_superuser("staff", "staff@example.com", "password")
         self.basic_user = User.objects.create_user("basicuser", "basic@example.com", "password")
+        # a person gets only their model permissions through the API (#502)
+        self.basic_user.user_permissions.add(*Permission.objects.filter(
+            codename__in=["add_system", "add_switch", "add_systemimage"]))
         _, self.api_key = APIKey.objects.create_key(name="jobserver-key")
         self.systems = 0
         self.images = 0
@@ -103,7 +106,8 @@ class CreatedByRequestTests(TestCase):
         sys = self._create_system_via_api(hostname="change-me", dummy_created_by=self.anon_target.pk)
         # a second actor patches it.
         other = User.objects.create_user("other", "other@example.com", "password")
-        # Need staff perms? MProvView permission is MProvPermission, any authenticated user can write.
+        # a person needs the model permission for the change (#502)
+        other.user_permissions.add(Permission.objects.get(codename="change_system"))
         self.client.force_login(other)
         resp = self._patch_json(f"/systems/{sys.id}/", {"hostname": "change-me-2"})
         self.assertEqual(resp.status_code, 200, resp.content)

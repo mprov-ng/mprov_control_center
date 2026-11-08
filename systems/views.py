@@ -1018,6 +1018,14 @@ A BMC that can't be reached shows in its own result, with "status": "400";
 the response is still 200.
     '''
     model = SystemBMC
+
+    @staticmethod
+    def mprov_permissions(request):
+        """ status reads the BMCs; the other actions power systems and can set provision. """
+        action = request.parser_context["kwargs"].get("action") if getattr(request, "parser_context", None) else None
+        if action == "status":
+            return ["systems.view_systembmc"]
+        return ["systems.view_systembmc", "systems.change_system"]
     serializer_class = SystemBMCSerializer
     queryset = None
     def get(self, request, format=None, **kwargs):

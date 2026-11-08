@@ -212,6 +212,7 @@ Job servers use this when the POST /jobservers/ reply lists the "job-claim"
 feature.
     '''
     permission_classes = [MProvPermission]
+    mprov_permissions = {"POST": ["jobqueue.change_job"]}
     serializer_class = JobAPISerializer
     queryset = Job.objects.all()
 
@@ -624,6 +625,7 @@ Job servers use this when the POST /jobservers/ reply lists the
 "jobserver-address-heartbeat" feature.
     '''
     permission_classes = [MProvPermission]
+    mprov_permissions = {"POST": ["jobqueue.change_jobserver"]}
     queryset = JobServerAddress.objects.all()
 
     def post(self, request, pk, format=None):

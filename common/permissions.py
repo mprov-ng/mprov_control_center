@@ -10,7 +10,12 @@
             caller's address belongs to.  For old node images until they're
             rebuilt.
     off   - refused.
-- A logged-in user (session, Basic) may use the whole API, as before.
+- A person (a login, Basic, or one of their API tokens, #502) gets their own
+  Django model permissions: GET needs view_<model>, POST add_, PATCH/PUT
+  change_, DELETE delete_ on the view's model.  A view whose request does
+  more than that declares what it needs in `mprov_permissions`.  A view with
+  no model and no declaration is for superusers only.  Superusers may do
+  everything.
 """
 import logging
 
@@ -44,6 +49,30 @@ def system_from_address(request):
 
 _warned = set()
 
+ACTIONS = {"GET": "view", "HEAD": "view", "OPTIONS": "view", "POST": "add", "PUT": "change",
+           "PATCH": "change", "DELETE": "delete"}
+
+
+def required_permissions(request, view):
+    """ The Django permissions a person needs for this request, or None when
+    the view doesn't say (superusers only).
+
+    A view may set `mprov_permissions` to {method: [perm, ...]}, or to a
+    function (request) -> [perm, ...]; otherwise it's the method's action
+    on the view's model. """
+    declared = getattr(view, "mprov_permissions", None)
+    if callable(declared):
+        perms = declared(request)
+        return list(perms) if perms is not None else None
+    if declared is not None:
+        perms = declared.get(request.method)
+        return list(perms) if perms is not None else None
+    model = getattr(view, "model", None) or getattr(getattr(view, "queryset", None), "model", None)
+    action = ACTIONS.get(request.method)
+    if model is None or action is None:
+        return None
+    return [f"{model._meta.app_label}.{action}_{model._meta.model_name}"]
+
 
 def warn_once(key, message):
     """ Log message as a warning the first time key is seen in this process. """
@@ -54,8 +83,8 @@ def warn_once(key, message):
 
 class MProvPermission(BasePermission):
     """ The project's default permission: an agent certificate gets what its kind
-    may do, a logged-in user everything, and the shared API key what
-    MPROV_SHARED_KEY_MODE allows. """
+    may do, a person their Django model permissions, and the shared API key
+    what MPROV_SHARED_KEY_MODE allows. """
     message = "Not allowed."
 
     def has_permission(self, request, view):
@@ -75,9 +104,26 @@ class MProvPermission(BasePermission):
                 self.message = f"{credential.user.username} may not {request.method} this."
             return allowed
         if request.user and request.user.is_authenticated:
-            return True
+            return self.person(request, view)
         if HasAPIKey().has_permission(request, view):
             return self.shared_key(request)
+        return False
+
+    def person(self, request, view):
+        """ Whether a person may make this request: a superuser always, anyone
+        else with the Django permissions it needs (required_permissions). """
+        user = request.user
+        if user.is_superuser:
+            return True
+        perms = required_permissions(request, view)
+        if perms is None:
+            self.message = "Only a superuser may do this."
+        elif user.has_perms(perms):
+            return True
+        else:
+            missing = [perm for perm in perms if not user.has_perm(perm)]
+            self.message = f"{user.username} needs the permission {', '.join(missing)}."
+        log.info(f"refused {request.method} {request.get_full_path()} for {user.username}: {self.message}")
         return False
 
     def shared_key(self, request):

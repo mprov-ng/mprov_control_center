@@ -254,3 +254,10 @@ def preview_subnet_changes(request, pk):
             'bmcs': proposed_bmcs
         }
     })
+
+
+# a person needs these (common.permissions.required_permissions): applying a
+# subnet change also renumbers the network's interfaces and BMCs.
+update_network_with_confirmation.cls.mprov_permissions = {
+    "POST": ["networks.change_network", "systems.change_networkinterface", "systems.change_systembmc"]}
+preview_subnet_changes.cls.mprov_permissions = {"GET": ["networks.view_network"]}
