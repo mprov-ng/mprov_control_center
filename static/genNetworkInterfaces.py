@@ -24,6 +24,21 @@ except ImportError:
   mprov_enroll = None
 
 
+
+def learn_mprov_version(session, mprov_url):
+  """ Send the mPCC's own API version on every request (#520).  This script
+  comes from that mPCC at boot, so it always matches it: ask /enroll/ca.crt,
+  which isn't version-locked, and copy the mProv-Version header every reply
+  carries.  An mPCC without the lock sends none, and nothing changes. """
+  try:
+    reply = session.get(mprov_url + "enroll/ca.crt", headers={"Authorization": None}, timeout=(10, 30))
+  except Exception:
+    return None
+  version = reply.headers.get("mProv-Version")
+  if version:
+    session.headers["mProv-Version"] = version
+  return version
+
 class mProvNetworkScriptGenerator():
   """ Reads this node's interfaces from the mPCC and writes their ifcfg files.
   Settings (mprovURL, apikey, ...) come from the global section of
@@ -112,6 +127,7 @@ class mProvNetworkScriptGenerator():
     if mprov_enroll is not None and mprov_enroll.enroll(self.session, self.mprovURL):
       self.mprovURL = mprov_enroll.use(self.session, self.mprovURL)
 
+    learn_mprov_version(self.session, self.mprovURL)
     # connect to the mPCC
     try:
       response = self.session.get(self.mprovURL, stream=True)
