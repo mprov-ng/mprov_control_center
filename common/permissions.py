@@ -31,7 +31,7 @@ SHARED_KEY_MODES = ("all", "nodes", "off")
 
 def shared_key_mode():
     """ MPROV_SHARED_KEY_MODE, or "off" if it isn't one of the known modes. """
-    mode = getattr(settings, "MPROV_SHARED_KEY_MODE", "all")
+    mode = getattr(settings, "MPROV_SHARED_KEY_MODE", "off")
     return mode if mode in SHARED_KEY_MODES else "off"
 
 

@@ -61,6 +61,7 @@ class APIHistoryTests(TestCase):
         self.call("PATCH", f"/jobservers/{js.pk}/", {"name": "js2"})
         self.assertEqual(self.entries(js), [])
 
+    @override_settings(MPROV_SHARED_KEY_MODE="all")
     def test_the_shared_key_is_its_own_user(self):
         _, key = APIKey.objects.create_key(name="shared")
         self.call("POST", "/systemgroups/", {"name": "rack9"}, auth=f"Api-Key {key}")
@@ -75,6 +76,7 @@ class APIHistoryTests(TestCase):
         system = System.objects.get(hostname="c02")
         self.assertEqual((system.created_by.username, system.updated_by.username), (SHARED_KEY_USER, SHARED_KEY_USER))
 
+    @override_settings(MPROV_SHARED_KEY_MODE="all")
     def test_a_nodes_boot_report(self):
         """ Every boot is recorded, as the node's own credential's user when it
         has one; here the shared key. """
