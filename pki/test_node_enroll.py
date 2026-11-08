@@ -47,8 +47,10 @@ class FakeSession:
 
     def __init__(self, ca, enroll_status=200):
         self.ca, self.enroll_status, self.headers, self.posts = ca, enroll_status, {"Authorization": "Api-Key x"}, []
+        self.gets = []
 
     def get(self, url, **kwargs):
+        self.gets.append(url)
         assert url.endswith("/enroll/ca.crt"), url
         assert kwargs["headers"] == {"Authorization": None}
         return Reply(200, cert_pem(self.ca.cert))
@@ -94,6 +96,29 @@ class NodeEnrollModuleTests(SimpleTestCase):
                               ("http://mpcc", "https://mpcc/"), ("http://[fd00::1]:80/", "https://[fd00::1]/")):
             with self.subTest(url=url):
                 self.assertEqual(self.m.https_url(url), expected)
+
+    def test_http_url(self):
+        for url, expected in (("http://10.0.0.1/", "http://10.0.0.1/"), ("http://mpcc:8080", "http://mpcc:8080/"),
+                              ("https://mpcc/", "http://mpcc/"), ("https://mpcc:8443/", "http://mpcc/"),
+                              ("https://[fd00::1]/", "http://[fd00::1]/")):
+            with self.subTest(url=url):
+                self.assertEqual(self.m.http_url(url), expected)
+
+    def test_an_https_mprov_url_still_enrolls(self):
+        # the CA comes over plain HTTP (it can't be checked over HTTPS before
+        # the node has it); enrollment itself is over HTTPS.
+        session = FakeSession(self.ca)
+        self.assertTrue(self.m.enroll(session, "https://10.0.0.1/", cmdline=self.cmdline, tls_dir=self.tls,
+                                      log=self.log.append))
+        self.assertEqual(session.gets, ["http://10.0.0.1/enroll/ca.crt"])
+        self.assertEqual(session.posts[0][0], "https://10.0.0.1/enroll/system/")
+        self.assertTrue(session.posts[0][2]["verify"].endswith("ca.crt"))
+
+    def test_an_https_mprov_url_still_checks_the_fingerprint(self):
+        session = FakeSession(CA.create("impostor"))
+        self.assertFalse(self.m.enroll(session, "https://10.0.0.1/", cmdline=self.cmdline, tls_dir=self.tls,
+                                       log=self.log.append))
+        self.assertEqual(session.posts, [])
 
     def test_pem_fingerprint_matches_the_mpccs(self):
         self.assertEqual(self.m.pem_fingerprint(cert_pem(self.ca.cert)), fingerprint(self.ca.cert))

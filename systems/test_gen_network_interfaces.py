@@ -91,6 +91,17 @@ class GenNetworkInterfacesTests(GenNetworkInterfacesTestCase):
                      ["http://mpcc/systems/?self", "http://mpcc/networkinterfaces/?system=7", "http://mpcc/networks/3/"])
     self.assertIn("NETMASK=255.255.255.0", self.ifcfg("ens18"))
 
+  def test_ca_bundle_is_used_for_the_session(self):
+    path = Path(self.tmp.name) / "script-runner.yaml"
+    path.write_text("- global:\n    mprovURL: 'https://mpcc/'\n    apikey: 'key'\n    caBundle: '/etc/mprov/mpcc-ca.crt'\n")
+    self.gen.configfile = str(path)
+    self.gen.load_config()
+    self.gen.session = mock.Mock(headers={})
+    self.gen.session.get.return_value = mock.Mock(status_code=200, raw=mock.Mock(fileno=mock.Mock(return_value=0)))
+    with mock.patch.object(self.module, "mprov_enroll", None), mock.patch.object(self.module.socket, "fromfd"):
+      self.assertTrue(self.gen.startSession())
+    self.assertEqual(self.gen.session.verify, "/etc/mprov/mpcc-ca.crt")
+
   def test_unreachable_mpcc_is_reported_not_a_crash(self):
     self.gen.apikey = "key"
     self.gen.session = mock.Mock(headers={})

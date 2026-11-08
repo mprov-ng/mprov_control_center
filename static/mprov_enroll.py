@@ -70,6 +70,20 @@ def https_url(url):
   return urlunsplit(("https", host, parts.path or "/", "", ""))
 
 
+def http_url(url):
+  """ Where to download the CA certificate from: url itself if it's plain
+  HTTP, else the same host over HTTP on port 80.  A node can't check the
+  mPCC's HTTPS certificate before it has the CA; the CA is trusted by its
+  fingerprint (mprov_ca) instead. """
+  parts = urlsplit(url)
+  if parts.scheme == "http":
+    return url.rstrip("/") + "/"
+  host = parts.hostname or ""
+  if ":" in host:
+    host = f"[{host}]"
+  return urlunsplit(("http", host, parts.path or "/", "", ""))
+
+
 def pem_fingerprint(pem):
   """ The SHA-256 fingerprint of the first certificate in pem, in lowercase hex. """
   match = re.search(r"-----BEGIN CERTIFICATE-----(.+?)-----END CERTIFICATE-----", pem, re.S)
@@ -115,7 +129,7 @@ def enroll(session, mprov_url, cmdline="/proc/cmdline", tls_dir=TLS_DIR, log=pri
     return False
   try:
     # no API key: this download isn't an agent's API call
-    response = session.get(mprov_url.rstrip("/") + "/enroll/ca.crt", headers={"Authorization": None},
+    response = session.get(http_url(mprov_url) + "enroll/ca.crt", headers={"Authorization": None},
                            timeout=(10, 30))
     response.raise_for_status()
     ca_pem = response.text

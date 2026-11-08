@@ -31,6 +31,8 @@ class mProvNetworkScriptGenerator():
   config_data = {}
   mprovURL = "http://127.0.0.1:8080/"
   apikey = ""
+  # the mPCC's CA certificate, for an https mprovURL (the global caBundle setting).
+  caBundle = ""
   heartbeatInterval = 10
   runonce = False
   sessionOk = False
@@ -104,6 +106,8 @@ class mProvNetworkScriptGenerator():
       'Authorization': 'Api-Key ' + self.apikey,
       'Content-Type': 'application/json'
       })
+    if self.caBundle:
+      self.session.verify = self.caBundle
     # enroll this boot and use its own certificate, over HTTPS (#381).
     if mprov_enroll is not None and mprov_enroll.enroll(self.session, self.mprovURL):
       self.mprovURL = mprov_enroll.use(self.session, self.mprovURL)
