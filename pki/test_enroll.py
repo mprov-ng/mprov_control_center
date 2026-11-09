@@ -17,6 +17,7 @@ from jobqueue.models import JobServer
 from mprov_control_center.version import API_VERSION
 from osmanagement.models import OSDistro
 from pki import signer as signer_module
+from pki import signer_client as signer_client_module
 from pki.ca import CA, PKIError, fingerprint, issued_by
 from pki.issue import issue_credential
 from pki.models import AgentCredential, BootNonce, EnrollmentToken
@@ -92,6 +93,44 @@ class SignerSocketTests(SimpleTestCase):
     def test_unreachable(self):
         with self.assertRaises(SignerUnavailable):
             socket_signer("system", "mprov.sys.7", DAY, csr_text(), path=os.path.join(self.dir, "nope.sock"))
+
+    def test_a_burst_of_signatures_all_succeed(self):
+        # #534: with socketserver's default backlog of 5, most of a burst of
+        # simultaneous connects failed at once with EAGAIN.
+        csrs = [csr_text() for _ in range(64)]
+        start, errors = threading.Barrier(len(csrs)), []
+
+        def sign(csr):
+            start.wait()
+            try:
+                socket_signer("system", "mprov.sys.7", DAY, csr, path=self.path)
+            except PKIError as e:
+                errors.append(e)
+        threads = [threading.Thread(target=sign, args=(csr,)) for csr in csrs]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(30)
+        self.assertEqual(errors, [])
+
+    def test_a_full_queue_is_tried_again(self):
+        real = signer_client_module.socket.socket.connect
+        calls = []
+
+        def connect(sock, path):
+            calls.append(path)
+            if len(calls) < signer_client_module.CONNECT_TRIES:
+                raise BlockingIOError(11, "Resource temporarily unavailable")
+            return real(sock, path)
+        with mock.patch.object(signer_client_module.socket.socket, "connect", connect):
+            socket_signer("system", "mprov.sys.7", DAY, csr_text(), path=self.path)
+        self.assertEqual(len(calls), signer_client_module.CONNECT_TRIES)
+
+        def always_full(sock, path):
+            raise BlockingIOError(11, "Resource temporarily unavailable")
+        with mock.patch.object(signer_client_module.socket.socket, "connect", always_full):
+            with self.assertRaisesRegex(SignerUnavailable, "temporarily unavailable"):
+                socket_signer("system", "mprov.sys.7", DAY, csr_text(), path=self.path)
 
     def test_no_ca_no_helper(self):
         with self.assertRaises(SystemExit):

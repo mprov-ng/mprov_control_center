@@ -77,6 +77,11 @@ class Handler(socketserver.StreamRequestHandler):
 
 class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
     daemon_threads = True
+    # socketserver's default listen backlog is 5.  The client's connect() has a
+    # timeout, so it doesn't wait for room in the queue: a sixth connection
+    # waiting to be accepted fails at once with EAGAIN, and a fleet boot's
+    # enrollments got 503s (#534).  The kernel caps this at net.core.somaxconn.
+    request_queue_size = 256
 
 
 def serve(directory, path, group):
