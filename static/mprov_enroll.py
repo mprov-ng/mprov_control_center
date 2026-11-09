@@ -42,6 +42,11 @@ import time
 from urllib.parse import urlsplit, urlunsplit
 
 TLS_DIR = "/etc/mprov/tls"
+# Written once this boot's nonce may have been used.  The boot console's 'r'
+# would restart the boot with the same nonce, which the mPCC accepts only
+# once, so mprov_boot_init.sh reboots for a new one instead (#533).  The
+# boot scripts run in the image's chroot: the console sees /image/tmp/.
+SPENT = "/tmp/mprov_enroll_spent"
 KEY, CERT, CA, URL = "node.key", "node.crt", "ca.crt", "mpcc_url"
 # renew this many days before the credential expires (the mPCC allows 15)
 RENEW_DAYS = 14
@@ -179,7 +184,16 @@ def _send(call, what, log, sleep, resend_after_reply_lost):
     sleep(wait)
 
 
-def enroll(session, mprov_url, cmdline="/proc/cmdline", tls_dir=TLS_DIR, log=print, sleep=time.sleep):
+def mark_spent(path=None):
+  """ Note for the boot console that this boot's nonce may have been used. """
+  try:
+    with open(path or SPENT, "w") as f:
+      f.write("this boot's enrollment nonce may have been used; reboot for a new one\n")
+  except OSError:
+    pass
+
+
+def enroll(session, mprov_url, cmdline="/proc/cmdline", tls_dir=TLS_DIR, log=print, sleep=time.sleep, spent=None):
   """ Enroll this boot, if it was given a nonce.  True when the node has its
   credential in tls_dir afterwards.  A brief overload of the mPCC is retried
   (#536). """
@@ -203,14 +217,20 @@ def enroll(session, mprov_url, cmdline="/proc/cmdline", tls_dir=TLS_DIR, log=pri
       _write(ca_path, ca_pem, 0o644)
       csr = make_csr(os.path.join(tmp, KEY))
       import requests
+      reply, maybe_used = None, True
       try:
-        # the nonce is redeemed and the CSR signed all or nothing, so a try
-        # the mPCC refused for overload leaves the nonce usable.
-        reply, maybe_used = _send(
-          lambda: session.post(https_url(mprov_url) + "enroll/system/", data=json.dumps({"nonce": nonce, "csr": csr}),
-                               headers={"Content-Type": "application/json", "Authorization": None},
-                               verify=ca_path, timeout=(10, 30)),
-          "Enrolling", log, sleep, resend_after_reply_lost=False)
+        try:
+          # the nonce is redeemed and the CSR signed all or nothing, so a try
+          # the mPCC refused for overload leaves the nonce usable.
+          reply, maybe_used = _send(
+            lambda: session.post(https_url(mprov_url) + "enroll/system/", data=json.dumps({"nonce": nonce, "csr": csr}),
+                                 headers={"Content-Type": "application/json", "Authorization": None},
+                                 verify=ca_path, timeout=(10, 30)),
+            "Enrolling", log, sleep, resend_after_reply_lost=False)
+        finally:
+          # only a 502/503 to every try certainly left the nonce unused
+          if maybe_used or reply is None or reply.status_code not in (502, 503):
+            mark_spent(spent)
       except requests.exceptions.ReadTimeout:
         # the mPCC may have used the nonce: sending it again would only be
         # refused, and logged there as a possible attack.

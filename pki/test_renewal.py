@@ -137,6 +137,10 @@ class RenewalHelperTests(SimpleTestCase):
         self.ca = CA.create("test CA")
         self.tls = tempfile.mkdtemp()
         self.addCleanup(__import__("shutil").rmtree, self.tls, True)
+        # never the real /tmp/mprov_enroll_spent
+        spent_dir = tempfile.mkdtemp()
+        self.addCleanup(__import__("shutil").rmtree, spent_dir, True)
+        self.m.SPENT = os.path.join(spent_dir, "spent")
         self.log = []
 
     def credential(self, lifetime):

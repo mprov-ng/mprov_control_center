@@ -5,13 +5,45 @@ mount -t proc proc /proc >/dev/null 2>&1
 mount -t sysfs sysfs /sys >/dev/null 2>&1
 mount -t devtmpfs devtmpfs /dev >/dev/null 2>&1
 mount -t tmpfs tmpfs /run >/dev/null 2>&1
+# genNetworkInterfaces.py's enrollment writes this (in the image, copied to
+# the initramfs) once this boot's one-time nonce may have been used (#533).
+ENROLL_SPENT=/tmp/mprov_enroll_spent
+
+# reboot the node now; never return, so init can't respawn this script.
+reboot_node() {
+  echo "Rebooting..."
+  sync
+  mount -t proc proc /proc >/dev/null 2>&1
+  echo b > /proc/sysrq-trigger
+  /bin/busybox reboot -f
+  sleep 10
+  echo "Error: unable to reboot.  Reset this system."
+  while true; do sleep 3600; done
+}
+
 respawn() {
-  echo "Press 'r' to restart the mProv Boot System."
+  # restarting would send this boot's nonce again, and the mPCC accepts it
+  # only once: a reboot gets a new one.
+  local spent=""
+  if [ -e "$ENROLL_SPENT" ] || [ -e "/image$ENROLL_SPENT" ]
+  then
+    spent=1
+    echo "This boot's one-time enrollment nonce has been used, so it can't be restarted."
+    echo "Press 'r' to reboot this node for a new one."
+  else
+    echo "Press 'r' to restart the mProv Boot System."
+  fi
   while true
   do
     read -r -n 1 -s key
     if [ "$key" == "r" ] || [ "$key" == "R" ]
     then
+      if [ -n "$spent" ]
+      then
+        trap EXIT
+        trap ERR
+        reboot_node
+      fi
       echo "Restarting..."
       trap EXIT
       trap ERR
@@ -290,6 +322,11 @@ then
   wget -q -O /image/tmp/mprov_enroll.py "${mprovURL}/static/mprov_enroll.py"
   /bin/chmod 755 /image/tmp/mprov_genNetworkInterfaces.py
   chroot /image/ "$(image_python /image)" /tmp/mprov_genNetworkInterfaces.py
+  # keep the note that the nonce was used where a restart doesn't clear it
+  if [ -e "/image$ENROLL_SPENT" ]
+  then
+    touch "$ENROLL_SPENT"
+  fi
 fi
 
 
@@ -450,7 +487,6 @@ else
   echo "Give the root password for maintenance mode"
   chroot /image /bin/setsid /bin/login -p  root <> /dev/tty1 >&0 2>&1
   echo "You are at the end of the line for rescue mode."
-  echo "To restart the mProv Boot System, press 'r'."
   respawn
 fi
 exit 0

@@ -76,6 +76,9 @@ class NodeEnrollModuleTests(SimpleTestCase):
         self.cmdline = os.path.join(self.tmp, "cmdline")
         self.write_cmdline(f"quiet mprov_enroll={'a' * 32} mprov_ca={fingerprint(self.ca.cert)} mprov_rescue=0")
         self.log = []
+        # never the real /tmp/mprov_enroll_spent
+        self.spent = os.path.join(self.tmp, "spent")
+        self.m.SPENT = self.spent
 
     def write_cmdline(self, text):
         with open(self.cmdline, "w") as f:
@@ -311,6 +314,45 @@ class NodeEnrollRetryTests(SimpleTestCase):
         self.assertEqual(len(self.sleeps), 3)
         self.assertEqual(len(session.gets), 4)
         self.assertEqual(len(session.posts), 1)
+
+
+
+class NodeEnrollSpentNonceTests(SimpleTestCase):
+    """ #533: enroll() tells the boot console when this boot's nonce may have
+    been used, so its 'r' reboots for a new one instead of resending it. """
+
+    write_cmdline = NodeEnrollModuleTests.write_cmdline
+    enroll = NodeEnrollRetryTests.enroll
+
+    def setUp(self):
+        NodeEnrollRetryTests.setUp(self)
+        self.spent_path = self.spent
+
+    def is_spent(self):
+        return os.path.exists(self.spent_path)
+
+    def test_used(self):
+        import requests
+        for posts in ([], [403], [requests.exceptions.ReadTimeout("slow")], [dropped(), 403], [400], [500],
+                      [dropped() for _ in range(5)]):
+            with self.subTest(posts=posts):
+                if self.is_spent():
+                    os.unlink(self.spent_path)
+                __import__("shutil").rmtree(self.tls, True)
+                self.enroll(FlakySession(self.ca, posts=posts))
+                self.assertTrue(self.is_spent())
+
+    def test_unused(self):
+        # the mPCC refused every try before redeeming it, or none was made
+        self.assertFalse(self.enroll(FlakySession(self.ca, posts=[503] * self.m.TRIES)))
+        self.assertFalse(self.is_spent())
+        self.write_cmdline("quiet")
+        self.assertFalse(self.enroll(FlakySession(self.ca)))
+        self.assertFalse(self.is_spent())
+
+    def test_not_sent_when_the_ca_doesnt_match(self):
+        self.assertFalse(self.enroll(FlakySession(CA.create("impostor"))))
+        self.assertFalse(self.is_spent())
 
 
 class BootScriptGetRetryTests(SimpleTestCase):
