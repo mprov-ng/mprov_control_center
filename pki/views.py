@@ -146,7 +146,7 @@ class EnrollJobServerView(EnrollView):
             token.jobserver = jobserver
             token.save(update_fields=["jobserver"])
             self.revoke_others(credential, jobserver=jobserver)
-        log.info(f"enrolled job server {jobserver.name} ({host_id}) with token {token.prefix}…")
+        log.info(f"enrolled job server {jobserver.name} ({host_id}) with token {token.prefix}...")
         return self.issued(credential, pem)
 
 
