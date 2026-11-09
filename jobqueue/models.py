@@ -218,7 +218,10 @@ class JobServerAddress(models.Model):
     last heartbeat (mprov_jobserver#114). """
     jobserver = models.ForeignKey(JobServer, on_delete=models.CASCADE, related_name='addresses')
     network = models.ForeignKey('networks.Network', blank=True, null=True, on_delete=models.SET_NULL)
-    address = models.CharField(max_length=1024)
+    # 255, not 1024: the unique (jobserver, address) key must fit MySQL's
+    # 3072-byte key limit in utf8mb4 (#527).  An interface address or host
+    # name is always shorter.
+    address = models.CharField(max_length=255)
     heartbeat_time = models.DateTimeField(default=timezone.now, verbose_name="Last Heartbeat")
     # where this address's last heartbeat (POST /jobservers/<pk>/heartbeat/)
     # came from, and the network that's on (#435).  NULL until it has one.

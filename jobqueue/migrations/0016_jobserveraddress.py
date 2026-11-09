@@ -13,11 +13,15 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # address was max_length=1024 here until #527: with the unique
+        # (jobserver, address) key that's over InnoDB's 3072-byte key limit in
+        # utf8mb4, which MySQL refuses (MariaDB backs it with a hidden hash).
+        # Sites that already ran this with 1024 are brought to 255 by 0021.
         migrations.CreateModel(
             name='JobServerAddress',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('address', models.CharField(max_length=1024)),
+                ('address', models.CharField(max_length=255)),
                 ('heartbeat_time', models.DateTimeField(default=django.utils.timezone.now, verbose_name='Last Heartbeat')),
                 ('jobserver', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='addresses', to='jobqueue.jobserver')),
                 ('network', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='networks.network')),

@@ -558,7 +558,7 @@ Format returned:
             if not isinstance(entry, dict) or not isinstance(entry.get('address'), str) or not entry['address'].strip():
                 return None, 'Each entry needs a non-blank "address".'
             address = entry['address'].strip()
-            if len(address) > 1024:
+            if len(address) > JobServerAddress.address.field.max_length:
                 return None, f"Address {address[:40]}... is too long."
             if address in seen:
                 return None, f"Address {address} is listed twice."

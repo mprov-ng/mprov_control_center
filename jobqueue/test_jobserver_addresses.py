@@ -62,7 +62,8 @@ class JobServerAddressRegisterTests(JobServerAddressTestCase):
 
   def test_bad_addresses_are_400_and_change_nothing(self):
     for addresses in ("172.16.0.5", [{"network": self.lan.pk}], [{"address": ""}], ["172.16.0.5"],
-                      [{"address": "172.16.0.5", "network": 999}], [{"address": "172.16.0.5"}, {"address": "172.16.0.5"}]):
+                      [{"address": "172.16.0.5", "network": 999}], [{"address": "172.16.0.5"}, {"address": "172.16.0.5"}],
+                      [{"address": "a" * 256}]):
       with self.subTest(addresses=addresses):
         response = self.post(addresses=addresses)
         self.assertEqual(response.status_code, 400)
