@@ -271,6 +271,23 @@ install -m 0644 "$MPROV_TLS_CA" /etc/mprov/ca.crt.new && mv -f /etc/mprov/ca.crt
 chown apache db/ -R
 chmod u+w db/ -R
 
+# mod_wsgi's daemon processes (#535; mprov_control_center.conf reads
+# MPROV_WSGI_PROCESSES): one per CPU this container may run on, at least 2
+# and at most 8, which handled a 1,000-node boot burst in testing.  Set it
+# in the container's environment to choose another number.
+if [ -z "${MPROV_WSGI_PROCESSES:-}" ]
+then
+       MPROV_WSGI_PROCESSES=$(nproc 2>/dev/null || echo 2)
+       [ "$MPROV_WSGI_PROCESSES" -lt 2 ] && MPROV_WSGI_PROCESSES=2
+       [ "$MPROV_WSGI_PROCESSES" -gt 8 ] && MPROV_WSGI_PROCESSES=8
+elif ! [[ "$MPROV_WSGI_PROCESSES" =~ ^[1-9][0-9]*$ ]]
+then
+       echo "Error: MPROV_WSGI_PROCESSES must be a whole number above 0, not '$MPROV_WSGI_PROCESSES'." >&2
+       exit 1
+fi
+export MPROV_WSGI_PROCESSES
+echo "Starting Apache with $MPROV_WSGI_PROCESSES mod_wsgi processes."
+
 # start apache in a new process group, filters out signals to the
 # container, e.g. SIGWINCH.  The -d flag is still accepted
 # (mprov-compose passes it) but is ignored; this is the only mode.
