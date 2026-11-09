@@ -224,6 +224,16 @@ class JobServerEnrollTests(EnrollTestCase):
         self.assertIsNotNone(row.used_at)
         self.assertLessEqual(cert.not_valid_after_utc - timezone.now(), 90 * DAY)
 
+    def test_the_log_line_is_ascii(self):
+        # #530: mod_wsgi escapes non-ASCII on stderr, so a "…" showed up in
+        # Apache's error log as \xe2\x80\xa6.
+        row, secret = EnrollmentToken.make()
+        with self.assertLogs("mprov.enroll", "INFO") as logs:
+            self.cert(self.enroll(secret))
+        line = next(m for m in logs.output if "enrolled job server js1" in m)
+        self.assertIn(f"with token {row.prefix}...", line)
+        self.assertTrue(line.isascii(), line)
+
     def test_the_token_works_once(self):
         _, secret = EnrollmentToken.make()
         self.cert(self.enroll(secret))
