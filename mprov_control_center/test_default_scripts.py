@@ -1,4 +1,5 @@
 import os
+import re
 import unittest
 
 import yaml
@@ -32,3 +33,24 @@ class DefaultScriptsBundleTests(SimpleTestCase):
 
   def test_no_git_metadata(self):
     self.assertFalse(os.path.exists(os.path.join(BUNDLE, ".git")))
+
+  def test_bundle_speaks_this_mpccs_version(self):
+    """ The scripts send their version in mProv-Version, and the mPCC warns
+    on every call when it isn't its own major.minor: 0.7.0 shipped default
+    scripts that still said 0.6 (#544).  When the mPCC's minor version
+    changes, the pin has to move to an mprov_scripts commit that speaks it. """
+    from mprov_control_center.version import API_VERSION
+    with open(os.path.join(BUNDLE, "VERSION")) as f:
+      self.assertEqual(".".join(f.read().strip().split(".")[:2]), API_VERSION, "mprov_scripts VERSION")
+    found = {}
+    for root, _, files in os.walk(BUNDLE):
+      for name in files:
+        if not name.endswith((".py", ".sh")):
+          continue
+        path = os.path.join(root, name)
+        with open(path, errors="replace") as f:
+          for match in re.finditer(r"""^MPROV_SCRIPTS_VERSION\s*=\s*["']([^"']+)["']""", f.read(), re.M):
+            found[os.path.relpath(path, BUNDLE)] = match.group(1)
+    self.assertTrue(found, "no MPROV_SCRIPTS_VERSION in the bundled scripts")
+    for path, version in found.items():
+      self.assertEqual(".".join(version.split(".")[:2]), API_VERSION, path)
