@@ -75,6 +75,22 @@ class RecoveryWindowTests(EnrollTestCase):
                                    CONTENT_TYPE="application/json", **meta)
         self.assertEqual(response.status_code, 426)
 
+    def test_what_the_renewal_helper_relies_on(self):
+        """ #532: mprov_enroll.py renew asks every time, without a version
+        header: 409 when the credential isn't due, 401 with the client
+        certificate challenge once it's revoked. """
+        credential, pem = issue_credential(self.ca, make_csr(), 30 * DAY, system=self.system)
+        meta = {"SSL_CLIENT_CERT": pem, "SSL_CLIENT_VERIFY": "SUCCESS"}
+        self.assertEqual(self.post("/enroll/renew/", {"csr": csr_text()}, **meta).status_code, 409)
+        credential.revoke()
+        with self.assertLogs("mprov", "WARNING"):
+            response = self.post("/enroll/renew/", {"csr": csr_text()}, **meta)
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("TLS-Client-Certificate", response["WWW-Authenticate"])
+        # and the window the admin opens takes the node back
+        BootNonce.open_recovery(self.system)
+        self.cert(self.recover())
+
 
 class ReenrollAdminTests(EnrollTestCase):
     """ #506: the admin action that opens the windows, and the Credential
@@ -115,15 +131,22 @@ class ReenrollAdminTests(EnrollTestCase):
 class FakeMPCC:
     """ The mPCC a node's renewal helper talks to. """
 
-    def __init__(self, ca, renew_status=200, recover_status=200):
+    def __init__(self, ca, renew_status=200, recover_status=200, challenge=True):
         self.ca, self.statuses = ca, {"renew": renew_status, "recover": recover_status}
+        self.challenge = challenge
         self.posts = []
 
     def post(self, url, data, **kwargs):
         kind = url.rstrip("/").rsplit("/", 1)[-1]
         self.posts.append((kind, kwargs))
-        if self.statuses[kind] != 200:
-            return Reply(self.statuses[kind], "no")
+        status = self.statuses[kind]
+        if isinstance(status, Exception):
+            raise status
+        if status != 200:
+            reply = Reply(status, "no")
+            reply.headers = {"WWW-Authenticate": 'TLS-Client-Certificate realm="mprov"'} \
+                if status == 401 and self.challenge else {}
+            return reply
         cert = self.ca.sign_csr(check_csr(json.loads(data)["csr"]), "mprov.sys.1", "system", 30 * DAY)
         return Reply(200, body={"certificate": cert_pem(cert)})
 
@@ -168,10 +191,54 @@ class RenewalHelperTests(SimpleTestCase):
         self.assertIn("uses the shared API key", self.log[-1])
 
     def test_not_due(self):
-        self.credential(30 * DAY)
-        session = FakeMPCC(self.ca)
+        # the mPCC is asked, and says so (#532)
+        old = self.credential(30 * DAY).serial_number
+        session = FakeMPCC(self.ca, renew_status=409)
         self.assertTrue(self.renew(session))
-        self.assertEqual(session.posts, [])
+        self.assertEqual([kind for kind, _ in session.posts], ["renew"])
+        self.assertEqual(self.log, ["The credential isn't due for renewal."])
+        self.assertEqual(self.serial(), old)
+
+    def test_a_revoked_credential_reenrolls_through_the_window(self):
+        # #532: in date, but the mPCC refuses it; an admin opened a window
+        old = self.credential(30 * DAY).serial_number
+        session = FakeMPCC(self.ca, renew_status=401)
+        self.assertTrue(self.renew(session))
+        self.assertEqual([kind for kind, _ in session.posts], ["renew", "recover"])
+        self.assertNotIn("cert", session.posts[1][1])
+        self.assertNotEqual(self.serial(), old)
+        self.assertIn("refused this node's certificate", self.log[0])
+        self.assertEqual(self.log[-1], "Re-enrolled; the credential is current again.")
+
+    def test_a_revoked_credential_without_a_window_says_what_to_do(self):
+        old = self.credential(30 * DAY).serial_number
+        self.assertFalse(self.renew(FakeMPCC(self.ca, renew_status=401, recover_status=403)))
+        self.assertEqual(self.serial(), old)
+        self.assertIn("The mPCC refused this node's certificate. In the mPCC", self.log[-1])
+        self.assertIn("Let these systems re-enroll", self.log[-1])
+
+    def test_a_401_without_the_certificate_challenge_isnt_a_revocation(self):
+        # e.g. a proxy in the way: not the mPCC refusing the certificate
+        self.credential(30 * DAY)
+        session = FakeMPCC(self.ca, renew_status=401, challenge=False)
+        self.assertTrue(self.renew(session))
+        self.assertEqual([kind for kind, _ in session.posts], ["renew"])
+        self.assertIn("Warning: couldn't check the credential", self.log[-1])
+
+    def test_an_unreachable_mpcc_isnt_an_error_until_its_due(self):
+        self.credential(30 * DAY)
+        session = FakeMPCC(self.ca, renew_status=OSError("no route to host"))
+        self.assertTrue(self.renew(session))
+        self.assertEqual([kind for kind, _ in session.posts], ["renew"])
+        self.assertIn("couldn't renew (OSError", self.log[0])
+        self.assertIn("checked again next time", self.log[-1])
+
+    def test_an_unreachable_mpcc_when_due_tries_recovery(self):
+        self.credential(10 * DAY)
+        session = FakeMPCC(self.ca, renew_status=OSError("no route to host"), recover_status=OSError("no route"))
+        self.assertFalse(self.renew(session))
+        self.assertEqual([kind for kind, _ in session.posts], ["renew", "recover"])
+        self.assertIn("The credential has expired or is about to.", self.log[-1])
 
     def test_renews_in_its_window(self):
         old = self.credential(10 * DAY).serial_number
