@@ -22,9 +22,11 @@ key, as before, and say why.
 Images also install this file and run it at boot and daily, to keep the
 credential current:
 
-  mprov_enroll.py renew    renew it in its last RENEW_DAYS days; if it has
-                           expired, re-enroll through a window an admin opened
-                           ("Let these systems re-enroll" in the mPCC)
+  mprov_enroll.py renew    ask the mPCC to renew it, which it does in the
+                           credential's last days; if it has expired or the
+                           mPCC refuses it (revoked), re-enroll through a
+                           window an admin opened ("Let these systems
+                           re-enroll" in the mPCC)
   mprov_enroll.py status   show when it expires
 
 Both exit 0 when there's nothing to do, including on a node without a
@@ -175,65 +177,93 @@ def valid_for(seconds, tls_dir=TLS_DIR):
   return result.returncode == 0
 
 
-def _new_credential(session, url, tls_dir, log, what, **kwargs):
+def _new_credential(session, url, tls_dir, log, what, quiet=(), **kwargs):
   """ POST a new CSR to url and swap in the key and certificate it returns.
-  True on success. """
+  Returns the mPCC's reply: a 200 is the new credential, in place.  A refusal
+  is logged unless its status is in quiet. """
   with tempfile.TemporaryDirectory(dir=tls_dir) as tmp:
     csr = make_csr(os.path.join(tmp, KEY))
     reply = session.post(url, data=json.dumps({"csr": csr}), timeout=(10, 30),
                          headers={"Content-Type": "application/json", "Authorization": None},
                          verify=os.path.join(tls_dir, CA), **kwargs)
     if reply.status_code != 200:
-      log(f"Error: {what} refused ({reply.status_code}): {reply.text[:300]}")
-      return False
+      if reply.status_code not in quiet:
+        log(f"Error: {what} refused ({reply.status_code}): {reply.text[:300]}")
+      return reply
     _write(os.path.join(tmp, CERT), reply.json()["certificate"], 0o644)
     # the certificate first: a node stopped between the two renames has a
     # certificate its old key doesn't match, which a recovery window fixes;
     # the other way round it'd look valid and fail every handshake.
     os.replace(os.path.join(tmp, CERT), os.path.join(tls_dir, CERT))
     os.replace(os.path.join(tmp, KEY), os.path.join(tls_dir, KEY))
-  return True
+  return reply
+
+
+def _refused_certificate(reply):
+  """ Whether the mPCC refused the node's certificate itself (revoked, its
+  system deleted, or used from another address): 401 with its challenge. """
+  return reply.status_code == 401 and \
+    "TLS-Client-Certificate" in (getattr(reply, "headers", None) or {}).get("WWW-Authenticate", "")
 
 
 def renew(session=None, tls_dir=TLS_DIR, log=print, days=RENEW_DAYS):
   """ Keep this node's credential current.  True when it's current afterwards,
-  or there's none to keep. """
+  or there's none to keep.
+
+  The mPCC is asked every time, even when the certificate isn't near its
+  expiry: it renews in its own window (409 before that), and it refuses a
+  revoked certificate (401), which only it knows about.  A revoked node then
+  re-enrolls through the window an admin opened, as the admin's action says
+  it will (#532). """
   if not have(tls_dir) or not os.path.isfile(os.path.join(tls_dir, URL)):
     log("No credential to renew; this node uses the shared API key.")
-    return True
-  if valid_for(days * 86400, tls_dir):
-    log("The credential isn't due for renewal.")
     return True
   if session is None:
     import requests
     session = requests.Session()
   with open(os.path.join(tls_dir, URL)) as f:
     base = f.read().strip()
+  due = not valid_for(days * 86400, tls_dir)
   if valid_for(60, tls_dir):
+    reply = None
     try:
-      if _new_credential(session, base + "enroll/renew/", tls_dir, log, "renewal",
-                         cert=(os.path.join(tls_dir, CERT), os.path.join(tls_dir, KEY))):
-        log("Renewed the credential.")
-        return True
+      reply = _new_credential(session, base + "enroll/renew/", tls_dir, log, "renewal", quiet=(401, 409),
+                              cert=(os.path.join(tls_dir, CERT), os.path.join(tls_dir, KEY)))
     except Exception as e:
       log(f"Error: couldn't renew ({e.__class__.__name__}: {e}).")
+    if reply is not None and reply.status_code == 200:
+      log("Renewed the credential.")
+      return True
+    if reply is not None and reply.status_code == 409:
+      log("The credential isn't due for renewal.")
+      return True
+    if reply is not None and _refused_certificate(reply):
+      log("The mPCC refused this node's certificate: it was revoked, or the system was deleted or its "
+          "address changed. Re-enrolling through an admin's window.")
+      return recover(session, tls_dir, log, revoked=True)
+    if not due:
+      log(f"Warning: couldn't check the credential with the mPCC; it's valid for more than {days} days, "
+          "so it's checked again next time.")
+      return True
   return recover(session, tls_dir, log)
 
 
-def recover(session=None, tls_dir=TLS_DIR, log=print):
-  """ Re-enroll through the window an admin opened for this system. """
+def recover(session=None, tls_dir=TLS_DIR, log=print, revoked=False):
+  """ Re-enroll through the window an admin opened for this system.  revoked:
+  the mPCC refused the current certificate, rather than it expiring. """
   if session is None:
     import requests
     session = requests.Session()
   try:
     with open(os.path.join(tls_dir, URL)) as f:
       base = f.read().strip()
-    if _new_credential(session, base + "enroll/recover/", tls_dir, log, "re-enrollment"):
+    if _new_credential(session, base + "enroll/recover/", tls_dir, log, "re-enrollment").status_code == 200:
       log("Re-enrolled; the credential is current again.")
       return True
   except Exception as e:
     log(f"Error: couldn't re-enroll ({e.__class__.__name__}: {e}).")
-  log("The credential has expired or is about to. In the mPCC, select this system and use "
+  why = "The mPCC refused this node's certificate." if revoked else "The credential has expired or is about to."
+  log(f"{why} In the mPCC, select this system and use "
       "\"Let these systems re-enroll\"; this node picks it up on its next check or boot.")
   return False
 
