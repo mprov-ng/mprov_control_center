@@ -4,6 +4,7 @@ import json
 import os
 import re
 import stat
+import sys
 import tempfile
 from pathlib import Path
 from unittest import mock
@@ -165,6 +166,193 @@ class NodeEnrollModuleTests(SimpleTestCase):
         self.assertEqual(session.cert, (os.path.join(self.tls, "node.crt"), os.path.join(self.tls, "node.key")))
         self.assertEqual(session.verify, os.path.join(self.tls, "ca.crt"))
         self.assertNotIn("Authorization", session.headers)
+
+
+
+class FlakySession(FakeSession):
+    """ An mPCC under load: each GET and POST takes the next outcome from its
+    list (a status, or an exception to raise) before behaving normally. """
+
+    def __init__(self, ca, posts=(), gets=()):
+        super().__init__(ca)
+        self.post_outcomes, self.get_outcomes = list(posts), list(gets)
+
+    @staticmethod
+    def _outcome(outcomes):
+        if outcomes:
+            outcome = outcomes.pop(0)
+            if isinstance(outcome, Exception):
+                raise outcome
+            return Reply(outcome, "busy")
+        return None
+
+    def get(self, url, **kwargs):
+        if self.get_outcomes:
+            self.gets.append(url)
+            return self._outcome(self.get_outcomes)
+        return super().get(url, **kwargs)
+
+    def post(self, url, data, **kwargs):
+        # every try is recorded, including one that raises
+        if self.post_outcomes:
+            self.posts.append((url, json.loads(data), kwargs))
+            return self._outcome(self.post_outcomes)
+        return super().post(url, data, **kwargs)
+
+
+def refused():
+    """ The ConnectionError requests raises when nothing listens: never sent. """
+    import requests
+    from urllib3.exceptions import MaxRetryError, NewConnectionError
+    return requests.exceptions.ConnectionError(MaxRetryError(None, "/", NewConnectionError(None, "refused")))
+
+
+def dropped():
+    """ The ConnectionError for a connection closed mid-request: maybe sent. """
+    import requests
+    from urllib3.exceptions import ProtocolError
+    return requests.exceptions.ConnectionError(ProtocolError("Connection aborted.", ConnectionResetError()))
+
+
+class NodeEnrollRetryTests(SimpleTestCase):
+    """ #536: a booting node retries the enrollment calls a brief overload
+    refuses, but never resends a nonce the mPCC may already have used. """
+
+    write_cmdline = NodeEnrollModuleTests.write_cmdline
+
+    def setUp(self):
+        NodeEnrollModuleTests.setUp(self)
+        self.sleeps = []
+
+    def enroll(self, session):
+        return self.m.enroll(session, "http://10.0.0.1/", cmdline=self.cmdline, tls_dir=self.tls,
+                             log=self.log.append, sleep=self.sleeps.append)
+
+    def test_an_overloaded_mpcc_is_tried_again(self):
+        import requests
+        for outcome in (503, 502, 504, refused(), dropped(), requests.exceptions.ConnectTimeout("slow")):
+            with self.subTest(outcome=outcome):
+                self.log, self.sleeps = [], []
+                session = FlakySession(self.ca, posts=[outcome])
+                self.assertTrue(self.enroll(session))
+                self.assertEqual(len(session.posts), 2)
+                # the same nonce and CSR both times
+                self.assertEqual(session.posts[0][1], session.posts[1][1])
+                self.assertEqual(len(self.sleeps), 1)
+                self.assertIn("trying again", self.log[0])
+
+    def test_backoff_grows(self):
+        session = FlakySession(self.ca, posts=[503] * (self.m.TRIES - 1))
+        self.assertTrue(self.enroll(session))
+        self.assertEqual(len(self.sleeps), self.m.TRIES - 1)
+        for attempt, wait in enumerate(self.sleeps):
+            base = self.m.BACKOFF * 2 ** attempt
+            self.assertTrue(base * 0.5 <= wait <= base * 1.5, (attempt, wait))
+
+    def test_gives_up_after_tries(self):
+        session = FlakySession(self.ca, posts=[503] * self.m.TRIES)
+        self.assertFalse(self.enroll(session))
+        self.assertEqual(len(session.posts), self.m.TRIES)
+        self.assertIn("enrollment refused (503)", self.log[-1])
+        self.assertFalse(self.m.have(self.tls))
+
+    def test_gives_up_when_it_never_gets_through(self):
+        session = FlakySession(self.ca, posts=[refused() for _ in range(self.m.TRIES)])
+        self.assertFalse(self.enroll(session))
+        self.assertEqual(len(session.posts), self.m.TRIES)
+        self.assertIn("couldn't enroll (ConnectionError", self.log[-1])
+
+    def test_a_refusal_isnt_tried_again(self):
+        for status in (400, 403, 500):
+            with self.subTest(status=status):
+                self.log, self.sleeps = [], []
+                session = FlakySession(self.ca, posts=[status])
+                self.assertFalse(self.enroll(session))
+                self.assertEqual(len(session.posts), 1)
+                self.assertEqual(self.sleeps, [])
+                self.assertIn(f"enrollment refused ({status})", self.log[-1])
+
+    def test_a_read_timeout_isnt_resent(self):
+        # the mPCC may have signed and used the nonce: a resend would be
+        # refused, and logged there as a possible attack.
+        import requests
+        session = FlakySession(self.ca, posts=[requests.exceptions.ReadTimeout("read timed out")])
+        self.assertFalse(self.enroll(session))
+        self.assertEqual(self.sleeps, [])
+        self.assertIn("Reboot the node", self.log[-1])
+        self.assertFalse(self.m.have(self.tls))
+
+    def test_a_used_nonce_after_a_lost_reply_says_why(self):
+        for lost in (dropped(), 504):
+            with self.subTest(lost=lost):
+                self.log, self.sleeps = [], []
+                session = FlakySession(self.ca, posts=[lost, 403])
+                self.assertFalse(self.enroll(session))
+                self.assertIn("this node's own earlier try", self.log[-1])
+                self.assertIn("Reboot the node", self.log[-1])
+
+    def test_a_used_nonce_after_an_unsent_try_is_an_ordinary_refusal(self):
+        session = FlakySession(self.ca, posts=[503, refused(), 403])
+        self.assertFalse(self.enroll(session))
+        self.assertIn("enrollment refused (403): busy;", self.log[-1])
+        self.assertNotIn("earlier try", self.log[-1])
+
+    def test_a_certificate_error_isnt_tried_again(self):
+        import requests
+        session = FlakySession(self.ca, posts=[requests.exceptions.SSLError("bad certificate")])
+        self.assertFalse(self.enroll(session))
+        self.assertEqual(self.sleeps, [])
+        self.assertIn("SSLError", self.log[-1])
+
+    def test_the_ca_download_is_tried_again(self):
+        import requests
+        session = FlakySession(self.ca, gets=[503, requests.exceptions.ReadTimeout("slow"), dropped()])
+        self.assertTrue(self.enroll(session))
+        self.assertEqual(len(self.sleeps), 3)
+        self.assertEqual(len(session.gets), 4)
+        self.assertEqual(len(session.posts), 1)
+
+
+class BootScriptGetRetryTests(SimpleTestCase):
+    """ #536: genNetworkInterfaces.py and mprov_stateful.py retry their GETs
+    through a brief overload, after enrollment, which retries on its own. """
+
+    def load(self, name):
+        path = Path(settings.BASE_DIR) / "static" / name
+        spec = importlib.util.spec_from_file_location(f"{name[:-3]}_retry_under_test", path)
+        module = importlib.util.module_from_spec(spec)
+        # mprov_stateful.py imports what only an installing node has
+        with mock.patch.dict(sys.modules, {"parted": mock.MagicMock(), "sh": mock.MagicMock()}):
+            spec.loader.exec_module(module)
+        return module
+
+    def test_retry_gets(self):
+        import requests
+        for name in ("genNetworkInterfaces.py", "mprov_stateful.py"):
+            with self.subTest(script=name):
+                session = requests.Session()
+                self.load(name).retry_gets(session)
+                for url in ("http://10.0.0.1/", "https://10.0.0.1/"):
+                    retry = session.get_adapter(url).max_retries
+                    self.assertEqual(retry.total, 5)
+                    self.assertEqual(set(retry.status_forcelist), {502, 503, 504})
+                    self.assertFalse(retry.raise_on_status)
+                    self.assertTrue(retry.is_retry("GET", 503))
+                    self.assertFalse(retry.is_retry("POST", 503))
+
+    def test_gen_network_interfaces_mounts_it_after_enrolling(self):
+        module = self.load("genNetworkInterfaces.py")
+        gen = module.mProvNetworkScriptGenerator.__new__(module.mProvNetworkScriptGenerator)
+        gen.mprovURL, gen.apikey = "http://10.0.0.1/", "k"
+        gen.session = mock.MagicMock()
+        order = []
+        fake = mock.MagicMock()
+        fake.enroll.side_effect = lambda *a, **k: order.append("enroll") or True
+        fake.use.return_value = "https://10.0.0.1/"
+        with mock.patch.object(module, "mprov_enroll", fake), mock.patch.object(module.socket, "fromfd"), \
+                mock.patch.object(module, "retry_gets", side_effect=lambda s: order.append("retry")):
+            gen.startSession()
+        self.assertEqual(order, ["enroll", "retry"])
 
 
 class BootScriptsTests(SimpleTestCase):

@@ -34,15 +34,24 @@ import base64
 import hashlib
 import json
 import os
+import random
 import re
 import subprocess
 import tempfile
+import time
 from urllib.parse import urlsplit, urlunsplit
 
 TLS_DIR = "/etc/mprov/tls"
 KEY, CERT, CA, URL = "node.key", "node.crt", "ca.crt", "mpcc_url"
 # renew this many days before the credential expires (the mPCC allows 15)
 RENEW_DAYS = 14
+# A fleet boot can briefly overload the mPCC (a 502/503/504 or a dropped
+# connection) and it recovers seconds later, so a booting node tries its
+# enrollment calls this many times, waiting about BACKOFF seconds before the
+# second try and twice as long before each next one (#536).
+TRIES = 5
+BACKOFF = 2
+RETRY_STATUSES = (502, 503, 504)
 
 
 def kernel_params(path="/proc/cmdline"):
@@ -120,17 +129,69 @@ def make_csr(key_path):
   return result.stdout
 
 
-def enroll(session, mprov_url, cmdline="/proc/cmdline", tls_dir=TLS_DIR, log=print):
+def _never_connected(error):
+  """ Whether a requests ConnectionError happened before the request was sent:
+  the connection timed out or was refused, so the mPCC never saw it. """
+  import requests
+  from urllib3.exceptions import NewConnectionError
+  if isinstance(error, requests.exceptions.ConnectTimeout):
+    return True
+  reason = getattr(error.args[0], "reason", None) if error.args else None
+  return isinstance(reason, NewConnectionError)
+
+
+def _send(call, what, log, sleep, resend_after_reply_lost):
+  """ call() until the mPCC answers with something other than RETRY_STATUSES or
+  the request fails to get through, up to TRIES times, with backoff and
+  jitter.  Returns (the last reply, whether an earlier try may have reached
+  the mPCC and been acted on although its reply was lost).
+
+  A connection that couldn't be made, or a 502/503/504, didn't change
+  anything on the mPCC.  A read timeout or a connection dropped mid-request
+  may have: unless resend_after_reply_lost, the request isn't sent again and
+  a read timeout is raised; a dropped connection is retried, as it's far more
+  likely to be an overloaded mPCC closing it unread, but reported as maybe
+  acted on.  The last try's exception is raised if none got a reply. """
+  import requests
+  maybe_acted_on = False
+  for attempt in range(TRIES):
+    try:
+      reply = call()
+      if reply.status_code not in RETRY_STATUSES or attempt == TRIES - 1:
+        return reply, maybe_acted_on
+      problem = f"the mPCC answered {reply.status_code}"
+      maybe_acted_on = maybe_acted_on or reply.status_code == 504
+    except requests.exceptions.ReadTimeout:
+      if not resend_after_reply_lost or attempt == TRIES - 1:
+        raise
+      problem = "no reply in time"
+    except requests.exceptions.SSLError:
+      # a certificate that doesn't check out won't on a retry either
+      raise
+    except requests.exceptions.ConnectionError as e:
+      if attempt == TRIES - 1:
+        raise
+      if not _never_connected(e):
+        maybe_acted_on = True
+      problem = f"couldn't reach the mPCC ({e.__class__.__name__})"
+    wait = BACKOFF * 2 ** attempt * random.uniform(0.5, 1.5)
+    log(f"{what}: {problem}; trying again in {wait:.0f}s ({attempt + 2} of {TRIES}).")
+    sleep(wait)
+
+
+def enroll(session, mprov_url, cmdline="/proc/cmdline", tls_dir=TLS_DIR, log=print, sleep=time.sleep):
   """ Enroll this boot, if it was given a nonce.  True when the node has its
-  credential in tls_dir afterwards. """
+  credential in tls_dir afterwards.  A brief overload of the mPCC is retried
+  (#536). """
   nonce, ca_fp = kernel_params(cmdline)
   if nonce is None or ca_fp is None:
     log("No enrollment parameters on the kernel command line; using the shared API key.")
     return False
   try:
     # no API key: this download isn't an agent's API call
-    response = session.get(http_url(mprov_url) + "enroll/ca.crt", headers={"Authorization": None},
-                           timeout=(10, 30))
+    response, _ = _send(lambda: session.get(http_url(mprov_url) + "enroll/ca.crt",
+                                            headers={"Authorization": None}, timeout=(10, 30)),
+                        "Downloading the mPCC's CA certificate", log, sleep, resend_after_reply_lost=True)
     response.raise_for_status()
     ca_pem = response.text
     if pem_fingerprint(ca_pem) != ca_fp:
@@ -141,9 +202,25 @@ def enroll(session, mprov_url, cmdline="/proc/cmdline", tls_dir=TLS_DIR, log=pri
       ca_path = os.path.join(tmp, CA)
       _write(ca_path, ca_pem, 0o644)
       csr = make_csr(os.path.join(tmp, KEY))
-      reply = session.post(https_url(mprov_url) + "enroll/system/", data=json.dumps({"nonce": nonce, "csr": csr}),
-                           headers={"Content-Type": "application/json", "Authorization": None},
-                           verify=ca_path, timeout=(10, 30))
+      import requests
+      try:
+        # the nonce is redeemed and the CSR signed all or nothing, so a try
+        # the mPCC refused for overload leaves the nonce usable.
+        reply, maybe_used = _send(
+          lambda: session.post(https_url(mprov_url) + "enroll/system/", data=json.dumps({"nonce": nonce, "csr": csr}),
+                               headers={"Content-Type": "application/json", "Authorization": None},
+                               verify=ca_path, timeout=(10, 30)),
+          "Enrolling", log, sleep, resend_after_reply_lost=False)
+      except requests.exceptions.ReadTimeout:
+        # the mPCC may have used the nonce: sending it again would only be
+        # refused, and logged there as a possible attack.
+        log("Error: the mPCC didn't answer the enrollment in time, and may have used this boot's one-time "
+            "nonce. Reboot the node to get a new one; using the shared API key.")
+        return False
+      if reply.status_code == 403 and maybe_used:
+        log("Error: enrollment refused (403): this boot's one-time nonce was already used, most likely by this "
+            "node's own earlier try, whose reply was lost. Reboot the node to get a new one; using the shared API key.")
+        return False
       if reply.status_code != 200:
         log(f"Error: enrollment refused ({reply.status_code}): {reply.text[:200]}; using the shared API key.")
         return False

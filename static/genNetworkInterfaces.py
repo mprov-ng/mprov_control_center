@@ -39,6 +39,19 @@ def learn_mprov_version(session, mprov_url):
     session.headers["mProv-Version"] = version
   return version
 
+def retry_gets(session):
+  """ Retry this session's GETs through a brief overload of the mPCC: a
+  502/503/504, a dropped keep-alive connection or a connection that couldn't
+  be made, up to 5 more times over about a minute (#536).  urllib3 retries only
+  idempotent methods after the request was sent, so a POST is retried only
+  when it never got through.  Mounted after enrollment, which has its own. """
+  from requests.adapters import HTTPAdapter
+  from urllib3.util.retry import Retry
+  adapter = HTTPAdapter(max_retries=Retry(total=5, backoff_factor=2, status_forcelist=(502, 503, 504),
+                                          raise_on_status=False))
+  session.mount("http://", adapter)
+  session.mount("https://", adapter)
+
 class mProvNetworkScriptGenerator():
   """ Reads this node's interfaces from the mPCC and writes their ifcfg files.
   Settings (mprovURL, apikey, ...) come from the global section of
@@ -127,6 +140,7 @@ class mProvNetworkScriptGenerator():
     if mprov_enroll is not None and mprov_enroll.enroll(self.session, self.mprovURL):
       self.mprovURL = mprov_enroll.use(self.session, self.mprovURL)
 
+    retry_gets(self.session)
     learn_mprov_version(self.session, self.mprovURL)
     # connect to the mPCC
     try:
