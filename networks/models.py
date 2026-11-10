@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.text import slugify
 from django.dispatch import receiver
 from django.db.models.signals import pre_save, pre_delete
-from jobqueue.models import JobModule, JobStatus, Job, requeue_job
+from jobqueue.models import JobModule, JobStatus, Job, requeue_job, queue_dnsmasq_jobs, changes_fields
 from django.contrib.auth.models import AnonymousUser, User
 from django.utils import timezone
 
@@ -111,21 +111,18 @@ def UpdateSwitch(sender, instance, **kwargs):
   ''' Before a switch is saved: record who saved it (see stamp_users). '''
   from common.request import stamp_users
   stamp_users(instance)
+# What the job servers' dnsmasq plugin reads from a network, through the
+# /networks/ list (#546).
+DNSMASQ_FIELDS = ('slug', 'subnet', 'netmask', 'gateway', 'nameserver1', 'domain',
+                  'isdhcp', 'managedns', 'dhcpstart', 'dhcpend')
+
 @receiver(pre_save, sender=Network)
-def UpdateNetwork(sender, instance, **kwargs):
-
-  for slug in ['pxe-update', 'dns-update', 'dhcp-update']:
-    JobType = None
-    try:
-        JobType = JobModule.objects.get(slug=slug)
-    except JobModule.DoesNotExist:
-        JobType = None
-    # look up the pxe/dns/dhcp-update job module in the DB
-    # get the jobtype, do nothing if it's not defined.
-    if JobType is not None:
-        # save a new job, if one doesn't already exist.
-
-        requeue_job(JobType)      
+def UpdateNetwork(sender, instance, update_fields=None, **kwargs):
+  ''' Before a network is saved, queue the pxe-update, dns-update and
+  dhcp-update jobs (see queue_dnsmasq_jobs) if it's new or a field in
+  DNSMASQ_FIELDS changes. '''
+  if changes_fields(instance, DNSMASQ_FIELDS, update_fields):
+    queue_dnsmasq_jobs()
 
 @receiver(pre_delete, sender=Network)
 def DeleteNetwork(sender, instance, **kwargs):
