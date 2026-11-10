@@ -25,7 +25,7 @@
     let timer = null;
     let inFlight = null;
 
-    function queryString() {
+    function formParams() {
       const params = new URLSearchParams();
       for (const [key, value] of new FormData(searchForm)) {
         // an empty search box, or a filter set back to its title, adds nothing.
@@ -33,7 +33,25 @@
           params.append(key, value);
         }
       }
-      const qs = params.toString();
+      return params;
+    }
+
+    // what a set of list parameters searches and filters by, ignoring the page
+    // number (and Django's error flag), which the search form never carries,
+    // and the order they come in.
+    function searchKey(params) {
+      const copy = new URLSearchParams(params);
+      copy.delete('p');
+      copy.delete('e');
+      copy.sort();
+      return copy.toString();
+    }
+
+    // the search and filters of the results shown, or last asked for.
+    let shown = searchKey(new URLSearchParams(window.location.search));
+
+    function queryString() {
+      const qs = formParams().toString();
       return qs ? '?' + qs : window.location.pathname;
     }
 
@@ -101,6 +119,7 @@
       }
       const controller = new AbortController();
       inFlight = controller;
+      shown = searchKey(formParams());
       const url = queryString();
       fetch(url, {signal: controller.signal, credentials: 'same-origin', headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(function (response) {
@@ -126,11 +145,23 @@
         });
     }
 
+    // re-fetch only when the search or filters differ from what's shown.  A
+    // fetch always lands on page 1, and jazzmin fires a change on every filter
+    // on page load, so an unconditional re-fetch would send the user back to
+    // page 1 straight after they picked another page (#550).
+    function refreshIfChanged() {
+      if (searchKey(formParams()) === shown) {
+        clearTimeout(timer);
+        return;
+      }
+      refresh();
+    }
+
     if (searchBar) {
       searchBar.setAttribute('autocomplete', 'off');
       searchBar.addEventListener('input', function () {
         clearTimeout(timer);
-        timer = setTimeout(refresh, DELAY_MS);
+        timer = setTimeout(refreshIfChanged, DELAY_MS);
       });
     }
     searchForm.addEventListener('submit', function (event) {
@@ -141,7 +172,7 @@
     // Its own change handler names the select after the chosen option, so
     // let it run first.
     const onFilterChange = function () {
-      setTimeout(refresh, 0);
+      setTimeout(refreshIfChanged, 0);
     };
     if (window.jQuery) {
       window.jQuery(searchForm).on('change', 'select', onFilterChange);
