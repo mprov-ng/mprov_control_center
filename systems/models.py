@@ -491,6 +491,20 @@ def UpdateSystemAttributes(sender, instance, update_fields=None, **kwargs):
   if changes_fields(instance, DNSMASQ_FIELDS[sender], update_fields):
     queue_dnsmasq_jobs()
 
+@receiver(pre_delete, sender=System)
+@receiver(pre_delete, sender=NetworkInterface)
+@receiver(pre_delete, sender=SystemBMC)
+def DeleteSystemAttributes(sender, instance, **kwargs):
+  ''' Before a system, NIC or BMC is deleted, queue the same pxe-update,
+  dns-update and dhcp-update jobs a save does, so the job servers drop its
+  hostname, MAC and IP from their boot, DNS and DHCP config (#547).  The
+  job servers re-render all of it for either kind of job.  The jobs commit
+  with the delete: Django deletes, and sends this, in one transaction.  A
+  system's NICs and BMC are deleted with it, and requeue_job keeps that to
+  one pending job per module (see queue_dnsmasq_jobs).
+  '''
+  queue_dnsmasq_jobs()
+
 # emit image-delete jobs for every server that currently 
 # hosts a deleted image.
 @receiver(pre_delete, sender=SystemImage)

@@ -4,14 +4,15 @@ from datetime import timedelta
 from unittest import mock
 
 from django.apps import apps
+from django.db import transaction
 from django.test import override_settings
 from django.utils import timezone
 
 from common.testing import APITestCase
 from jobqueue.models import Job, JobModule, JobServer, JobStatus, requeue_job, sweep_stale_jobservers
-from networks.models import Network, NetworkType
+from networks.models import Network, NetworkType, Switch
 from osmanagement.models import OSRepo
-from systems.models import System
+from systems.models import NetworkInterface, System, SystemBMC
 
 PENDING, RUNNING, ERROR, COMPLETE = 1, 2, 3, 4
 
@@ -125,6 +126,84 @@ class ChangeSignalTests(JobsTestCase):
   def test_repo_delete(self):
     OSRepo.objects.create(name="BaseOS", repo_package_url="http://mirror/").delete()
     self.assertRequeued("repo-delete")
+
+  DNSMASQ = ("pxe-update", "dns-update", "dhcp-update")
+
+  def clear_pending(self):
+    Job.objects.filter(status_id=PENDING).delete()
+
+  def assertNothingPending(self):
+    self.assertFalse(Job.objects.filter(status_id=PENDING).exists())
+
+  def system_with_parts(self, hostname="node01"):
+    system = System.objects.create(hostname=hostname, created_by=self.user)
+    nic = NetworkInterface.objects.create(system=system, name="eth0", ipaddress="172.16.0.10",
+                                          mac="52:54:00:00:00:10")
+    bmc = SystemBMC.objects.create(system=system, ipaddress="172.17.0.10", mac="52:54:00:00:01:10")
+    self.clear_pending()
+    return system, nic, bmc
+
+  def test_deleting_a_nic_or_bmc(self):
+    # #547: a delete used to leave the host in the job servers' DHCP/DNS config.
+    _, nic, bmc = self.system_with_parts()
+    for row in (nic, bmc):
+      with self.subTest(model=type(row).__name__):
+        row.delete()
+        self.assertRequeued(*self.DNSMASQ)
+        self.clear_pending()
+
+  def test_deleting_a_system_and_its_parts(self):
+    system, _, _ = self.system_with_parts()
+    system.delete()
+    # the NIC and BMC go with it; still one pending job per module.
+    self.assertFalse(NetworkInterface.objects.exists() or SystemBMC.objects.exists())
+    self.assertRequeued(*self.DNSMASQ)
+
+  def test_a_bulk_delete(self):
+    # the admin's "delete selected" deletes through a queryset.
+    self.system_with_parts("node01")
+    self.system_with_parts("node02")
+    System.objects.all().delete()
+    self.assertRequeued(*self.DNSMASQ)
+
+  def test_a_rolled_back_delete_queues_nothing(self):
+    # the jobs commit with the delete, so a job server never re-renders for
+    # a delete that didn't happen.
+    system, _, _ = self.system_with_parts()
+    pk = system.pk  # delete() clears it
+    with self.assertRaises(RuntimeError), transaction.atomic():
+      system.delete()
+      self.assertRequeued(*self.DNSMASQ)
+      raise RuntimeError
+    self.assertTrue(System.objects.filter(pk=pk).exists())
+    self.assertNothingPending()
+
+  def test_switch_save_and_delete(self):
+    # #547: the job servers render each switch's management MAC and IP.
+    switch = Switch.objects.create(hostname="sw1", created_by=self.user, mgmt_ip="172.16.0.2",
+                                   mgmt_mac="52:54:00:00:02:01")
+    self.assertRequeued(*self.DNSMASQ)
+    self.clear_pending()
+    switch.mgmt_ip = "172.16.0.3"
+    switch.save()
+    self.assertRequeued(*self.DNSMASQ)
+    self.clear_pending()
+    switch.delete()
+    self.assertRequeued(*self.DNSMASQ)
+
+
+class NoDnsmasqModulesTests(JobsTestCase):
+  """ #547: without the dnsmasq job modules, deletes and switch changes queue nothing and don't fail. """
+
+  def test_nothing_queued(self):
+    system = System.objects.create(hostname="node01", created_by=self.user)
+    NetworkInterface.objects.create(system=system, name="eth0")
+    SystemBMC.objects.create(system=system, ipaddress="172.17.0.10")
+    switch = Switch.objects.create(hostname="sw1", created_by=self.user, mgmt_ip="172.16.0.2",
+                                   mgmt_mac="52:54:00:00:02:01")
+    switch.delete()
+    system.delete()
+    self.assertFalse(Job.objects.exists())
 
 
 class RunningJobsTestCase(JobsTestCase):
