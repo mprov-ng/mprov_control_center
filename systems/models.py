@@ -6,7 +6,7 @@ from disklayouts.models import DiskLayout
 from networks.models import SwitchPort, Network
 from osmanagement.models import OSDistro, OSRepo
 from django.db.models.signals import pre_save, pre_delete, post_save
-from jobqueue.models import JobModule, JobStatus, Job, JobServer, requeue_job
+from jobqueue.models import JobModule, JobStatus, Job, JobServer, requeue_job, queue_dnsmasq_jobs, changes_fields
 from django.utils.text import slugify
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection, File
 from django.contrib.auth.models import AnonymousUser, User
@@ -462,40 +462,34 @@ def UpdateGenders (sender, instance, **kwargs):
 
     requeue_job(JobType)
 
-# emits jobs to update dns, dhcp, and pxe config if a
-# system, NIC, or BMC is changed.
-# TODO: add the sender information to the
-# job params? Or should we just rebuild it all.
+# What the job servers' dnsmasq plugin reads from each sender, through the
+# /networkinterfaces/ and /systembmcs/ lists, to build its DNS, DHCP and PXE
+# config.  A system's hostname reaches it as its NICs' copies.  Saving
+# anything else (provision, bootable, BMC credentials...) changes nothing
+# it builds, so queues nothing (#546).
+DNSMASQ_FIELDS = {
+  System: ('hostname',),
+  NetworkInterface: ('system', 'hostname', 'hostaliases', 'ipaddress', 'ipv6ll', 'mac', 'network'),
+  SystemBMC: ('system', 'ipaddress', 'mac', 'network'),
+}
 
 @receiver(pre_save, sender=System)
 @receiver(pre_save, sender=NetworkInterface)
 @receiver(pre_save, sender=SystemBMC)
-def UpdateSystemAttributes(sender, instance, **kwargs):
+def UpdateSystemAttributes(sender, instance, update_fields=None, **kwargs):
   ''' Before a system, NIC or BMC is saved, queue the pxe-update, dns-update and
   dhcp-update jobs (one pending job each at most, see requeue_job) for
-  whichever of those job modules exist, so the job servers' boot, DNS and
-  DHCP config follow the change.  For a system saved during a request, it
-  also records the user the request acts as (acting_user): as updated_by
-  always, and as created_by when the system is new.
+  whichever of those job modules exist, if the save is new or changes a
+  field in DNSMASQ_FIELDS, so the job servers' boot, DNS and DHCP config
+  follow the change.  For a system saved during a request, it also records
+  the user the request acts as (acting_user): as updated_by always, and as
+  created_by when the system is new.
   '''
-  
   # SystemImage isn't a sender here; UpdateSystemImages sets its own.
   if sender == System:
     stamp_users(instance)
-
-      
-  for slug in ['pxe-update', 'dns-update', 'dhcp-update']:
-    JobType = None
-    try:
-        JobType = JobModule.objects.get(slug=slug)
-    except JobModule.DoesNotExist:
-        JobType = None
-    # look up the pxe/dns/dhcp update job module in the DB
-    # get the jobtype, do nothing if it's not defined.
-    if JobType is not None:
-        # save a new job, if one doesn't already exist.
-
-        requeue_job(JobType)
+  if changes_fields(instance, DNSMASQ_FIELDS[sender], update_fields):
+    queue_dnsmasq_jobs()
 
 # emit image-delete jobs for every server that currently 
 # hosts a deleted image.

@@ -124,6 +124,38 @@ def requeue_job(module, name=None):
                 return finished
         return Job.objects.create(name=name, module=module, status_id=PENDING)
 
+# the jobs a job server's dnsmasq plugin rebuilds its DNS, DHCP and PXE config
+# on; it fetches everything again for each one.
+DNSMASQ_JOBS = ('pxe-update', 'dns-update', 'dhcp-update')
+
+def queue_dnsmasq_jobs():
+    """ Requeue (see requeue_job) whichever of the DNSMASQ_JOBS modules exist. """
+    for slug in DNSMASQ_JOBS:
+        module = JobModule.objects.filter(slug=slug).first()
+        if module is not None:
+            requeue_job(module)
+
+def changes_fields(instance, fields, update_fields=None):
+    """ Whether saving instance would change any of fields (model field names)
+    in the database, for the pre_save signals that only queue jobs when what
+    a job builds from changes (#546).  A new instance, or one whose row is
+    gone, changes them all.  With update_fields (the save()'s), only the
+    fields it saves count.  A value that only looks different (e.g. "16" for
+    16) counts as a change, so in doubt the jobs are queued. """
+    if instance._state.adding or instance.pk is None:
+        return True
+    meta = instance._meta
+    attnames = [meta.get_field(name).attname for name in fields]
+    if update_fields is not None:
+        saved = set(update_fields)
+        attnames = [attname for name, attname in zip(fields, attnames) if name in saved or attname in saved]
+        if not attnames:
+            return False
+    stored = type(instance)._base_manager.filter(pk=instance.pk).values(*attnames).first()
+    if stored is None:
+        return True
+    return any(stored[attname] != getattr(instance, attname) for attname in attnames)
+
 # a job server, or one of its addresses, with no heartbeat for this long is
 # stale: it's left out of routing, not deleted (#254, #435).
 STALE_AFTER = datetime.timedelta(seconds=60)
