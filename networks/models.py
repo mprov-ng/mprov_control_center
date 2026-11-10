@@ -111,6 +111,15 @@ def UpdateSwitch(sender, instance, **kwargs):
   ''' Before a switch is saved: record who saved it (see stamp_users). '''
   from common.request import stamp_users
   stamp_users(instance)
+
+@receiver(pre_save, sender=Switch)
+@receiver(pre_delete, sender=Switch)
+def QueueSwitchJobs(sender, instance, **kwargs):
+  ''' Before a switch is saved or deleted, queue the pxe-update, dns-update
+  and dhcp-update jobs (see queue_dnsmasq_jobs): the job servers put each
+  switch's management MAC and IP in their DHCP and DNS config (#547). '''
+  queue_dnsmasq_jobs()
+
 # What the job servers' dnsmasq plugin reads from a network, through the
 # /networks/ list (#546).
 DNSMASQ_FIELDS = ('slug', 'subnet', 'netmask', 'gateway', 'nameserver1', 'domain',
