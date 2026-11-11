@@ -243,3 +243,152 @@ class ModelPermissionTests(APITestCase):
     def test_no_model_means_superusers_only(self):
         response = self.as_staff("POST", "/enroll/build/", {})
         self.assertIn(response.status_code, (403,))
+
+
+class TokenAssignTests(APITestCase):
+    """ #561: add_usertoken makes tokens for other staff users whose
+    permissions the maker has too, never for a superuser; the user is fixed
+    once it's made; change_usertoken renames and brings expiry forward. """
+    ADD = "/admin/authcustom/usertoken/add/"
+    LIST = "/admin/authcustom/usertoken/"
+
+    def setUp(self):
+        super().setUp()
+        self.other_admin = User.objects.create_superuser("root2", "r@example.com", "pw")
+        self.lead = self.grant(User.objects.create_user("lead", "l@example.com", "pw", is_staff=True),
+                               "authcustom.add_usertoken", "systems.view_system", "systems.change_system")
+        self.junior = self.grant(User.objects.create_user("junior", "j@example.com", "pw", is_staff=True),
+                                 "systems.view_system")
+        self.senior = self.grant(User.objects.create_user("senior", "s@example.com", "pw", is_staff=True),
+                                 "systems.view_system", "systems.delete_system")
+        User.objects.create_user("notstaff", "n@example.com", "pw")
+
+    def options(self, user):
+        self.client.force_login(user)
+        form = self.client.get(self.ADD).context["adminform"].form
+        return set(form.fields["user"].queryset.values_list("username", flat=True))
+
+    def add(self, maker, target, **extra):
+        self.client.force_login(maker)
+        return self.client.post(self.ADD, {"name": "t", "user": target.pk, "days": "", **extra}, follow=True)
+
+    def change_url(self, token):
+        return f"{self.LIST}{token.pk}/change/"
+
+    @staticmethod
+    def split(when):
+        when = timezone.localtime(when)
+        return {"expiry_date_0": when.strftime("%Y-%m-%d"), "expiry_date_1": when.strftime("%H:%M:%S")}
+
+    def test_plain_staff_only_make_their_own(self):
+        self.client.force_login(self.staff)
+        form = self.client.get(self.ADD).context["adminform"].form
+        self.assertNotIn("user", form.fields)
+        self.client.post(self.ADD, {"name": "t", "user": self.junior.pk, "days": ""})
+        token = UserToken.objects.get()
+        self.assertEqual((token.user, token.created_by), (self.staff, self.staff))
+        page = self.client.get(self.change_url(token))
+        self.assertNotIn("name", page.context["adminform"].form.fields)  # nothing to edit
+
+    def test_the_choices(self):
+        self.assertEqual(self.options(self.lead), {"lead", "junior", "ops"})  # ops has no permissions
+        self.assertEqual(self.options(self.admin), {"admin", "ops", "lead", "junior", "senior"})
+
+    def test_make_one_for_someone_else(self):
+        response = self.add(self.lead, self.junior)
+        token = UserToken.objects.get()
+        self.assertEqual((token.user, token.created_by), (self.junior, self.lead))
+        self.assertContains(response, "It acts as junior")
+        secret = response.context["messages"]._loaded_messages[0].message.split("<code>")[1].split("</code>")[0]
+        self.client.logout()  # so the token, not the admin login, authenticates
+        listing = self.call("GET", "/tokens/", f"Token {secret}")
+        self.assertEqual([t["prefix"] for t in listing.json()], [token.prefix])  # acts as junior
+
+    def test_refused_targets(self):
+        for maker, target in ((self.lead, self.senior),    # has a permission lead hasn't
+                              (self.lead, self.admin),     # a superuser
+                              (self.admin, self.other_admin),
+                              (self.lead, User.objects.get(username="notstaff")),
+                              (self.staff, self.junior)):  # no add_usertoken: ignored, made for themselves
+            self.add(maker, target)
+            self.assertFalse(UserToken.objects.filter(user=target).exists(), (maker, target))
+        self.assertEqual(UserToken.objects.get().user, self.staff)
+
+    def test_save_model_checks_again(self):
+        from django.contrib.admin.sites import site
+        from django.core.exceptions import PermissionDenied
+        from django.test import RequestFactory
+
+        class Form:
+            cleaned_data = {"name": "t", "user": self.admin, "days": None}
+        request = RequestFactory().post(self.ADD)
+        request.user = self.lead
+        with self.assertRaises(PermissionDenied):
+            site._registry[UserToken].save_model(request, UserToken(), Form(), False)
+        self.assertFalse(UserToken.objects.exists())
+
+    def test_superusers_still_make_their_own(self):
+        response = self.add(self.admin, self.admin)
+        token = UserToken.objects.get()
+        self.assertEqual(token.user, self.admin)
+        secret = response.context["messages"]._loaded_messages[0].message.split("<code>")[1].split("</code>")[0]
+        self.assertEqual(self.call("GET", "/systems/", f"Token {secret}").status_code, 200)
+
+    def test_promoted_to_superuser_since(self):
+        token, secret = UserToken.make(self.junior, "t", created_by=self.lead)
+        self.assertEqual(self.call("GET", "/tokens/", f"Token {secret}").status_code, 200)
+        self.junior.is_superuser = True
+        self.junior.save()
+        response = self.call("GET", "/tokens/", f"Token {secret}")
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("superuser now", response.json()["detail"])
+
+    def test_user_is_fixed_on_change(self):
+        lead = self.grant(self.lead, "authcustom.change_usertoken")
+        token, _ = UserToken.make(self.junior, "t", created_by=lead)
+        self.client.force_login(lead)
+        self.client.post(self.change_url(token), {"name": "renamed", "user": lead.pk,
+                                                  "expiry_date_0": "", "expiry_date_1": ""})
+        token = UserToken.objects.get(pk=token.pk)
+        self.assertEqual((token.name, token.user), ("renamed", self.junior))
+
+    def test_expiry_only_comes_forward(self):
+        lead = self.grant(self.lead, "authcustom.change_usertoken")
+        self.client.force_login(lead)
+        token, _ = UserToken.make(self.junior, "t", days=10)
+        original = token.expiry_date
+        for when in ({"expiry_date_0": "", "expiry_date_1": ""}, self.split(original + datetime.timedelta(days=1))):
+            response = self.client.post(self.change_url(token), {"name": "t", **when})
+            self.assertContains(response, "brought forward, not pushed back")
+            self.assertEqual(UserToken.objects.get(pk=token.pk).expiry_date, original)
+        sooner = (original - datetime.timedelta(days=5)).replace(microsecond=0)
+        self.client.post(self.change_url(token), {"name": "t", **self.split(sooner)})
+        self.assertEqual(UserToken.objects.get(pk=token.pk).expiry_date, sooner)
+        forever, _ = UserToken.make(self.junior, "f")
+        self.client.post(self.change_url(forever), {"name": "f", **self.split(sooner)})
+        self.assertEqual(UserToken.objects.get(pk=forever.pk).expiry_date, sooner)
+
+    def test_revoked_stays_as_it_is(self):
+        lead = self.grant(self.lead, "authcustom.change_usertoken")
+        token, _ = UserToken.make(self.junior, "t")
+        token.revoked = True
+        token.save()
+        self.client.force_login(lead)
+        self.client.post(self.change_url(token), {"name": "renamed", "expiry_date_0": "", "expiry_date_1": ""})
+        self.assertEqual(UserToken.objects.get(pk=token.pk).name, "t")
+
+    def test_view_and_revoke_others(self):
+        theirs, _ = UserToken.make(self.junior, "theirs")
+        mine, _ = UserToken.make(self.staff, "mine")
+        viewer = self.grant(self.staff, "authcustom.view_usertoken")
+        self.client.force_login(viewer)
+        response = self.client.get(self.LIST)
+        self.assertContains(response, "theirs")
+        self.assertNotIn("delete_selected", response.context["action_form"].fields["action"].choices.__repr__())
+        self.client.post(self.LIST, {"action": "revoke", "_selected_action": [theirs.pk, mine.pk]})
+        self.assertFalse(UserToken.objects.get(pk=theirs.pk).revoked)
+        self.assertTrue(UserToken.objects.get(pk=mine.pk).revoked)
+        changer = self.grant(viewer, "authcustom.change_usertoken")
+        self.client.force_login(changer)
+        self.client.post(self.LIST, {"action": "revoke", "_selected_action": [theirs.pk]})
+        self.assertTrue(UserToken.objects.get(pk=theirs.pk).revoked)

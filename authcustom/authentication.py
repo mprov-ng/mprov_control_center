@@ -32,6 +32,11 @@ class UserTokenAuthentication(BaseAuthentication):
         if not token.user.is_staff:
             # tokens are for staff users (#502)
             raise exceptions.AuthenticationFailed("This token's user isn't staff any more.")
+        if token.user.is_superuser and token.made_for_someone_else:
+            # someone else saw its secret, and tokens are never made for a
+            # superuser by someone else; its user was promoted since (#561)
+            raise exceptions.AuthenticationFailed(
+                "This token's user is a superuser now, and the token was made by someone else.")
         token.touch()
         return token.user, token
 
