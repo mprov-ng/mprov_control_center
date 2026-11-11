@@ -3,7 +3,7 @@ import traceback
 from django.contrib import admin, messages
 from django.forms import BaseInlineFormSet
 from django.utils import timezone
-from django.utils.html import format_html, mark_safe
+from django.utils.html import format_html, format_html_join, mark_safe
 from django import forms
 from django.urls import reverse
 from django.db.models.query import QuerySet
@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
 from scripts.models import Script
 from common.admin import LiveSearchMixin
-from common.rendered_config import RenderedConfigAdminMixin
+from common.rendered_config import RenderedConfigAdminMixin, admin_url
 import pyipmi
 import pyipmi.interfaces
 from systems.bootdev import bootdev_failed, set_pxe_bootdev
@@ -709,6 +709,28 @@ class SystemGroupAdmin(FilesRebuildNoticeMixin, SystemMembersMixin, admin.ModelA
   list_display_links = ['id', 'name']
   raw_id_fields = ['systems']
   actions = ['set_bmc_credentials', 'reenroll']
+
+  # #554: the images that include this group, next to its member systems,
+  # on the change page (a new group isn't in any image yet).
+  def get_readonly_fields(self, request, obj=None):
+    fields = list(super().get_readonly_fields(request, obj))
+    if obj is not None:
+      fields.append('system_images')
+    return fields
+
+  def get_fields(self, request, obj=None):
+    fields = list(super().get_fields(request, obj))
+    if 'system_images' in fields and 'systems' in fields:
+      fields.remove('system_images')
+      fields.insert(fields.index('systems') + 1, 'system_images')
+    return fields
+
+  @admin.display(description='System Images')
+  def system_images(self, obj):
+    images = obj.systemimage_set.order_by('name')
+    if not images:
+      return "None"
+    return format_html_join(", ", '<a href="{}">{}</a>', ((admin_url(image), image.name) for image in images))
 
   @admin.action(description="Set BMC credentials for these groups' systems")
   def set_bmc_credentials(self, request, queryset):

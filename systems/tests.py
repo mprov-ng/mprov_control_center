@@ -268,6 +268,45 @@ class FlattenConfigTests(TestCase):
     self.assertEqual(configs["list-b"]["prov_interface"], "eno2")
 
 
+class SystemGroupImagesAdminTests(TestCase):
+  """ A System Group's change page lists the System Images that include it,
+  next to its member systems (#554). """
+
+  def setUp(self):
+    self.user = User.objects.create_superuser("group-images-admin", password="x")
+    self.client.force_login(self.user)
+    self.group = SystemGroup.objects.create(name="gpu")
+
+  def page(self, url):
+    response = self.client.get(url)
+    self.assertEqual(response.status_code, 200)
+    return response.content.decode()
+
+  def test_images_are_listed_as_links(self):
+    compute = SystemImage.objects.create(name="compute", created_by=self.user)
+    analysis = SystemImage.objects.create(name="analysis", created_by=self.user)
+    SystemImage.objects.create(name="login", created_by=self.user)
+    compute.systemgroups.add(self.group)
+    analysis.systemgroups.add(self.group)
+    html = self.page(f"/admin/systems/systemgroup/{self.group.pk}/change/")
+    self.assertIn("field-system_images", html)
+    self.assertIn(f'<a href="/admin/systems/systemimage/{analysis.pk}/change/">analysis</a>, '
+                  f'<a href="/admin/systems/systemimage/{compute.pk}/change/">compute</a>', html)
+    self.assertNotIn(">login</a>", html)
+    # shown straight after the member systems
+    self.assertLess(html.index('name="systems"'), html.index(">analysis</a>"))
+    self.assertLess(html.index(">analysis</a>"), html.index('name="config_params"'))
+
+  def test_no_images(self):
+    html = self.page(f"/admin/systems/systemgroup/{self.group.pk}/change/")
+    self.assertInHTML('<div class="readonly">None</div>', html)
+
+  def test_not_an_input_and_not_on_the_add_page(self):
+    html = self.page(f"/admin/systems/systemgroup/{self.group.pk}/change/")
+    self.assertNotIn('name="system_images"', html)
+    self.assertNotIn("field-system_images", self.page("/admin/systems/systemgroup/add/"))
+
+
 @skipIf(connection.vendor == "sqlite", "SQLite allows only 999 variables per query, too few for a group this big (#464)")
 class LargeSystemGroupAdminTests(TestCase):
   """ A System Group with a very large membership needs to be saveable.  A
