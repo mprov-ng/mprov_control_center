@@ -38,10 +38,6 @@ mPCC is installed as part of the full mProv stack via [mprov-compose](https://gi
 
 Every domain app below models its entities and then exposes them through [MProvView](architecture/api-foundation.md), the shared DRF base class — whose default auth and permission classes now come from the [PKI & Agent Auth](domain/pki-and-agent-auth.md) layer (client certificates for jobservers/nodes, scoped by `pki/rules.py`). Write-side signals in [Systems & Networking](domain/systems-and-networking.md) and [OS & Disk Management](domain/os-and-disk-management.md) do not call external systems directly — they queue jobs that external jobservers poll out of the [Job Queue](domain/jobs-and-scripts.md).
 
-## Testing and change guidance
-
-CI (`.github/workflows/test-and-publish-dev.yml`) runs on every PR and push to `main`: it builds the shipping Docker image, then runs `python manage.py check && python manage.py test` inside it, against SQLite and again against MariaDB 10.11 (#385, see [CI](architecture/overview.md#ci)). A separate lint gate (`.github/workflows/lint.yml`) fails on ruff or ShellCheck errors (#330). The suite includes a `MigrationsTest`, so any model change without a committed migration fails CI. When changing an app, add or run app-local tests (e.g. `systems/test_detail_serializer.py`, `disklayouts/test_dtype_default.py`).
-
 ## Backlog
 
 - `osmanagement/views_noauth.py` and `systems/views_noauth.py` unauthenticated surface: only the iPXE/register paths were summarized; audit the full no-auth attack surface in a later pass.
