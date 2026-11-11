@@ -17,6 +17,11 @@ class UserToken(AbstractAPIKey):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="api_tokens")
     last_used = models.DateTimeField(null=True, blank=True, editable=False, verbose_name="Last Used")
+    # who was shown the secret (#561): the user themselves, someone with
+    # add_usertoken who made it for them in the admin, or empty for a token
+    # made with manage.py mprov_token or before this field existed
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   editable=False, related_name="+", verbose_name="Made By")
 
     class Meta(AbstractAPIKey.Meta):
         verbose_name = "API Token"
@@ -26,10 +31,16 @@ class UserToken(AbstractAPIKey):
         return f"{self.name} ({self.prefix}…, {self.user.username})"
 
     @classmethod
-    def make(cls, user, name, days=None):
-        """ (token, the secret to give the user once). """
+    def make(cls, user, name, days=None, created_by=None):
+        """ (token, the secret to give the user once).  created_by is who
+        sees the secret, when that's a logged-in person. """
         expiry = timezone.now() + datetime.timedelta(days=days) if days else None
-        return cls.objects.create_key(user=user, name=name, expiry_date=expiry)
+        return cls.objects.create_key(user=user, name=name, expiry_date=expiry, created_by=created_by)
+
+    @property
+    def made_for_someone_else(self):
+        """ Made in the admin by someone other than its user (#561). """
+        return self.created_by_id is not None and self.created_by_id != self.user_id
 
     def touch(self):
         """ Record a use, at most once every TOUCH_EVERY. """

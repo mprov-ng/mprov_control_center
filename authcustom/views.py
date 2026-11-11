@@ -48,7 +48,7 @@ class TokensAPIView(APIView):
             errors["days"] = "Must be a whole number of days from 1 to 3650, or left out."
         if errors:
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
-        token, secret = UserToken.make(request.user, name.strip(), days)
+        token, secret = UserToken.make(request.user, name.strip(), days, created_by=request.user)
         return Response({"token": secret, **describe(token)}, status=status.HTTP_201_CREATED)
 
     def delete(self, request, prefix=None):
