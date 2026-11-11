@@ -4,11 +4,9 @@ from django.contrib import admin, messages
 from django.forms import BaseInlineFormSet
 from django.utils import timezone
 from django.utils.html import format_html, mark_safe
-from jobqueue.models import JobModule, JobStatus, Job
 from django import forms
 from django.urls import reverse
 from django.db.models.query import QuerySet
-from django.db.models import F
 
 from django.shortcuts import render
 from django.core.exceptions import ValidationError
@@ -748,27 +746,24 @@ class SystemLocationAdmin(admin.ModelAdmin):
 # does (#176).
 @admin.action(description="Rebuild selected images now")
 def mark_rebuild(modeladmin, request, queryset):
-  queryset.update(needs_rebuild=True)
-  try:
-      JobType = JobModule.objects.get(slug='image-update')
-  except JobModule.DoesNotExist:
-      # do nothing if the jobtype isn't defined.
-      return
-
+  # Each image is saved with needs_rebuild set, the same as the button, so
+  # UpdateSystemImages (systems/models.py) queues its one image-update job,
+  # bumps its version, clears its job servers and clears needs_rebuild.  This
+  # action used to queue the job itself and leave needs_rebuild set, so the
+  # next save of the image -- the job server registering itself after the
+  # build -- queued a second build and cleared the registration (#556).
+  queued, not_queued = [], []
   for instance in queryset:
-    # create a new image-update job.
-    params = { 'imageId': instance.slug}
-    Job.objects.create( name=JobType.name,
-        module=JobType,
-        status=JobStatus.objects.get(pk=1),
-        params = params,
-    )
-
-    # Increment version number and clear out jobservers field.
-    # update() saves the version without firing UpdateSystemImages, which
-    # would queue a second job and clear needs_rebuild.
-    instance.jobservers.clear()
-    SystemImage.objects.filter(pk=instance.pk).update(version=F('version') + 1)
+    instance.needs_rebuild = True
+    instance.save()
+    # the signal leaves needs_rebuild set only if there's no image-update
+    # job module to queue a job with.
+    (not_queued if instance.needs_rebuild else queued).append(instance.name)
+  if queued:
+    modeladmin.message_user(request, f"Queued a rebuild of {', '.join(queued)}.", messages.SUCCESS)
+  if not_queued:
+    modeladmin.message_user(request, f"{', '.join(not_queued)} marked for rebuild, but no rebuild was queued: "
+                            "there's no image-update job module.", messages.WARNING)
 
 class SystemImageAdmin(FilesRebuildNoticeMixin, RenderedConfigAdminMixin, admin.ModelAdmin):
   """ System images: their merged config, version and the job servers serving them;
