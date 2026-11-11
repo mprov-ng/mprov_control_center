@@ -40,7 +40,7 @@ class RenderedConfigTabTests(APITestCase):
     html = self.page(f"/admin/systems/system/{self.system.pk}/change/")
     self.assertIn('href="#rendered-config-tab"', html)
     distro = f'<a href="/admin/osmanagement/osdistro/{self.distro.pk}/change/">OS Distribution: test-distro</a>'
-    group = f'<a href="/admin/systems/systemgroup/{self.group.pk}/change/">System Group: gpu</a>'
+    group = f'<a href="/admin/systems/systemgroup/{self.group.pk}/change/">System Group: gpu (S)</a>'
     image = f'<a href="/admin/systems/systemimage/{self.image.pk}/change/">System Image: compute</a>'
     self.assertIn(f"{distro} &rarr; {group} &rarr; {image} &rarr; this system", html)
     self.assertInHTML(f"<tr><td>Install kernel command line</td><td><code>quiet console=ttyS0 nomodeset</code></td>"
@@ -51,6 +51,34 @@ class RenderedConfigTabTests(APITestCase):
                       f"<td>Post Boot</td><td>{group}</td></tr>", html)
     self.assertIn("config</code> field in the mPCC API", html)
     self.assertIn("&quot;gpus&quot;: 4", html)
+
+  def test_system_groups_are_tagged_with_their_origin(self):
+    # (S) the system's own group, (I) one from its image, (S, I) both (#553).
+    infiniband = SystemGroup.objects.create(name="infiniband", install_kernel_cmdline="ib")
+    self.image.systemgroups.add(infiniband)
+    html = self.page(f"/admin/systems/system/{self.system.pk}/change/")
+    gpu = f'<a href="/admin/systems/systemgroup/{self.group.pk}/change/">System Group: gpu (S)</a>'
+    ib = f'<a href="/admin/systems/systemgroup/{infiniband.pk}/change/">System Group: infiniband (I)</a>'
+    self.assertIn(f"{gpu} &rarr; {ib} &rarr;", html)
+    self.assertInHTML(f"<tr><td>Install kernel command line</td><td><code>quiet console=ttyS0 ib nomodeset</code></td>"
+                      f"<td>{self.distro_link()}, {gpu}, {ib}, this system</td></tr>", html)
+    self.assertIn("(S) marks a group the system is in, (I) one it gets from its image.", html)
+
+    self.image.systemgroups.add(self.group)
+    html = self.page(f"/admin/systems/system/{self.system.pk}/change/")
+    self.assertIn(f'<a href="/admin/systems/systemgroup/{self.group.pk}/change/">System Group: gpu (S, I)</a>', html)
+    self.assertNotIn("gpu (S)<", html)
+
+  def test_image_groups_are_not_tagged(self):
+    # every group on an image's tab is the image's own: no tag (#553).
+    self.image.systemgroups.add(self.group)
+    html = self.page(f"/admin/systems/systemimage/{self.image.pk}/change/")
+    self.assertIn(f'<a href="/admin/systems/systemgroup/{self.group.pk}/change/">System Group: gpu</a>', html)
+    self.assertNotIn("(S)", html)
+    self.assertNotIn("(I)", html)
+
+  def distro_link(self):
+    return f'<a href="/admin/osmanagement/osdistro/{self.distro.pk}/change/">OS Distribution: test-distro</a>'
 
   def test_values_are_escaped(self):
     html = self.page(f"/admin/systems/system/{self.system.pk}/change/")
