@@ -5,6 +5,8 @@ from disklayouts.serializers import DiskLayoutAPISerializer
 from networks.models import SwitchPort, Network
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection
 from common.serializers import NestedPrimaryKeyRelatedField, NoNestedUsersMixin
+from common.permissions import node_system
+from networks.serializers import GuidField
 from scripts.serializers import ScriptAPISerializer, AnsibleCollectionAPISerializer, AnsiblePlaybookAPISerializer, AnsibleRoleAPISerializer
 
 class SystemSerializer(serializers.ModelSerializer): 
@@ -98,12 +100,39 @@ class SystemBMCDetailNoPasswordSerializer(SystemBMCDetailSerializer):
         
 class NetworkInterfaceSerializer(serializers.ModelSerializer):
     """ A NIC; hostname is read-only, copied from its system on every save (#382). """
+    guid = GuidField(NetworkInterface)
+
     class Meta:
         model = NetworkInterface
         fields = '__all__'
         # copied from the System on every save (NetworkInterface.save()), so
         # a value sent here would be overwritten anyway (#382).
         read_only_fields = ['hostname']
+
+    def validate(self, attrs):
+        """ A node writing its own NICs (#566) may not take a MAC another system
+        has, or a switch port on a network other than the NIC's.  A 400 that
+        says which, so a node can tell it from a 403 rule refusal. """
+        attrs = super().validate(attrs)
+        request = self.context.get('request')
+        node = node_system(request) if request is not None else None
+        if node is None:
+            return attrs
+        errors = {}
+        mac = attrs.get('mac')
+        if mac:
+            taken = (NetworkInterface.objects.filter(mac__iexact=mac).exclude(system=node).exists()
+                     or SystemBMC.objects.filter(mac__iexact=mac).exclude(system=node).exists())
+            if taken:
+                errors['mac'] = "Another system already has this MAC address."
+        port = attrs.get('switch_port')
+        if port is not None:
+            network = attrs['network'] if 'network' in attrs else getattr(self.instance, 'network', None)
+            if port.networks_id is not None and port.networks_id != getattr(network, 'pk', None):
+                errors['switch_port'] = "This switch port is on a different network from this interface."
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
 
 class NetworkInterfaceDetailsSerializer(NoNestedUsersMixin, serializers.ModelSerializer):
     """ A NIC with its system, network and switch port nested three deep; hostname is

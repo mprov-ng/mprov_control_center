@@ -197,11 +197,14 @@ class SwitchAPIView(MProvView):
 
 ### Class Attributes
 - id: Internal ID of this switch in the db
-- hostname: hostname of this switch
+- hostname: hostname of this switch (unique)
 - timestamp: (Default: now) Creation time for this switch
 - updated: (Default: now) Last update time for this switch (not changed automatically on save)
-- mgmt_ip: The IP Address of the management interface for this switch
-- mgmt_mac: The MAC address of the management interface for this switch
+- mgmt_ip: (Optional) The IP Address of the management interface for this switch
+- mgmt_mac: (Optional) The MAC address of the management interface for this switch.
+    Job servers add a switch to DHCP and DNS only with these; an unmanaged InfiniBand switch has neither.
+- guid: (Optional) The InfiniBand node GUID of this switch: 0x and 16 hex digits, stored
+    lowercase, unique.
 - created_by: The user who created this switch (set automatically, read-only)
 - updated_by: The user who last saved this switch (set automatically on every save, read-only)
 - network: (Optional) ID of the management network for this switch.
@@ -227,6 +230,7 @@ Format returned:
         "updated": "2022-05-19T15:58:21.610109-05:00",
         "mgmt_ip": "172.16.253.1",
         "mgmt_mac": "de:ad:be:ef:01:02",
+        "guid": null,
         "created_by": 1,
         "updated_by": 1,
         "network": 1

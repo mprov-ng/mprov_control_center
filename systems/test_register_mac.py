@@ -20,10 +20,11 @@ class SystemRegAPIViewTests(TestCase):
     self.assertEqual((nads.switch, nads.port), ("sw2", "2/7"))
     self.assertEqual(NADSSystem.objects.count(), 1)
 
-  def test_switch_hostname_shared_by_two_switches_still_registers(self):
-    from systems.models import NADSSystem
+  def test_switch_hostnames_are_unique(self):
+    # two switches can no longer share a hostname (#566), which used to make
+    # register treat the switch as unknown
+    from django.db import IntegrityError, transaction
     user = User.objects.create(username="register-test")
-    for mac in ("de:ad:be:ef:00:01", "de:ad:be:ef:00:02"):
-      Switch.objects.create(hostname="sw1", mgmt_ip="10.0.0.1", mgmt_mac=mac, created_by=user)
-    self.assertEqual(self.register().status_code, 200)
-    self.assertTrue(NADSSystem.objects.filter(mac=self.packet["mac"]).exists())
+    Switch.objects.create(hostname="sw1", created_by=user)
+    with self.assertRaises(IntegrityError), transaction.atomic():
+      Switch.objects.create(hostname="sw1", created_by=user)

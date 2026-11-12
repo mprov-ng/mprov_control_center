@@ -35,6 +35,23 @@ def shared_key_mode():
     return mode if mode in SHARED_KEY_MODES else "off"
 
 
+def node_system(request):
+    """ The system a node's request acts for, under the system rules
+    (pki.rules.SYSTEM_RULES): its certificate's system, or, for the shared API
+    key in MPROV_SHARED_KEY_MODE=nodes, the system at the caller's address.
+    None for a person, a job server or a build. """
+    from pki.models import AgentCredential
+    credential = getattr(request, "auth", None)
+    if isinstance(credential, AgentCredential):
+        return credential.system if credential.kind == AgentCredential.SYSTEM else None
+    user = getattr(request, "user", None)
+    if user is not None and user.is_authenticated:
+        return None
+    if shared_key_mode() == "nodes":
+        return system_from_address(request)
+    return None
+
+
 def system_from_address(request):
     """ The system whose network interface has the caller's address, or None. """
     from django.core.exceptions import ValidationError

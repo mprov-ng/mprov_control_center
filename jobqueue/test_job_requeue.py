@@ -191,6 +191,28 @@ class ChangeSignalTests(JobsTestCase):
     switch.delete()
     self.assertRequeued(*self.DNSMASQ)
 
+  def test_switch_save_only_when_dnsmasq_changes(self):
+    # #566: nodes create switches without a management IP or MAC as they
+    # boot; the job servers write nothing for those, so nothing is queued.
+    switch = Switch.objects.create(hostname="ib-sw1", created_by=self.user, guid="0x506b4b0300abcdef")
+    self.assertNothingPending()
+    switch.guid = "0x506b4b0300abcde0"
+    switch.save()
+    self.assertNothingPending()
+    switch.mgmt_ip = "172.16.0.4"
+    switch.save()
+    self.assertRequeued(*self.DNSMASQ)
+    self.clear_pending()
+    switch.save()
+    self.assertNothingPending()
+    switch.hostname = "ib-sw1a"
+    switch.save()
+    self.assertRequeued(*self.DNSMASQ)
+    self.clear_pending()
+    # a delete always does: removing its ports can move NICs to another network
+    Switch.objects.create(hostname="ib-sw2", created_by=self.user).delete()
+    self.assertRequeued(*self.DNSMASQ)
+
 
 class NoDnsmasqModulesTests(JobsTestCase):
   """ #547: without the dnsmasq job modules, deletes and switch changes queue nothing and don't fail. """
