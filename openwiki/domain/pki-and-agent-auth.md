@@ -31,7 +31,7 @@ The Django process (Apache user) never reads `ca.key`. `pki/signer.py` is a stan
 
 `common/permissions.py` `MProvPermission` replaces `HasAPIKeyOrIsAuthenticated` as the DRF default permission and scopes requests by role per `pki/rules.py` — "each agent limited to what it needs":
 
-- **SYSTEM_RULES** (node cert): `GET /`; its own `systems/?self` row and `?hostname=<itself>`; its own NICs (list/one, `PATCH` limited to `ipv6ll`); their networks; its own BMC rows (`PATCH` `mac`/`ipv6ll`); `POST /systems/?self` limited to `netboot`, `booted`, `serial` (see [Systems & Networking](../domain/systems-and-networking.md)); `POST /enroll/renew/`.
+- **SYSTEM_RULES** (node cert): `GET /`; its own `systems/?self` row and `?hostname=<itself>`; its own NICs (list/one; `PATCH` `id`/`ipv6ll`/`name`/`mtu`/`switch_port`/`guid`); `POST /networkinterfaces/` to add NICs for itself; read and add switches and switch ports it's connected to (`GET`/`POST /switches/` and `/switchports/`, never change or delete — #566 interface/IB discovery); their networks; its own BMC rows (`PATCH` `mac`/`ipv6ll`); `POST /systems/?self` limited to `netboot`, `booted`, `serial` (see [Systems & Networking](../domain/systems-and-networking.md)); `POST /enroll/renew/`.
 - **JOBSERVER_RULES**: `GET` everything except `power/` and `datamodel/`; `POST /jobservers/` for its own `host_id`; own heartbeats and job claims; `PATCH` own or unclaimed jobs; `POST /jobs/`; `?addjs` on its own listings; `hosted_by=[itself]` filters; `POST /ostypes/`; `POST /enroll/renew/`.
 - Anything else → 403.
 
