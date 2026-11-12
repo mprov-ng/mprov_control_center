@@ -2,7 +2,19 @@
 
 from rest_framework import serializers
 from common.serializers import NoNestedUsersMixin
-from .models import Network, Switch, NetworkType, SwitchPort
+from rest_framework.validators import UniqueValidator
+from .models import Network, Switch, NetworkType, SwitchPort, GUID_VALIDATOR, normalize_guid
+
+
+class GuidField(serializers.CharField):
+  """ An InfiniBand GUID (#566), lowercased before it's checked for uniqueness,
+  so 0xABC... and 0xabc... are the same GUID.  Empty is stored as NULL. """
+  def __init__(self, model, **kwargs):
+    super().__init__(max_length=19, required=False, allow_null=True, allow_blank=True,
+                     validators=[GUID_VALIDATOR, UniqueValidator(queryset=model.objects.all())], **kwargs)
+
+  def to_internal_value(self, data):
+    return normalize_guid(super().to_internal_value(data))
 
 class NetworkAPISerializer(serializers.ModelSerializer):
   """ A network, with its network type as an ID. """
@@ -32,6 +44,7 @@ class SwitchAPISerializer(serializers.ModelSerializer):
   created_by = serializers.PrimaryKeyRelatedField(read_only=True)
   updated_by = serializers.PrimaryKeyRelatedField(read_only=True)
   network = serializers.PrimaryKeyRelatedField(queryset=Network.objects.all(), required=False, allow_null=True)
+  guid = GuidField(Switch)
   class Meta:
     model = Switch
     fields = '__all__'

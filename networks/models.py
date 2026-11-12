@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.text import slugify
 from django.dispatch import receiver
@@ -72,10 +73,25 @@ class Network(models.Model):
   
  
 
+# an InfiniBand GUID (#566): a switch's node GUID or an HCA port's GUID,
+# stored lowercase, e.g. 0x506b4b0300abcdef
+GUID_VALIDATOR = RegexValidator(r'^0[xX][0-9a-fA-F]{16}$', "Enter a GUID: 0x and 16 hex digits, e.g. 0x506b4b0300abcdef.")
+
+def normalize_guid(value):
+  """ A GUID as stored: lowercase, or None when empty (the column is unique, so
+  an empty value must be NULL). """
+  return value.strip().lower() or None if value else None
+
+def guid_field(verbose_name):
+  return models.CharField(max_length=19, null=True, blank=True, unique=True, validators=[GUID_VALIDATOR],
+                          verbose_name=verbose_name)
+
+
 class Switch(models.Model):
   """ This is where you would define the switches that the mPCC should know about for handling Node Auto Detection."""
   endpoint="/switches/"
-  hostname=models.CharField(max_length=255, verbose_name="Host Name")
+  # unique (#566): N.A.D.S. matches a booting node's switch by hostname
+  hostname=models.CharField(max_length=255, unique=True, verbose_name="Host Name")
   timestamp=models.DateTimeField(default=timezone.now, verbose_name="Created")
   created_by=models.ForeignKey(
     settings.AUTH_USER_MODEL, 
@@ -89,11 +105,21 @@ class Switch(models.Model):
   )
   updated=models.DateTimeField(default=timezone.now, verbose_name="Last Updated")
   network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Management Network')
-  mgmt_ip=models.GenericIPAddressField(verbose_name="Management IP")
-  mgmt_mac=models.CharField(max_length=100, verbose_name="Management MAC")
+  # optional (#566): an unmanaged InfiniBand switch has neither
+  mgmt_ip=models.GenericIPAddressField(null=True, blank=True, verbose_name="Management IP")
+  mgmt_mac=models.CharField(max_length=100, null=True, blank=True, verbose_name="Management MAC")
+  guid=guid_field("InfiniBand GUID")
   class Meta:
     verbose_name = "Switch"
     verbose_name_plural = "Switches"
+
+  def clean(self):
+    self.guid = normalize_guid(self.guid)
+
+  def save(self, *args, **kwargs):
+    self.guid = normalize_guid(self.guid)
+    self.mgmt_mac = self.mgmt_mac or None
+    super().save(*args, **kwargs)
   
 
 class SwitchPort(models.Model):
@@ -112,12 +138,34 @@ def UpdateSwitch(sender, instance, **kwargs):
   from common.request import stamp_users
   stamp_users(instance)
 
+# What the job servers' dnsmasq plugin reads from a switch, through the
+# /switches/ list: they put its management MAC and IP in their DHCP and DNS
+# config (#547), for the switch's network.
+SWITCH_DNSMASQ_FIELDS = ('hostname', 'mgmt_ip', 'mgmt_mac', 'network')
+
+def switch_in_dnsmasq(switch):
+  """ Whether the job servers write anything for this switch: only with a
+  management IP or MAC (#566). """
+  return bool(switch.mgmt_ip or switch.mgmt_mac)
+
 @receiver(pre_save, sender=Switch)
+def QueueSwitchJobs(sender, instance, update_fields=None, **kwargs):
+  ''' Before a switch is saved, queue the pxe-update, dns-update and
+  dhcp-update jobs (see queue_dnsmasq_jobs) only if that changes the job
+  servers' config (#566): a new switch with a management IP or MAC, or a
+  change to a field in SWITCH_DNSMASQ_FIELDS.  Nodes create switches without
+  either as they boot, which mustn't queue a rebuild each. '''
+  if instance._state.adding or instance.pk is None:
+    if switch_in_dnsmasq(instance):
+      queue_dnsmasq_jobs()
+  elif changes_fields(instance, SWITCH_DNSMASQ_FIELDS, update_fields):
+    queue_dnsmasq_jobs()
+
 @receiver(pre_delete, sender=Switch)
-def QueueSwitchJobs(sender, instance, **kwargs):
-  ''' Before a switch is saved or deleted, queue the pxe-update, dns-update
-  and dhcp-update jobs (see queue_dnsmasq_jobs): the job servers put each
-  switch's management MAC and IP in their DHCP and DNS config (#547). '''
+def QueueSwitchDeleteJobs(sender, instance, **kwargs):
+  ''' Before a switch is deleted, always queue the same jobs: besides its own
+  entry, deleting its ports can move NICs to another network (a port's
+  network comes first), without a NIC save to queue them. '''
   queue_dnsmasq_jobs()
 
 # What the job servers' dnsmasq plugin reads from a network, through the

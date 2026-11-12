@@ -252,7 +252,7 @@ class SwitchAdmin(admin.ModelAdmin):
   model = Switch
   inlines = [SwitchPortInline]
   readonly_fields = ['created_by', 'updated_by']
-  list_display = ['id', 'hostname', 'mgmt_ip', 'mgmt_mac', 'network']
+  list_display = ['id', 'hostname', 'mgmt_ip', 'mgmt_mac', 'guid', 'network']
   list_display_links = ['id', 'hostname']
 
 admin.site.register(Network, NetworkAdmin)

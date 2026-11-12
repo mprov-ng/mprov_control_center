@@ -3,7 +3,7 @@ from django.conf import settings
 from django.dispatch import receiver
 from django.forms import CharField, PasswordInput, ModelForm
 from disklayouts.models import DiskLayout
-from networks.models import SwitchPort, Network
+from networks.models import SwitchPort, Network, guid_field, normalize_guid
 from osmanagement.models import OSDistro, OSRepo
 from django.db.models.signals import pre_save, pre_delete, post_save
 from jobqueue.models import JobModule, JobStatus, Job, JobServer, requeue_job, queue_dnsmasq_jobs, changes_fields
@@ -311,10 +311,15 @@ class NetworkInterface(models.Model):
   network=models.ForeignKey(Network, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Network")
   bootable=models.BooleanField(default=False,null=True, blank=True)
   ipv6gua=models.GenericIPAddressField(verbose_name="IPv6 SLAAC GUA", blank=True, null=True)
+  # an InfiniBand HCA port's GUID (#566); IPoIB MACs change every boot
+  guid=guid_field("InfiniBand GUID")
 
   def __str__(self):
     return self.name
+  def clean(self):
+    self.guid = normalize_guid(self.guid)
   def save(self, *args, **kwargs):
+    self.guid = normalize_guid(self.guid)
     self.hostname = self.system.hostname
     super(NetworkInterface, self).save(*args, **kwargs)
     if self.bootable:

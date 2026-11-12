@@ -589,6 +589,12 @@ class NetworkInterfaceAPIView(MProvView):
 - system: The system ID this NIC is associated with
 - switch_port: The switch port ID this NIC is connected to.
 - network: The network ID this NIC is on.
+- guid: (Optional) The InfiniBand port GUID of this NIC: 0x and 16 hex digits, stored
+    lowercase, unique.  An IPoIB interface's MAC changes on every boot; its GUID doesn't.
+
+A node may add its own NICs and change some of their fields with its certificate.
+Then a MAC another system already has, or a switch port on a network other than
+the NIC's, is refused with a 400 naming the field.
 
 ### Query Parameters
 - ?network=SLUG: GET returns the NICs on that network, either set directly on the NIC or

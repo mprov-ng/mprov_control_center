@@ -6,7 +6,9 @@ check of every client (mprov_jobserver, its script runner, mprov_scripts'
 post-boot scripts, the stateful installer and genNetworkInterfaces.py):
 
 - a system may read and update only itself: its own row (?self), its own
-  network interfaces and their networks, and its own BMC entries;
+  network interfaces and their networks, and its own BMC entries; it may
+  also add network interfaces for itself, and read and add switches and
+  switch ports, as it finds them (#566);
 - a job server may read the inventory (DHCP, DNS, genders and image builds
   need all of it), and write only its own registration and heartbeats, the
   jobs it claims, and itself as a host of images and repos.
@@ -123,6 +125,11 @@ def nic_list(system, request, match):
     return own_system_query(system, request, match) and own_hostname(system, request, match)
 
 
+def adds_own_nic(system, request, match):
+    """ A new network interface for itself (#566). """
+    return _int(_body(request, "system")) == system.pk
+
+
 def bmc_list(system, request, match):
     """ The BMC list is filtered to its own entries, by ?self or ?system=. """
     keys = set(request.query_params.keys())
@@ -146,12 +153,26 @@ SYSTEM_RULES = [
     # genNetworkInterfaces.py (?system=) and register_IPv6_ll.py (?hostname=)
     Rule(("GET",), r"/networkinterfaces/", query={"system", "hostname", "detail"}, check=nic_list),
     Rule(("GET",), rf"/networkinterfaces/{PK}/", query={"detail"}, check=own_nic),
-    Rule(("PATCH",), rf"/networkinterfaces/{PK}/", query=set(), fields={"id", "ipv6ll"}, check=own_nic),
+    # mprov_scripts' interface discovery (#566) as well: the serializer also
+    # refuses a MAC another system has, or a switch port on another network
+    Rule(("PATCH",), rf"/networkinterfaces/{PK}/", query=set(),
+         fields={"id", "ipv6ll", "name", "mtu", "switch_port", "guid"}, check=own_nic),
+    Rule(("POST",), r"/networkinterfaces/", query=set(), fields={"system", "name", "mac", "mtu", "guid"},
+         check=adds_own_nic),
     Rule(("GET",), rf"/networks/{PK}/", query={"detail"}, check=own_nic_network),
     # setupBMC.py
     Rule(("GET",), r"/systembmcs/", query={"self", "system", "detail"}, check=bmc_list),
     Rule(("GET",), rf"/systembmcs/{PK}/", query={"detail"}, check=own_bmc),
     Rule(("PATCH",), rf"/systembmcs/{PK}/", query=set(), fields={"id", "mac", "ipv6ll"}, check=own_bmc),
+    # the switches and ports it's connected to (#566): read, and add; never
+    # change or delete.  Management IP and MAC are for people to enter, as
+    # the job servers put them in DHCP and DNS.
+    Rule(("GET",), r"/switches/", query={"hostname", "mgmt_mac", "guid", "detail"}),
+    Rule(("GET",), rf"/switches/{PK}/", query={"detail"}),
+    Rule(("POST",), r"/switches/", query=set(), fields={"hostname", "guid"}),
+    Rule(("GET",), r"/switchports/", query={"switch", "name", "detail"}),
+    Rule(("GET",), rf"/switchports/{PK}/", query={"detail"}),
+    Rule(("POST",), r"/switchports/", query=set(), fields={"name", "switch"}),
     # renewing its own certificate (pki.views.RenewView)
     Rule(("POST",), r"/enroll/renew/", query=set(), fields={"csr"}),
 ]
