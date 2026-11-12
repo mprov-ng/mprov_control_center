@@ -103,8 +103,9 @@ class SelfBootedTests(ProvisionTestCase):
     with mock.patch("systems.models.requeue_job") as requeue:
       self.post_self({"booted": True})
       requeue.assert_not_called()
+      # netboot is saved normally, but genders doesn't write it (#568).
       self.post_self({"netboot": False})
-      requeue.assert_called()
+      requeue.assert_not_called()
 
   def test_a_later_boot_moves_last_booted(self):
     self.post_self({"booted": True})

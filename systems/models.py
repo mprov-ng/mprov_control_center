@@ -5,7 +5,7 @@ from django.forms import CharField, PasswordInput, ModelForm
 from disklayouts.models import DiskLayout
 from networks.models import SwitchPort, Network, guid_field, normalize_guid
 from osmanagement.models import OSDistro, OSRepo
-from django.db.models.signals import pre_save, pre_delete, post_save
+from django.db.models.signals import pre_save, pre_delete, post_save, m2m_changed
 from jobqueue.models import JobModule, JobStatus, Job, JobServer, requeue_job, queue_dnsmasq_jobs, changes_fields
 from django.utils.text import slugify
 from scripts.models import Script, AnsiblePlaybook, AnsibleRole, AnsibleCollection, File
@@ -448,24 +448,45 @@ def AssignSystem(sender, instance, **kwargs):
       instance.system.set_serial(instance.serial, "nads")
     instance.delete()
     
-@receiver(post_save, sender=System)
-@receiver(post_save, sender=SystemImage)
-@receiver(post_save, sender=SystemGroup)
-def UpdateGenders (sender, instance, **kwargs):
-  ''' Queue the libgenders job (one pending job at most, see requeue_job) after
-  any save of a system, image or system group, so the job servers'
-  genders file is rebuilt.  Nothing is queued if no libgenders job module
-  exists.
-  '''
-  JobType = None
-  try:
-      JobType = JobModule.objects.get(slug="libgenders")
-  except JobModule.DoesNotExist:
-      JobType = None
-  if JobType is not None:
-    # save a new job, if one doesn't already exist.
+# What the job servers' libgenders plugin reads from each sender, through the
+# /systems/, /systemimages/ and /systemgroups/ lists, to write a genders line
+# per system: its hostname, its image's slug and OS distro, and its groups'
+# names.  An image's slug is set from its name (UpdateSystemImages, which
+# runs after UpdateGenders), so its name stands in for it.  Saving anything
+# else (BMC credentials, provision, image rebuild state...) changes nothing
+# it writes, so queues nothing (#568).  Group membership is a many-to-many,
+# saved without a save of either side, so UpdateGendersMembership watches it.
+GENDERS_FIELDS = {
+  System: ('hostname', 'systemimage'),
+  SystemImage: ('name', 'osdistro'),
+  SystemGroup: ('name',),
+}
 
-    requeue_job(JobType)
+def queue_genders_job():
+  """ Requeue (see requeue_job) the libgenders job, if that job module exists. """
+  module = JobModule.objects.filter(slug="libgenders").first()
+  if module is not None:
+    requeue_job(module)
+
+@receiver(pre_save, sender=System)
+@receiver(pre_save, sender=SystemImage)
+@receiver(pre_save, sender=SystemGroup)
+def UpdateGenders(sender, instance, update_fields=None, **kwargs):
+  ''' Before a system, image or system group is saved, queue the libgenders job
+  (one pending job at most, see requeue_job) if the save is new or changes a
+  field in GENDERS_FIELDS, so the job servers' genders file is rebuilt.
+  Nothing is queued if no libgenders job module exists.
+  '''
+  if changes_fields(instance, GENDERS_FIELDS[sender], update_fields):
+    queue_genders_job()
+
+@receiver(m2m_changed, sender=SystemGroup.systems.through)
+def UpdateGendersMembership(sender, action, pk_set=None, **kwargs):
+  ''' When systems join or leave a system group, from either side, queue the
+  libgenders job as UpdateGenders does: each system's genders line lists its
+  groups. '''
+  if action == 'post_clear' or (action in ('post_add', 'post_remove') and pk_set):
+    queue_genders_job()
 
 # What the job servers' dnsmasq plugin reads from each sender, through the
 # /networkinterfaces/ and /systembmcs/ lists, to build its DNS, DHCP and PXE

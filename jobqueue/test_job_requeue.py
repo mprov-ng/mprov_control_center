@@ -11,8 +11,8 @@ from django.utils import timezone
 from common.testing import APITestCase
 from jobqueue.models import Job, JobModule, JobServer, JobStatus, requeue_job, sweep_stale_jobservers
 from networks.models import Network, NetworkType, Switch
-from osmanagement.models import OSRepo
-from systems.models import NetworkInterface, System, SystemBMC
+from osmanagement.models import OSDistro, OSRepo
+from systems.models import NetworkInterface, System, SystemBMC, SystemGroup, SystemImage
 
 PENDING, RUNNING, ERROR, COMPLETE = 1, 2, 3, 4
 
@@ -212,6 +212,59 @@ class ChangeSignalTests(JobsTestCase):
     # a delete always does: removing its ports can move NICs to another network
     Switch.objects.create(hostname="ib-sw2", created_by=self.user).delete()
     self.assertRequeued(*self.DNSMASQ)
+
+
+  def assertGendersQueued(self, queued=True):
+    pending = Job.objects.filter(status_id=PENDING, module=self.modules["libgenders"]).exists()
+    self.assertEqual(pending, queued)
+    self.clear_pending()
+
+  def test_genders_only_when_genders_fields_change(self):
+    # #568: the libgenders job writes hostname, image, OS distro and group
+    # names; saving anything else used to queue it as well.
+    distro = OSDistro.objects.create(name="Rocky 9", vendor="Rocky", version="9", baseurl="http://mirror/")
+    other_distro = OSDistro.objects.create(name="Alma 9", vendor="Alma", version="9", baseurl="http://mirror/")
+    image = SystemImage.objects.create(name="compute", osdistro=distro, needs_rebuild=False,
+                                       created_by=self.user)
+    self.assertGendersQueued()
+    group = SystemGroup.objects.create(name="rack1")
+    self.assertGendersQueued()
+    system, _, bmc = self.system_with_parts()
+    for row, field, value in ((system, "provision", False), (system, "stateful", True),
+                              (bmc, "password", "rotated"), (image, "version", 7),
+                              (group, "config_params", "a: 1")):
+      with self.subTest(model=type(row).__name__, field=field):
+        setattr(row, field, value)
+        row.save()
+        self.assertGendersQueued(False)
+    for row, field, value in ((system, "hostname", "node01a"), (system, "systemimage", image),
+                              (image, "osdistro", other_distro), (group, "name", "rack2")):
+      with self.subTest(model=type(row).__name__, field=field):
+        setattr(row, field, value)
+        row.save()
+        self.assertGendersQueued()
+    # update_fields that leave the genders fields out queue nothing
+    system.hostname = "node01b"
+    system.save(update_fields=["provision"])
+    self.assertGendersQueued(False)
+
+  def test_genders_on_group_membership(self):
+    # #568: membership is a many-to-many, saved with no save of the system
+    # or group (the admin's bulk update, the API), but each genders line
+    # lists the system's groups.
+    group = SystemGroup.objects.create(name="rack1")
+    system, _, _ = self.system_with_parts()
+    self.clear_pending()
+    system.systemgroups.add(group)
+    self.assertGendersQueued()
+    system.systemgroups.add(group)  # already a member
+    self.assertGendersQueued(False)
+    group.systems.remove(system)
+    self.assertGendersQueued()
+    system.systemgroups.set([group])
+    self.assertGendersQueued()
+    system.systemgroups.clear()
+    self.assertGendersQueued()
 
 
 class NoDnsmasqModulesTests(JobsTestCase):
