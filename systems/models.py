@@ -449,17 +449,19 @@ def AssignSystem(sender, instance, **kwargs):
     instance.delete()
     
 # What the job servers' libgenders plugin reads from each sender, through the
-# /systems/, /systemimages/ and /systemgroups/ lists, to write a genders line
-# per system: its hostname, its image's slug and OS distro, and its groups'
-# names.  An image's slug is set from its name (UpdateSystemImages, which
-# runs after UpdateGenders), so its name stands in for it.  Saving anything
-# else (BMC credentials, provision, image rebuild state...) changes nothing
-# it writes, so queues nothing (#568).  Group membership is a many-to-many,
-# saved without a save of either side, so UpdateGendersMembership watches it.
+# /systems/, /systemimages/, /systemgroups/ and /distros/ lists, to write a
+# genders line per system: its hostname, its image's slug, that image's OS
+# distro's name, and its groups' names.  An image's slug is set from its name
+# (UpdateSystemImages, which runs after UpdateGenders), so its name stands in
+# for it.  Saving anything else (BMC credentials, provision, image rebuild
+# state, a distro's repositories...) changes nothing it writes, so queues
+# nothing (#568, #571).  Group membership is a many-to-many, saved without a
+# save of either side, so UpdateGendersMembership watches it.
 GENDERS_FIELDS = {
   System: ('hostname', 'systemimage'),
   SystemImage: ('name', 'osdistro'),
   SystemGroup: ('name',),
+  OSDistro: ('name',),
 }
 
 def queue_genders_job():
@@ -471,10 +473,12 @@ def queue_genders_job():
 @receiver(pre_save, sender=System)
 @receiver(pre_save, sender=SystemImage)
 @receiver(pre_save, sender=SystemGroup)
+@receiver(pre_save, sender=OSDistro)
 def UpdateGenders(sender, instance, update_fields=None, **kwargs):
-  ''' Before a system, image or system group is saved, queue the libgenders job
-  (one pending job at most, see requeue_job) if the save is new or changes a
-  field in GENDERS_FIELDS, so the job servers' genders file is rebuilt.
+  ''' Before a system, image, system group or OS distro is saved, queue the
+  libgenders job (one pending job at most, see requeue_job) if the save is
+  new or changes a field in GENDERS_FIELDS, so the job servers' genders file
+  is rebuilt.
   Nothing is queued if no libgenders job module exists.
   '''
   if changes_fields(instance, GENDERS_FIELDS[sender], update_fields):
@@ -487,6 +491,20 @@ def UpdateGendersMembership(sender, action, pk_set=None, **kwargs):
   groups. '''
   if action == 'post_clear' or (action in ('post_add', 'post_remove') and pk_set):
     queue_genders_job()
+
+@receiver(pre_delete, sender=System)
+@receiver(pre_delete, sender=SystemImage)
+@receiver(pre_delete, sender=SystemGroup)
+@receiver(pre_delete, sender=OSDistro)
+def DeleteGenders(sender, instance, **kwargs):
+  ''' Before a system, image, system group or OS distro is deleted, queue the
+  libgenders job as UpdateGenders does (#572): the system's line goes, and
+  the systems that used the image, group or distro lose it from theirs.
+  Django clears those references and membership rows without a save or an
+  m2m_changed, so nothing else queues it.  The job commits with the delete,
+  in Django's delete transaction; requeue_job keeps a bulk delete to one
+  pending job. '''
+  queue_genders_job()
 
 # What the job servers' dnsmasq plugin reads from each sender, through the
 # /networkinterfaces/ and /systembmcs/ lists, to build its DNS, DHCP and PXE
