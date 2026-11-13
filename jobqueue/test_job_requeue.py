@@ -267,6 +267,45 @@ class ChangeSignalTests(JobsTestCase):
     self.assertGendersQueued()
 
 
+  def test_genders_on_distro_rename(self):
+    # #571: each genders line names its image's OS distro.
+    distro = OSDistro.objects.create(name="Rocky 9", vendor="Rocky", version="9", baseurl="http://mirror/")
+    self.clear_pending()
+    distro.baseurl = "http://other-mirror/"
+    distro.save()
+    self.assertGendersQueued(False)
+    distro.name = "Rocky 9.5"
+    distro.save()
+    self.assertGendersQueued()
+
+  def test_genders_on_delete(self):
+    # #572: Django clears a deleted image's, group's or distro's references
+    # without saving the systems, so only the delete itself can queue it.
+    distro = OSDistro.objects.create(name="Rocky 9", vendor="Rocky", version="9", baseurl="http://mirror/")
+    image = SystemImage.objects.create(name="compute", osdistro=distro, needs_rebuild=False,
+                                       created_by=self.user)
+    group = SystemGroup.objects.create(name="rack1")
+    system, _, _ = self.system_with_parts()
+    system.systemimage = image
+    system.save()
+    system.systemgroups.add(group)
+    self.clear_pending()
+    for row in (group, distro, image, system):
+      with self.subTest(model=type(row).__name__):
+        row.delete()
+        self.assertGendersQueued()
+
+  def test_genders_on_bulk_and_rolled_back_deletes(self):
+    self.system_with_parts("node01")
+    self.system_with_parts("node02")
+    with self.assertRaises(RuntimeError), transaction.atomic():
+      System.objects.all().delete()
+      raise RuntimeError
+    self.assertNothingPending()
+    System.objects.all().delete()
+    self.assertEqual(Job.objects.filter(status_id=PENDING, module=self.modules["libgenders"]).count(), 1)
+
+
 class NoDnsmasqModulesTests(JobsTestCase):
   """ #547: without the dnsmasq job modules, deletes and switch changes queue nothing and don't fail. """
 
