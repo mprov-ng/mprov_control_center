@@ -1,0 +1,10 @@
+{% extends "admin/submit_line.html" %}
+{% load i18n admin_urls %}
+
+{% block extra-actions %}
+    <!-- Force DNS update (networks/admin.py): saves the form, then queues the DNS, DHCP and PXE jobs. -->
+    {% if original.pk %}
+        <input type="submit" value="{% translate 'Force DNS update' %}" name="_force_dns_update" class="btn btn-sm btn-warning"
+               title="{% translate 'Save, then queue a DNS, DHCP and PXE update on the job servers, even if nothing changed' %}">
+    {% endif %}
+{% endblock %}

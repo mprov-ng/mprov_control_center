@@ -6,14 +6,31 @@ from django.urls import path, reverse
 from django.http import QueryDict
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
+from jobqueue.models import DNSMASQ_JOBS, JobModule, queue_dnsmasq_jobs
 from systems.models import NetworkInterface, SystemBMC
 from .models import Network, NetworkType, Switch, SwitchPort
 from .utils import get_associated_objects, calculate_new_ips
 
 
+def queue_dns_update(modeladmin, request, networks):
+  """ Queue the dnsmasq jobs (DNS, DHCP and PXE; see queue_dnsmasq_jobs) for
+  networks, whether or not anything they build from has changed (#569).  The
+  job servers rebuild the config for every network on each one, so this
+  queues them once however many networks are picked. """
+  names = ", ".join(network.name for network in networks)
+  if not JobModule.objects.filter(slug__in=DNSMASQ_JOBS).exists():
+    modeladmin.message_user(request, f"No DNS update was queued for {names}: there's no DNS, DHCP or PXE job module.",
+                            messages.WARNING)
+    return
+  queue_dnsmasq_jobs()
+  modeladmin.message_user(request, f"Queued a DNS, DHCP and PXE update for {names}. "
+                          "The job servers rebuild the config for every network.", messages.SUCCESS)
+
+
 class NetworkAdmin(admin.ModelAdmin):
   """ Networks, with a summary tab of what's on each one. """
   model = Network
+  actions = ['force_dns_update']
   # Removing vlan for now.
   #list_display = ['slug', 'name', 'net_type', 'vlan', 'subnet', 'netmask']
   list_display = ['slug', 'name', 'net_type', 'subnet', 'netmask']
@@ -108,11 +125,22 @@ class NetworkAdmin(admin.ModelAdmin):
       # If no subnet/netmask change, proceed with normal save
       super().save_model(request, obj, form, change)
 
+  @admin.action(description="Force DNS update for these networks")
+  def force_dns_update(self, request, queryset):
+      queue_dns_update(self, request, list(queryset.order_by('name')))
+
   def response_change(self, request, obj):
       # Check if we need to redirect to confirmation
       if hasattr(request, '_network_update_confirmation_needed') and request._network_update_confirmation_needed:
           return redirect(reverse('admin:network_update_with_confirmation', args=[obj.pk]))
-      
+
+      # "Force DNS update" on the change page (#569; the button is in
+      # templates/admin/networks/network/submit_line.html): the form is saved
+      # like any other, then the dnsmasq jobs are queued even if nothing changed.
+      if "_force_dns_update" in request.POST:
+          queue_dns_update(self, request, [obj])
+          return redirect(reverse('admin:networks_network_change', args=[obj.pk]))
+
       return super().response_change(request, obj)
 
   def update_with_confirmation_view(self, request, object_id):
