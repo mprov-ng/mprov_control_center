@@ -1,4 +1,5 @@
 from systems.models import NetworkInterface, SystemImage, System, SystemGroup, SystemBMC, SystemModel
+from django.db import transaction
 from rest_framework import serializers
 from jobqueue.models import JobServer
 from disklayouts.serializers import DiskLayoutAPISerializer
@@ -133,6 +134,22 @@ class NetworkInterfaceSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
+
+    def save(self, **kwargs):
+        """ A node linking its own NIC to a switch port that has no network
+        puts the port on the NIC's network (#575), the same rule validate()
+        enforces when the port has one.  Only the node path, as validate();
+        a person sets a port's network themselves.  The conditional update
+        never overwrites a network set meanwhile. """
+        request = self.context.get('request')
+        if request is None or node_system(request) is None or 'switch_port' not in self.validated_data:
+            return super().save(**kwargs)
+        with transaction.atomic():
+            nic = super().save(**kwargs)
+            if nic.switch_port_id is not None and nic.network_id is not None:
+                SwitchPort.objects.filter(pk=nic.switch_port_id, networks__isnull=True) \
+                    .update(networks=nic.network_id)
+        return nic
 
 class NetworkInterfaceDetailsSerializer(NoNestedUsersMixin, serializers.ModelSerializer):
     """ A NIC with its system, network and switch port nested three deep; hostname is
