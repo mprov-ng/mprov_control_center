@@ -292,7 +292,8 @@ class SwitchPortAPIView(MProvView):
 - id: Internal ID of this port in the db
 - name: A human-readable name for the port number
 - switch: ID of the switch this port is associated with
-- networks: ID of the network for this port.
+- networks: ID of the network for this port.  Setting it puts the NIC linked
+    to this port on the same network.  Clearing it leaves the NIC's network.
     
 ### Query Parameters
 - ?detail: GET (no primary key) returns entries with related objects nested 3 levels deep, as for a single entry.

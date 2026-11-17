@@ -597,6 +597,9 @@ Then a MAC another system already has, or a switch port on a network other than
 the NIC's, is refused with a 400 naming the field.  A switch port with no network
 that a node links its NIC to is put on the NIC's network.
 
+Otherwise, setting a NIC's network, or linking it to a switch port, puts that
+switch port on the NIC's network.  Clearing the network leaves the port's.
+
 ### Query Parameters
 - ?network=SLUG: GET returns the NICs on that network, either set directly on the NIC or
     through the network of the NIC's switch port, or 404 if there is no such network.
