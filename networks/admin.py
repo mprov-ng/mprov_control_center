@@ -1,6 +1,8 @@
 import ipaddress
 
+from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin import helpers
 from django.shortcuts import render, redirect
 from django.urls import path, reverse
 from django.http import QueryDict
@@ -283,6 +285,59 @@ class SwitchAdmin(admin.ModelAdmin):
   list_display = ['id', 'hostname', 'mgmt_ip', 'mgmt_mac', 'guid', 'network']
   list_display_links = ['id', 'hostname']
 
+class SetNetworkForm(forms.Form):
+  """ The network the "Set network" bulk action puts the selected ports on. """
+  network = forms.ModelChoiceField(queryset=Network.objects.order_by('name'), label="Network")
+
+
+class SwitchPortAdmin(admin.ModelAdmin):
+  """ Every switch's ports in one list, with a bulk action to set the network of
+  several at once (#577), e.g. to fill it in on ports added before nodes set it. """
+  model = SwitchPort
+  actions = ['set_network']
+  list_display = ['name', 'switch', 'networks', 'linked_interface']
+  list_display_links = ['name']
+  list_filter = ['switch', 'networks']
+  search_fields = ['name', 'switch__hostname']
+  list_select_related = ['switch', 'networks', 'networkinterface__system']
+  ordering = ('switch__hostname', 'name')
+
+  @admin.display(description="Interface")
+  def linked_interface(self, obj):
+    nic = getattr(obj, 'networkinterface', None)
+    if nic is None:
+      return "-"
+    return f"{nic.system.hostname}: {nic.name}"
+
+  @admin.action(description="Set network for these switch ports", permissions=['change'])
+  def set_network(self, request, queryset):
+    """ Asks for the network on an intermediate page, then saves each port
+    with it.  Each port is saved on its own (not a queryset update), so
+    anything that follows a port's save follows this too. """
+    ports = list(queryset.select_related('switch', 'networks').order_by('switch__hostname', 'name'))
+    form = SetNetworkForm(request.POST if 'apply' in request.POST else None)
+    if form.is_valid():
+      network = form.cleaned_data['network']
+      changed = 0
+      for port in ports:
+        if port.networks_id != network.pk:
+          port.networks = network
+          port.save()
+          changed += 1
+      self.message_user(request, f"Set the network of {changed} switch port{'s' if changed != 1 else ''} "
+                        f"to {network.name}.", messages.SUCCESS)
+      return None
+    return render(request, 'admin/networks/switchport/set_network.html', {
+      **self.admin_site.each_context(request),
+      'title': "Set network for switch ports",
+      'form': form,
+      'ports': ports,
+      'opts': self.model._meta,
+      'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+      'action': request.POST.get('action', 'set_network'),
+    })
+
 admin.site.register(Network, NetworkAdmin)
 admin.site.register(NetworkType, NetworkTypeAdmin)
 admin.site.register(Switch, SwitchAdmin)
+admin.site.register(SwitchPort, SwitchPortAdmin)
