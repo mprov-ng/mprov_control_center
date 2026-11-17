@@ -109,17 +109,27 @@ class NetworkInterfaceSerializer(serializers.ModelSerializer):
         # copied from the System on every save (NetworkInterface.save()), so
         # a value sent here would be overwritten anyway (#382).
         read_only_fields = ['hostname']
+        # the (system, name) constraint is checked in validate() instead, so a
+        # clash is a 400 on 'name' and ignores case, as MariaDB does (#581).
+        validators = []
 
     def validate(self, attrs):
-        """ A node writing its own NICs (#566) may not take a MAC another system
-        has, or a switch port on a network other than the NIC's.  A 400 that
-        says which, so a node can tell it from a 403 rule refusal. """
+        """ A NIC's name must be new on its system, ignoring case.  And a node
+        writing its own NICs (#566) may not take a MAC another system has, or
+        a switch port on a network other than the NIC's.  A 400 that says
+        which, so a node can tell it from a 403 rule refusal. """
         attrs = super().validate(attrs)
+        errors = {}
+        system = attrs['system'] if 'system' in attrs else getattr(self.instance, 'system', None)
+        name = attrs['name'] if 'name' in attrs else getattr(self.instance, 'name', None)
+        if NetworkInterface.name_taken(system, name, getattr(self.instance, 'pk', None)):
+            errors['name'] = NetworkInterface.NAME_TAKEN
         request = self.context.get('request')
         node = node_system(request) if request is not None else None
         if node is None:
+            if errors:
+                raise serializers.ValidationError(errors)
             return attrs
-        errors = {}
         mac = attrs.get('mac')
         if mac:
             taken = (NetworkInterface.objects.filter(mac__iexact=mac).exclude(system=node).exists()

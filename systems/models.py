@@ -1,6 +1,7 @@
 from django.db import models, transaction
 from django.conf import settings
 from django.dispatch import receiver
+from django.core.exceptions import ValidationError
 from django.forms import CharField, PasswordInput, ModelForm
 from disklayouts.models import DiskLayout
 from networks.models import SwitchPort, Network, guid_field, normalize_guid
@@ -296,6 +297,8 @@ class SystemBMCForm(ModelForm):
       del self.cleaned_data['password']
     return self.cleaned_data
 
+NIC_NAME_TAKEN = "This system already has an interface with this name."
+
 class NetworkInterface(models.Model):
   endpoint="/networkinterfaces/"
   system = models.ForeignKey(System, on_delete=models.CASCADE)
@@ -314,10 +317,31 @@ class NetworkInterface(models.Model):
   # an InfiniBand HCA port's GUID (#566); IPoIB MACs change every boot
   guid=guid_field("InfiniBand GUID")
 
+  NAME_TAKEN = NIC_NAME_TAKEN
+
+  class Meta:
+    # a system's NICs are told apart by name (#581); MariaDB compares names
+    # ignoring case, so name_taken() does too, on every backend.
+    constraints = [
+      models.UniqueConstraint(fields=['system', 'name'], name='networkinterface_unique_system_name',
+                              violation_error_message=NIC_NAME_TAKEN),
+    ]
+
   def __str__(self):
     return self.name
+
+  @classmethod
+  def name_taken(cls, system, name, exclude_pk=None):
+    """ Whether system has another NIC called name, ignoring case. """
+    if system is None or not name:
+      return False
+    return cls.objects.filter(system=system, name__iexact=name).exclude(pk=exclude_pk).exists()
+
   def clean(self):
     self.guid = normalize_guid(self.guid)
+    system = self.system if self.system_id is not None else None
+    if self.name_taken(system, self.name, self.pk):
+      raise ValidationError({'name': self.NAME_TAKEN})
   def save(self, *args, **kwargs):
     self.guid = normalize_guid(self.guid)
     self.hostname = self.system.hostname

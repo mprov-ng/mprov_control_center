@@ -69,6 +69,11 @@ class NetworkInterfaceInlineFormset(BaseInlineFormSet):
                 if getattr(form, 'cleaned_data', {}).get('bootable') and not form.cleaned_data.get('DELETE')]
     if len(bootable) > 1:
       raise ValidationError("Only one network interface can be bootable.")
+    # Django's own formset check is case-sensitive; MariaDB isn't (#581).
+    names = [form.cleaned_data['name'].lower() for form in self.forms
+             if getattr(form, 'cleaned_data', {}).get('name') and not form.cleaned_data.get('DELETE')]
+    if len(names) != len(set(names)):
+      raise ValidationError("Two network interfaces have the same name.")
   
 
 class NetworkInterfaceInline(admin.StackedInline):
