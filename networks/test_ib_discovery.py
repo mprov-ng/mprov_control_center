@@ -155,7 +155,11 @@ class NodeDiscoveryRuleTests(AgentTestCase):
     port = SwitchPort.objects.get(switch=switch)
     self.assertStatus(200, "GET", f"/switchports/?switch={switch.pk}&name=1")
     self.assertStatus(200, "GET", f"/switchports/{port.pk}/")
-    self.assertStatus(403, "POST", "/switchports/", {"name": "2", "switch": switch.pk, "networks": self.lan.pk})
+    # with the network of the NIC it's for (#576)
+    self.assertStatus(201, "POST", "/switchports/", {"name": "2", "switch": switch.pk, "networks": self.lan.pk})
+    self.assertEqual(SwitchPort.objects.get(switch=switch, name="2").networks, self.lan)
+    self.assertStatus(403, "POST", "/switchports/", {"name": "3", "switch": switch.pk, "networks": self.lan.pk,
+                                                      "id": 999})
     self.assertStatus(403, "PATCH", f"/switchports/{port.pk}/", {"name": "9"})
     self.assertStatus(403, "DELETE", f"/switchports/{port.pk}/")
 

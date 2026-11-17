@@ -172,7 +172,9 @@ SYSTEM_RULES = [
     Rule(("POST",), r"/switches/", query=set(), fields={"hostname", "guid"}),
     Rule(("GET",), r"/switchports/", query={"switch", "name", "detail"}),
     Rule(("GET",), rf"/switchports/{PK}/", query={"detail"}),
-    Rule(("POST",), r"/switchports/", query=set(), fields={"name", "switch"}),
+    # a new port may name its network: the network of the NIC the node is
+    # about to link to it (#576)
+    Rule(("POST",), r"/switchports/", query=set(), fields={"name", "switch", "networks"}),
     # renewing its own certificate (pki.views.RenewView)
     Rule(("POST",), r"/enroll/renew/", query=set(), fields={"csr"}),
 ]
