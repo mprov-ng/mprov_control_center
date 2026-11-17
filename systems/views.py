@@ -594,7 +594,8 @@ class NetworkInterfaceAPIView(MProvView):
 
 A node may add its own NICs and change some of their fields with its certificate.
 Then a MAC another system already has, or a switch port on a network other than
-the NIC's, is refused with a 400 naming the field.
+the NIC's, is refused with a 400 naming the field.  A switch port with no network
+that a node links its NIC to is put on the NIC's network.
 
 ### Query Parameters
 - ?network=SLUG: GET returns the NICs on that network, either set directly on the NIC or

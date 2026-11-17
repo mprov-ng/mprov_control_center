@@ -132,6 +132,37 @@ class NodeDiscoveryRuleTests(AgentTestCase):
     self.assertStatus(403, "PATCH", url, {"network": self.other_net.pk})
     self.assertStatus(403, "PATCH", f"/networkinterfaces/{self.nic2.pk}/", {"name": "x"})
 
+  def test_a_port_without_a_network_takes_the_nics(self):
+    """ #575: linking puts a port that has no network on the NIC's network. """
+    url = f"/networkinterfaces/{self.nic1.pk}/"
+    self.assertStatus(200, "PATCH", url, {"switch_port": self.plain_port.pk})
+    self.plain_port.refresh_from_db()
+    self.assertEqual(self.plain_port.networks, self.lan)
+    # a port with a network keeps it (a different one is the 400 above)
+    self.assertStatus(200, "PATCH", url, {"switch_port": self.lan_port.pk})
+    self.lan_port.refresh_from_db()
+    self.assertEqual(self.lan_port.networks, self.lan)
+    # a NIC without a network leaves the port without one
+    NetworkInterface.objects.filter(pk=self.nic1.pk).update(network=None)
+    port = SwitchPort.objects.create(name="4", switch=self.lan_switch)
+    self.assertStatus(200, "PATCH", url, {"switch_port": port.pk})
+    port.refresh_from_db()
+    self.assertIsNone(port.networks)
+    # a change that doesn't link a port leaves its port alone
+    NetworkInterface.objects.filter(pk=self.nic1.pk).update(network=self.lan)
+    self.assertStatus(200, "PATCH", url, {"mtu": 1500})
+    port.refresh_from_db()
+    self.assertIsNone(port.networks)
+
+  def test_a_person_linking_a_port_leaves_its_network(self):
+    """ #575 is for nodes; a person sets a port's network themselves. """
+    port = SwitchPort.objects.create(name="5", switch=self.lan_switch)
+    self.client.force_login(self.admin)
+    response = self.call("PATCH", f"/networkinterfaces/{self.nic1.pk}/", {"switch_port": port.pk})
+    self.assertEqual(response.status_code, 200, response.content[:300])
+    port.refresh_from_db()
+    self.assertIsNone(port.networks)
+
   def test_switches_and_ports(self):
     self.assertStatus(200, "GET", "/switches/?hostname=lan-sw")
     self.assertStatus(200, "GET", f"/switches/{self.lan_switch.pk}/")
