@@ -131,6 +131,7 @@ JAZZMIN_SETTINGS={
         'osmanagement.osdistro': 'fas fa-compact-disc',
         'osmanagement': 'fas fa-compact-disc',
         'networks.switch': 'fas fa-server',
+        'networks.switchport': 'fas fa-ethernet',
         'networks.network': 'fas fa-network-wired',
         'networks.networktype': 'fas fa-project-diagram',
         'networks': 'fas fa-project-diagram',

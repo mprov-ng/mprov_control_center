@@ -1,0 +1,48 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block breadcrumbs %}
+<ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}"><i class="fa fa-home"></i> {% trans 'Home' %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a></li>
+    <li class="breadcrumb-item active">Set network</li>
+</ol>
+{% endblock %}
+
+{% block content %}
+<div class="col-12">
+    <form action="" method="post">
+        {% csrf_token %}
+        <div class="card card-outline">
+            <div class="card-header with-border">
+                <h4 class="card-title">Set the network of these switch ports</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12 col-lg-6">
+                        <div class="form-group">
+                            <label for="{{ form.network.id_for_label }}">{{ form.network.label }}</label>
+                            {{ form.network }}
+                            <div class="help-block red">{{ form.network.errors }}</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <ul>
+                        {% for port in ports %}
+                            <li>{{ port }}{% if port.networks %} (now {{ port.networks.name }}){% endif %}</li>
+                            <input type="hidden" name="{{ action_checkbox_name }}" value="{{ port.pk }}"/>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <input type="hidden" name="action" value="{{ action }}"/>
+                <input type="submit" name="apply" class="btn btn-primary" value="Set network"/>
+                <a href="{% url opts|admin_urlname:'changelist' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
