@@ -149,8 +149,9 @@ class NetworkInterfaceSerializer(serializers.ModelSerializer):
         """ A node linking its own NIC to a switch port that has no network
         puts the port on the NIC's network (#575), the same rule validate()
         enforces when the port has one.  Only the node path, as validate();
-        a person sets a port's network themselves.  The conditional update
-        never overwrites a network set meanwhile. """
+        a person's or API client's saves are synced by networks/port_sync.py
+        (#578).  The conditional update never overwrites a network set
+        meanwhile. """
         request = self.context.get('request')
         if request is None or node_system(request) is None or 'switch_port' not in self.validated_data:
             return super().save(**kwargs)

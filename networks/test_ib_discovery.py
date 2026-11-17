@@ -154,14 +154,15 @@ class NodeDiscoveryRuleTests(AgentTestCase):
     port.refresh_from_db()
     self.assertIsNone(port.networks)
 
-  def test_a_person_linking_a_port_leaves_its_network(self):
-    """ #575 is for nodes; a person sets a port's network themselves. """
+  def test_a_person_linking_a_port_syncs_its_network(self):
+    """ #575 is for nodes; a person's link is synced by #578 instead, which
+    puts the port on the NIC's network too. """
     port = SwitchPort.objects.create(name="5", switch=self.lan_switch)
     self.client.force_login(self.admin)
     response = self.call("PATCH", f"/networkinterfaces/{self.nic1.pk}/", {"switch_port": port.pk})
     self.assertEqual(response.status_code, 200, response.content[:300])
     port.refresh_from_db()
-    self.assertIsNone(port.networks)
+    self.assertEqual(port.networks, self.lan)
 
   def test_switches_and_ports(self):
     self.assertStatus(200, "GET", "/switches/?hostname=lan-sw")
